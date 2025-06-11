@@ -22,14 +22,14 @@ export function ModelSelector({
   selectedModelId,
   className,
 }: {
-  session: Session;
+  session: Session | null | undefined;
   selectedModelId: string;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
 
-  const userType = session.user.type;
+  const userType = session?.user?.type || 'guest';
   const { availableChatModelIds } = entitlementsByUserType[userType];
 
   const availableChatModels = chatModels.filter((chatModel) =>
@@ -55,8 +55,8 @@ export function ModelSelector({
       >
         <Button
           data-testid="model-selector"
-          variant="outline"
-          className="md:px-2 md:h-[34px]"
+          variant="ghost"
+          className="md:px-2"
         >
           {selectedChatModel?.name}
           <ChevronDownIcon />
@@ -81,21 +81,23 @@ export function ModelSelector({
               data-active={id === optimisticModelId}
               asChild
             >
-              <button
+              <Button
                 type="button"
-                className="gap-4 group/item flex flex-row justify-between items-center w-full"
+                variant="ghost"
+                size="lg"
+                className="gap-4 group/item flex flex-row justify-between items-center w-full h-fit"
               >
                 <div className="flex flex-col gap-1 items-start">
-                  <div>{chatModel.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <h4>{chatModel.name}</h4>
+                  <p className="text-xs text-muted-foreground">
                     {chatModel.description}
-                  </div>
+                  </p>
                 </div>
 
                 <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100">
                   <CheckCircleFillIcon />
                 </div>
-              </button>
+              </Button>
             </DropdownMenuItem>
           );
         })}

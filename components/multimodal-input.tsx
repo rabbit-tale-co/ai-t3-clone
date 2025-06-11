@@ -27,6 +27,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
+import { ModelSelector } from './model-selector';
+import { useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
+import { ModelSearch } from './model-search';
 
 function PureMultimodalInput({
   chatId,
@@ -42,6 +46,7 @@ function PureMultimodalInput({
   handleSubmit,
   className,
   selectedVisibilityType,
+  selectedModelId,
 }: {
   chatId: string;
   input: UseChatHelpers['input'];
@@ -56,9 +61,11 @@ function PureMultimodalInput({
   handleSubmit: UseChatHelpers['handleSubmit'];
   className?: string;
   selectedVisibilityType: VisibilityType;
+  selectedModelId: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+  const { data: session } = useSession();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -291,7 +298,13 @@ function PureMultimodalInput({
         }}
       />
 
-      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
+      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start gap-2">
+        <ModelSelector
+          session={session as Session}
+          selectedModelId={selectedModelId}
+          className="rounded-md p-1.5 h-fit"
+        />
+        <ModelSearch session={session as Session} />
         <AttachmentsButton fileInputRef={fileInputRef} status={status} />
       </div>
 

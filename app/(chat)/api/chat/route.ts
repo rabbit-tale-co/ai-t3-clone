@@ -207,6 +207,18 @@ export async function POST(request: Request) {
               }
             }
           },
+          onError: async (error: any) => {
+            console.error('Error within data stream execution:', error); // Log the error
+            // Instead of returning a string that might be misinterpreted,
+            // send an error message through the stream itself if your frontend can handle it.
+            // Or simply do nothing here if the main catch block below handles the Response.
+
+            // Example: Sending an error message through the stream
+            dataStream.writeData({
+              type: 'error', // Custom type for your frontend to recognize
+              message: 'An error occurred during AI generation.',
+            });
+          },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: 'stream-text',
@@ -233,7 +245,8 @@ export async function POST(request: Request) {
     } else {
       return new Response(stream);
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Unhandled error in chat API:', error);
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
