@@ -6,6 +6,7 @@ import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
   updateChatVisiblityById,
+  getMessageCountByUserId,
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
@@ -14,6 +15,8 @@ import {
   chatModels,
   DEFAULT_CHAT_MODEL,
 } from '@/lib/ai/models';
+import { entitlementsByUserType } from '@/lib/ai/entitlements';
+import type { UserType } from '@/app/(auth)/auth';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -77,4 +80,25 @@ export async function updateChatVisibility({
   visibility: VisibilityType;
 }) {
   await updateChatVisiblityById({ chatId, visibility });
+}
+
+export async function getUserMessageCount(userId: string, userType: UserType) {
+  'use server';
+
+  try {
+    const messageCount = await getMessageCountByUserId({
+      id: userId,
+      differenceInHours: 24,
+    });
+
+    const maxMessages =
+      entitlementsByUserType[userType]?.maxMessagesPerDay || 0;
+    return {
+      messagesLeft: Math.max(0, maxMessages - messageCount),
+      success: true,
+    };
+  } catch (error) {
+    console.error('Failed to fetch message count', error);
+    return { messagesLeft: null, success: false };
+  }
 }

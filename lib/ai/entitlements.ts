@@ -39,6 +39,16 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
     ],
   },
 
+  pro: {
+    maxMessagesPerDay: 50,
+    availableChatModelIds: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+  },
+
+  admin: {
+    maxMessagesPerDay: 100,
+    availableChatModelIds: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
+  },
+
   /*
    * TODO: For users with an account and a paid membership
    */
