@@ -64,12 +64,12 @@ export function useArtifact() {
   );
 
   const { data: localArtifactMetadata, mutate: setLocalArtifactMetadata } =
-    useSWR<any>(
+    useSWR<{ modelId: string }>(
       () =>
         artifact.documentId ? `artifact-metadata-${artifact.documentId}` : null,
       null,
       {
-        fallbackData: null,
+        fallbackData: { modelId: 'gemini-2.0-flash' },
       },
     );
 
@@ -77,7 +77,7 @@ export function useArtifact() {
     () => ({
       artifact,
       setArtifact,
-      metadata: localArtifactMetadata,
+      metadata: localArtifactMetadata || { modelId: 'gemini-2.0-flash' },
       setMetadata: setLocalArtifactMetadata,
     }),
     [artifact, setArtifact, localArtifactMetadata, setLocalArtifactMetadata],
