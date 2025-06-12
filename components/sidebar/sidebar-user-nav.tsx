@@ -1,6 +1,5 @@
 'use client';
 
-import { ChevronUp } from 'lucide-react';
 import Image from 'next/image';
 import type { User } from 'next-auth';
 import { signOut, useSession } from 'next-auth/react';
@@ -20,7 +19,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
 import { toast } from '../toast';
-import { LoaderIcon } from '../icons';
+import { LoaderIcon, ChevronUp } from 'lucide-react';
 import { guestRegex } from '@/lib/constants';
 
 export function SidebarUserNav({ user }: { user: User }) {

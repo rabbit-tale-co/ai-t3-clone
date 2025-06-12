@@ -4,7 +4,7 @@ import { useCopyToClipboard } from 'usehooks-ts';
 
 import type { Vote } from '@/lib/db/schema';
 
-import { CopyIcon, ThumbDownIcon, ThumbUpIcon } from './icons';
+import { CopyIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Tooltip,
@@ -39,7 +39,8 @@ export function PureMessageActions({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              className="py-1 px-2 h-fit text-muted-foreground"
+              className="py-1 text-muted-foreground"
+              size={'icon'}
               variant="outline"
               onClick={async () => {
                 const textFromParts = message.parts
@@ -67,7 +68,8 @@ export function PureMessageActions({
           <TooltipTrigger asChild>
             <Button
               data-testid="message-upvote"
-              className="py-1 px-2 h-fit text-muted-foreground pointer-events-auto!"
+              className="py-1 text-muted-foreground pointer-events-auto!"
+              size={'icon'}
               disabled={vote?.isUpvoted}
               variant="outline"
               onClick={async () => {
@@ -110,7 +112,7 @@ export function PureMessageActions({
                 });
               }}
             >
-              <ThumbUpIcon />
+              <ThumbsUpIcon />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Upvote Response</TooltipContent>
@@ -120,7 +122,8 @@ export function PureMessageActions({
           <TooltipTrigger asChild>
             <Button
               data-testid="message-downvote"
-              className="py-1 px-2 h-fit text-muted-foreground pointer-events-auto!"
+              className="py-1 text-muted-foreground pointer-events-auto!"
+              size={'icon'}
               variant="outline"
               disabled={vote && !vote.isUpvoted}
               onClick={async () => {
@@ -163,7 +166,7 @@ export function PureMessageActions({
                 });
               }}
             >
-              <ThumbDownIcon />
+              <ThumbsDownIcon />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Downvote Response</TooltipContent>

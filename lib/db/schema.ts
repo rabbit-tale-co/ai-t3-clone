@@ -27,6 +27,7 @@ export const folder = pgTable('Folder', {
   userId: uuid('userId')
     .notNull()
     .references(() => user.id),
+  color: varchar('color', { length: 32 }).default('blue'),
 });
 
 export type Folder = InferSelectModel<typeof folder>;

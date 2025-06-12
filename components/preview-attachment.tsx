@@ -1,6 +1,6 @@
 import type { Attachment } from 'ai';
 
-import { LoaderIcon } from './icons';
+import { LoaderIcon } from 'lucide-react';
 
 export const PreviewAttachment = ({
   attachment,

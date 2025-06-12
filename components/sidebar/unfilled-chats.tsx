@@ -8,12 +8,54 @@ import {
 } from '@/components/ui/sidebar';
 import { ChatItem } from './chat-item';
 import type { Chat } from '@/lib/db/schema';
+
+interface SidebarThread extends Chat {
+  folder: {
+    name: string;
+    color: string;
+  } | null;
+  tags: Array<{
+    id: string;
+    label: string;
+    color: string;
+    userId: string;
+  }>;
+}
+
 export function UnfiledChatsList({
   allChats,
+  allThreads,
   onDeleteChat,
+  onMoveToFolder,
+  onRemoveFromFolder,
+  onAddTagToChat,
+  onRemoveTagFromChat,
+  colorAccents,
 }: {
   allChats: Chat[];
+  allThreads?: SidebarThread[];
   onDeleteChat?: (chatId: string) => void;
+  onMoveToFolder?: (
+    chatId: string,
+    folderId: string,
+    folderName: string,
+    folderColor: string,
+  ) => void;
+  onRemoveFromFolder?: (chatId: string) => void;
+  onAddTagToChat?: (
+    chatId: string,
+    tag: { id: string; label: string; color: string; userId: string },
+  ) => void;
+  onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
+  colorAccents?: Record<
+    string,
+    {
+      light: string;
+      dark: string;
+      border: string;
+      accent: string;
+    }
+  >;
 }) {
   const chats = allChats;
   const params = useParams();
@@ -28,15 +70,25 @@ export function UnfiledChatsList({
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="gap-0.5">
-          {chats.map((chat) => (
-            <ChatItem
-              key={chat.id}
-              chat={chat}
-              isActive={currentChatId === chat.id}
-              onDelete={onDeleteChat || (() => {})}
-              setOpenMobile={setOpenMobile}
-            />
-          ))}
+          {chats.map((chat) => {
+            // Find the corresponding thread to get tags
+            const thread = allThreads?.find((t) => t.id === chat.id);
+            return (
+              <ChatItem
+                key={chat.id}
+                chat={chat}
+                isActive={currentChatId === chat.id}
+                onDelete={onDeleteChat || (() => {})}
+                setOpenMobile={setOpenMobile}
+                tags={thread?.tags || []}
+                colorAccents={colorAccents}
+                onMoveToFolder={onMoveToFolder}
+                onRemoveFromFolder={onRemoveFromFolder}
+                onAddTagToChat={onAddTagToChat}
+                onRemoveTagFromChat={onRemoveTagFromChat}
+              />
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

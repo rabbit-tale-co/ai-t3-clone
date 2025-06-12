@@ -4,8 +4,35 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { auth } from '../(auth)/auth';
 import Script from 'next/script';
+import { getSidebarThreadsByUserId } from '@/lib/db/queries';
 
 export const experimental_ppr = true;
+
+async function getInitialData(userId: string) {
+  try {
+    const result = await getSidebarThreadsByUserId({
+      userId,
+      limit: 50, // Limit dla SSR
+      startingAfter: null,
+      endingBefore: null,
+    });
+
+    return {
+      threads: result.threads,
+      folders: result.folders,
+      tags: result.tags,
+      hasMore: result.hasMore,
+    };
+  } catch (error) {
+    console.error('Failed to fetch initial data:', error);
+    return {
+      threads: [],
+      folders: [],
+      tags: [],
+      hasMore: false,
+    };
+  }
+}
 
 export default async function Layout({
   children,
@@ -15,6 +42,11 @@ export default async function Layout({
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
   const isCollapsed = cookieStore.get('sidebar:state')?.value !== 'true';
 
+  // Pobierz początkowe dane tylko dla zalogowanych użytkowników
+  const initialData = session?.user?.id
+    ? await getInitialData(session.user.id)
+    : { threads: [], folders: [], tags: [], hasMore: false };
+
   return (
     <>
       <Script
@@ -22,7 +54,7 @@ export default async function Layout({
         strategy="beforeInteractive"
       />
       <SidebarProvider defaultOpen={!isCollapsed}>
-        <AppSidebar user={session?.user} />
+        <AppSidebar session={session} initialData={initialData} />
         <SidebarInset>{children}</SidebarInset>
       </SidebarProvider>
     </>

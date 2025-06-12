@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, startTransition } from 'react';
 import Link from 'next/link';
-import { MessageSquare, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import type { Chat, Tag } from '@/lib/db/schema';
-import { getTagsByChatIdAction } from '@/app/(chat)/actions';
+import type { Chat, Tag, Folder } from '@/lib/db/schema';
+import {
+  getTagsByChatIdAction,
+  addChatToFolderAction,
+  removeChatFromFolderAction,
+  addTagToChatAction,
+  removeTagFromChatAction,
+  getFoldersByUserIdAction,
+  getTagsByUserIdAction,
+} from '@/app/(chat)/actions';
+import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import {
   SidebarMenuAction,
   SidebarMenuButton,
@@ -23,25 +31,82 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  CheckCircleFillIcon,
+  CheckCircleIcon,
   GlobeIcon,
   LockIcon,
   MoreHorizontalIcon,
   ShareIcon,
   TrashIcon,
-} from '@/components/icons';
-import { useChatVisibility } from '@/hooks/use-chat-visibility';
+  TagIcon,
+  MessageSquare,
+  Hash,
+  FolderIcon,
+} from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 
-const tagColors = {
-  blue: 'bg-blue-500/20 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  purple:
-    'bg-purple-500/20 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  green:
-    'bg-green-500/20 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  orange:
-    'bg-orange-500/20 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-  pink: 'bg-pink-500/20 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-  gray: 'bg-gray-500/20 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300',
+// Default color accents if not provided
+const defaultColorAccents = {
+  pink: {
+    light: '#FDF2F8',
+    dark: '#831843',
+    border: '#FBCFE8',
+    accent: '#EC4899',
+  },
+  purple: {
+    light: '#F5F3FF',
+    dark: '#5B21B6',
+    border: '#DDD6FE',
+    accent: '#8B5CF6',
+  },
+  blue: {
+    light: '#EFF6FF',
+    dark: '#1E40AF',
+    border: '#BFDBFE',
+    accent: '#3B82F6',
+  },
+  green: {
+    light: '#ECFDF5',
+    dark: '#065F46',
+    border: '#A7F3D0',
+    accent: '#10B981',
+  },
+  orange: {
+    light: '#FFF7ED',
+    dark: '#9A3412',
+    border: '#FFEDD5',
+    accent: '#F97316',
+  },
+  red: {
+    light: '#FEF2F2',
+    dark: '#991B1B',
+    border: '#FECACA',
+    accent: '#EF4444',
+  },
+  indigo: {
+    light: '#EEF2FF',
+    dark: '#3730A3',
+    border: '#C7D2FE',
+    accent: '#6366F1',
+  },
+  teal: {
+    light: '#F0FDFA',
+    dark: '#115E59',
+    border: '#99F6E4',
+    accent: '#14B8A6',
+  },
+  amber: {
+    light: '#FFFBEB',
+    dark: '#92400E',
+    border: '#FDE68A',
+    accent: '#F59E0B',
+  },
+  gray: {
+    light: '#F9FAFB',
+    dark: '#1F2937',
+    border: '#E5E7EB',
+    accent: '#6B7280',
+  },
 };
 
 interface ChatItemProps {
@@ -49,6 +114,28 @@ interface ChatItemProps {
   isActive: boolean;
   onDelete: (chatId: string) => void;
   setOpenMobile: (open: boolean) => void;
+  tags?: Tag[]; // Optional tags prop - if provided, won't fetch tags
+  colorAccents?: Record<
+    string,
+    {
+      light: string;
+      dark: string;
+      border: string;
+      accent: string;
+    }
+  >;
+  onMoveToFolder?: (
+    chatId: string,
+    folderId: string,
+    folderName: string,
+    folderColor: string,
+  ) => void;
+  onRemoveFromFolder?: (chatId: string) => void;
+  onAddTagToChat?: (
+    chatId: string,
+    tag: { id: string; label: string; color: string; userId: string },
+  ) => void;
+  onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
 }
 
 export const ChatItem = memo(
@@ -57,144 +144,543 @@ export const ChatItem = memo(
     isActive,
     onDelete,
     setOpenMobile,
+    tags: providedTags,
+    colorAccents,
+    onMoveToFolder,
+    onRemoveFromFolder,
+    onAddTagToChat,
+    onRemoveTagFromChat,
   }: ChatItemProps) {
-    const [chatTags, setChatTags] = useState<Tag[]>([]);
-    const [loadingTags, setLoadingTags] = useState(false);
+    const [chatTags, setChatTags] = useState<Tag[]>(providedTags || []);
+    const [availableFolders, setAvailableFolders] = useState<Folder[]>([]);
+    const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+    const [loadingFolders, setLoadingFolders] = useState(false);
     const { visibilityType, setVisibilityType } = useChatVisibility({
       chatId: chat.id,
       initialVisibilityType: chat.visibility,
     });
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
 
+    // Use provided colorAccents or fallback to defaults
+    const activeColorAccents = colorAccents || defaultColorAccents;
+
+    // Function to get tag styles based on color with better contrast
+    const getTagStyles = (tagColor: string) => {
+      const colorInfo =
+        activeColorAccents[tagColor as keyof typeof activeColorAccents] ||
+        activeColorAccents.gray;
+
+      // Convert hex to rgba with opacity
+      const hexToRgba = (hex: string, opacity: number) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return hex;
+        const r = Number.parseInt(result[1], 16);
+        const g = Number.parseInt(result[2], 16);
+        const b = Number.parseInt(result[3], 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      };
+
+      return {
+        backgroundColor: hexToRgba(colorInfo.accent, 0.15),
+        color: colorInfo.accent,
+        borderColor: hexToRgba(colorInfo.accent, 0.3),
+        fontWeight: '500',
+      };
+    };
+
+    // Only fetch tags if not provided as props
     useEffect(() => {
+      if (providedTags) {
+        setChatTags(providedTags);
+        return;
+      }
+
       let mounted = true;
       const fetchTags = async () => {
-        setLoadingTags(true);
         try {
           const tags = await getTagsByChatIdAction(chat.id);
-          if (mounted) setChatTags(tags as Tag[]);
+          if (mounted) {
+            setChatTags(tags as Tag[]);
+          }
         } catch (error) {
           console.error(`Failed to fetch tags for chat ${chat.title}:`, error);
-        } finally {
-          if (mounted) setLoadingTags(false);
         }
       };
       fetchTags();
       return () => {
         mounted = false;
       };
-    }, [chat.id]);
+    }, [chat.id, chat.title, providedTags]);
+
+    const loadFoldersAndTags = async () => {
+      if (!userId) return;
+
+      setLoadingFolders(true);
+      try {
+        const folders = await getFoldersByUserIdAction(userId);
+        const tags = await getTagsByUserIdAction(userId);
+        setAvailableFolders(folders);
+        setAvailableTags(tags);
+      } catch (error) {
+        console.error('Failed to load folders and tags:', error);
+      } finally {
+        setLoadingFolders(false);
+      }
+    };
+
+    const handleAddToFolder = async (folderId: string) => {
+      const folder = availableFolders.find((f) => f.id === folderId);
+
+      // Optimistic update UI natychmiast
+      if (onMoveToFolder && folder && chat.id && folderId) {
+        try {
+          startTransition(() => {
+            onMoveToFolder(
+              chat.id,
+              folderId,
+              folder.name,
+              folder.color || 'blue',
+            );
+          });
+        } catch (error) {
+          console.error('Optimistic update failed:', error);
+        }
+      }
+
+      try {
+        await addChatToFolderAction({ chatId: chat.id, folderId });
+        toast.success('Chat added to folder');
+      } catch (error) {
+        // Cofnij optimistic update w przypadku błędu
+        if (onRemoveFromFolder && chat.id) {
+          try {
+            startTransition(() => {
+              onRemoveFromFolder(chat.id);
+            });
+          } catch (rollbackError) {
+            console.error(
+              'Failed to rollback optimistic update:',
+              rollbackError,
+            );
+          }
+        }
+        console.error('Failed to add chat to folder:', error);
+        toast.error('Failed to add chat to folder');
+      }
+    };
+
+    const handleRemoveFromFolder = async () => {
+      const currentFolderId = chat.folderId;
+      const currentFolder = availableFolders.find(
+        (f) => f.id === currentFolderId,
+      );
+
+      // Optimistic update UI natychmiast
+      if (onRemoveFromFolder && chat.id) {
+        try {
+          startTransition(() => {
+            onRemoveFromFolder(chat.id);
+          });
+        } catch (error) {
+          console.error('Optimistic remove from folder failed:', error);
+        }
+      }
+
+      try {
+        await removeChatFromFolderAction(chat.id);
+
+        toast.success('Chat removed from folder');
+      } catch (error) {
+        // Cofnij optimistic update w przypadku błędu
+        if (onMoveToFolder && currentFolder && currentFolderId && chat.id) {
+          try {
+            startTransition(() => {
+              onMoveToFolder(
+                chat.id,
+                currentFolderId,
+                currentFolder.name,
+                currentFolder.color || 'blue',
+              );
+            });
+          } catch (rollbackError) {
+            console.error(
+              'Failed to rollback remove from folder:',
+              rollbackError,
+            );
+          }
+        }
+        console.error('Failed to remove chat from folder:', error);
+        toast.error('Failed to remove chat from folder');
+      }
+    };
+
+    const handleAddTag = async (tagId: string) => {
+      const tag = availableTags.find((t) => t.id === tagId);
+
+      // Optimistic update UI natychmiast
+      if (onAddTagToChat && tag && chat.id) {
+        try {
+          startTransition(() => {
+            onAddTagToChat(chat.id, {
+              id: tag.id,
+              label: tag.label,
+              color: tag.color,
+              userId: tag.userId,
+            });
+            setChatTags((prev) => [...prev, tag]);
+          });
+        } catch (error) {
+          console.error('Optimistic add tag failed:', error);
+        }
+      }
+
+      try {
+        await addTagToChatAction({ chatId: chat.id, tagId });
+        // Pobierz zaktualizowane tagi z serwera dla pewności
+        const updatedTags = await getTagsByChatIdAction(chat.id);
+        setChatTags(updatedTags as Tag[]);
+        toast.success('Tag added to chat');
+      } catch (error) {
+        // Cofnij optimistic update w przypadku błędu
+        if (tag) {
+          startTransition(() => {
+            setChatTags((prev) => prev.filter((t) => t.id !== tag.id));
+          });
+        }
+        console.error('Failed to add tag to chat:', error);
+        toast.error('Failed to add tag to chat');
+      }
+    };
+
+    const handleRemoveTag = async (tagId: string) => {
+      const tag = availableTags.find((t) => t.id === tagId);
+
+      // Optimistic update UI natychmiast
+      if (onRemoveTagFromChat && chat.id) {
+        try {
+          startTransition(() => {
+            onRemoveTagFromChat(chat.id, tagId);
+            setChatTags((prev) => prev.filter((t) => t.id !== tagId));
+          });
+        } catch (error) {
+          console.error('Optimistic remove tag failed:', error);
+        }
+      }
+
+      try {
+        await removeTagFromChatAction({ chatId: chat.id, tagId });
+        // Pobierz zaktualizowane tagi z serwera dla pewności
+        const updatedTags = await getTagsByChatIdAction(chat.id);
+        setChatTags(updatedTags as Tag[]);
+        toast.success('Tag removed from chat');
+      } catch (error) {
+        // Cofnij optimistic update w przypadku błędu
+        if (tag) {
+          startTransition(() => {
+            setChatTags((prev) => [...prev, tag]);
+          });
+        }
+        console.error('Failed to remove tag from chat:', error);
+        toast.error('Failed to remove tag from chat');
+      }
+    };
 
     return (
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          asChild
-          isActive={isActive}
-          className={cn(
-            'relative p-2 h-auto rounded-md transition-colors border border-transparent',
-            isActive
-              ? 'bg-pink-500/20 dark:bg-pink-900/30 border-pink-300 dark:border-pink-700'
-              : 'hover:bg-pink-100 dark:hover:bg-black/40 hover:border-pink-200 dark:hover:border-transparent',
-          )}
-        >
-          <Link
-            href={`/chat/${chat.id}`}
-            onClick={() => setOpenMobile(false)}
-            className="peer flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0"
+      <>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            asChild
+            isActive={isActive}
+            className={cn(
+              'relative p-2 h-auto rounded-md transition-colors border border-transparent',
+              isActive
+                ? 'bg-pink-500/20 dark:bg-pink-900/30 border-pink-300 dark:border-pink-700'
+                : 'hover:bg-pink-100 dark:hover:bg-black/40 hover:border-pink-200 dark:hover:border-transparent',
+            )}
           >
-            <MessageSquare className="size-3 sm:size-4 mt-1 text-pink-500 dark:text-pink-400" />
-            <div className="flex-1 min-w-0 pr-8">
-              <p className="text-sm font-medium truncate text-pink-900 dark:text-gray-100">
-                {chat.title}
-              </p>
-              <p className="text-xs text-pink-600 dark:text-pink-300/70 mt-0.5">
-                {new Date(chat.createdAt).toLocaleDateString() ===
-                new Date().toLocaleDateString()
-                  ? new Date(chat.createdAt).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : new Date(chat.createdAt).toLocaleDateString()}
-              </p>
+            <Link
+              href={`/chat/${chat.id}`}
+              onClick={() => setOpenMobile(false)}
+              className="peer flex items-start space-x-1 flex-1 min-w-0"
+            >
+              {/* <MessageSquare className="size-3 sm:size-4 mt-1 text-pink-500 dark:text-pink-400" /> */}
+              <div className="flex-1 min-w-0 pr-2">
+                <p className="text-sm font-medium truncate text-pink-900 dark:text-gray-100">
+                  {chat.title}
+                </p>
+                <p className="text-xs text-pink-600 dark:text-pink-300/70 mt-0.5">
+                  {new Date(chat.createdAt).toLocaleDateString() ===
+                  new Date().toLocaleDateString()
+                    ? new Date(chat.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : new Date(chat.createdAt).toLocaleDateString()}
+                </p>
 
-              {chatTags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {chatTags.map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      variant="outline"
-                      className={cn(
-                        'text-xs rounded-md border-transparent',
-                        tagColors[tag.color as keyof typeof tagColors] ||
-                          tagColors.gray,
-                      )}
-                    >
-                      <Hash className="size-2.5 mr-1" />
-                      {tag.label}
-                    </Badge>
-                  ))}
+                {chatTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {chatTags.map((tag) => (
+                      <Badge
+                        key={tag.id}
+                        variant="outline"
+                        className="text-xs rounded-md border-transparent"
+                        style={getTagStyles(tag.color)}
+                      >
+                        <Hash className="size-2.5 mr-1" />
+                        {tag.label}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Link>
+          </SidebarMenuButton>
+
+          <DropdownMenu
+            modal={true}
+            onOpenChange={(open) => {
+              if (
+                open &&
+                availableFolders.length === 0 &&
+                availableTags.length === 0
+              ) {
+                loadFoldersAndTags();
+              }
+            }}
+          >
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuAction
+                // FIXME: visible when clicked and unclicked
+                showOnHover={!isActive}
+                className="size-7 p-0 text-pink-500 hover:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30"
+              >
+                <MoreHorizontalIcon size={16} />
+                <span className="sr-only">More</span>
+              </SidebarMenuAction>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent side="bottom" align="end" className="w-64 p-2">
+              {/* Organization Section */}
+              <div className="mb-3">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
+                  Organization
                 </div>
-              )}
-            </div>
-          </Link>
-        </SidebarMenuButton>
 
-        <DropdownMenu modal={true}>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuAction
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5"
-              showOnHover={!isActive}
-            >
-              <MoreHorizontalIcon />
-              <span className="sr-only">More</span>
-            </SidebarMenuAction>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent side="bottom" align="end">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="cursor-pointer">
-                <ShareIcon />
-                <span>Share</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem
-                    className="cursor-pointer flex-row justify-between"
-                    onClick={() => setVisibilityType('private')}
-                  >
-                    <div className="flex flex-row gap-2 items-center">
-                      <LockIcon size={12} />
-                      <span>Private</span>
+                {/* Current Status Display */}
+                <div className="px-2 mb-2 space-y-1">
+                  {chat.folderId && (
+                    <div className="text-xs text-muted-foreground">
+                      📁 Currently in a folder
                     </div>
-                    {visibilityType === 'private' ? (
-                      <CheckCircleFillIcon />
-                    ) : null}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer flex-row justify-between"
-                    onClick={() => setVisibilityType('public')}
-                  >
-                    <div className="flex flex-row gap-2 items-center">
-                      <GlobeIcon />
-                      <span>Public</span>
+                  )}
+                  {chatTags.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      🏷️ {chatTags.length} tag{chatTags.length > 1 ? 's' : ''}{' '}
+                      assigned
                     </div>
-                    {visibilityType === 'public' ? (
-                      <CheckCircleFillIcon />
-                    ) : null}
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+                  )}
+                </div>
 
-            <DropdownMenuItem
-              className="cursor-pointer text-destructive focus:bg-destructive/15 focus:text-destructive dark:text-red-500"
-              onSelect={() => onDelete(chat.id)}
-            >
-              <TrashIcon />
-              <span>Delete</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
+                {/* Folder Management */}
+                <div className="space-y-1">
+                  {chat.folderId ? (
+                    <DropdownMenuItem
+                      className="cursor-pointer bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-md"
+                      onClick={handleRemoveFromFolder}
+                    >
+                      <FolderIcon
+                        size={16}
+                        className="mr-2 text-amber-600 dark:text-amber-400"
+                      />
+                      <span className="text-amber-800 dark:text-amber-200">
+                        Remove from folder
+                      </span>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="cursor-pointer">
+                        <FolderIcon
+                          size={16}
+                          className="mr-2 text-blue-600 dark:text-blue-400"
+                        />
+                        <span>Move to folder</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent className="w-56">
+                          {loadingFolders ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              Loading folders...
+                            </div>
+                          ) : availableFolders.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              No folders available
+                            </div>
+                          ) : (
+                            availableFolders.map((folder) => (
+                              <DropdownMenuItem
+                                key={folder.id}
+                                className="cursor-pointer"
+                                onClick={() => handleAddToFolder(folder.id)}
+                              >
+                                <FolderIcon
+                                  size={16}
+                                  className="mr-2"
+                                  style={{
+                                    color: (
+                                      activeColorAccents[
+                                        folder.color as keyof typeof activeColorAccents
+                                      ] || activeColorAccents.gray
+                                    ).accent,
+                                  }}
+                                />
+                                <span>{folder.name}</span>
+                              </DropdownMenuItem>
+                            ))
+                          )}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                  )}
+
+                  {/* Tag Management */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer">
+                      <TagIcon
+                        size={16}
+                        className="mr-2 text-purple-600 dark:text-purple-400"
+                      />
+                      <span>Manage tags</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                        {loadingFolders ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            Loading tags...
+                          </div>
+                        ) : availableTags.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            No tags available
+                          </div>
+                        ) : (
+                          availableTags.map((tag) => {
+                            const isAlreadyAdded = chatTags.some(
+                              (t) => t.id === tag.id,
+                            );
+                            return (
+                              <DropdownMenuItem
+                                key={tag.id}
+                                className={cn(
+                                  'cursor-pointer flex items-center justify-between',
+                                )}
+                                onClick={() => {
+                                  if (isAlreadyAdded) {
+                                    handleRemoveTag(tag.id);
+                                  } else {
+                                    handleAddTag(tag.id);
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center">
+                                  <div className="mr-2 flex items-center">
+                                    <Hash
+                                      size={14}
+                                      style={{
+                                        color: (
+                                          activeColorAccents[
+                                            tag.color as keyof typeof activeColorAccents
+                                          ] || activeColorAccents.gray
+                                        ).accent,
+                                      }}
+                                    />
+                                  </div>
+                                  <span>{tag.label}</span>
+                                </div>
+                                {isAlreadyAdded && (
+                                  <CheckCircleIcon
+                                    size={14}
+                                    className="text-green-500"
+                                  />
+                                )}
+                              </DropdownMenuItem>
+                            );
+                          })
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                </div>
+              </div>
+
+              {/* Sharing Section */}
+              <div className="border-t pt-3 mb-3">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
+                  Sharing
+                </div>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer">
+                    <ShareIcon
+                      size={16}
+                      className="mr-2 text-green-600 dark:text-green-400"
+                    />
+                    <span>Visibility</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {visibilityType === 'private' ? 'Private' : 'Public'}
+                    </span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setVisibilityType('private')}
+                      >
+                        <LockIcon size={16} className="mr-2 text-inherit" />
+                        <span>Private</span>
+                        {visibilityType === 'private' && (
+                          <CheckCircleIcon
+                            size={16}
+                            className="ml-auto text-green-500"
+                          />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setVisibilityType('public')}
+                      >
+                        <GlobeIcon size={16} className="mr-2 text-inherit" />
+                        <span>Public</span>
+                        {visibilityType === 'public' && (
+                          <CheckCircleIcon
+                            size={16}
+                            className="ml-auto text-green-500"
+                          />
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </div>
+
+              {/* Danger Zone */}
+              <div className="border-t pt-2">
+                <div className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide mb-2 px-2">
+                  Danger Zone
+                </div>
+                <DropdownMenuItem
+                  className="cursor-pointer focus:bg-red-50 dark:focus:bg-red-900/20"
+                  onSelect={() => onDelete(chat.id)}
+                >
+                  <TrashIcon size={16} className="mr-2 text-red-500" />
+                  <span className="text-red-600 dark:text-red-400">
+                    Delete chat
+                  </span>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </>
     );
   },
   (prev, next) =>

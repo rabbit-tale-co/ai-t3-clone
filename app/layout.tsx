@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 
 import './globals.css';
 import { SessionProvider } from 'next-auth/react';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chat.vercel.ai'),
@@ -69,6 +70,10 @@ export default async function RootLayout({
             __html: THEME_COLOR_SCRIPT,
           }}
         />
+        <Script
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className="antialiased">
         <ThemeProvider
@@ -77,7 +82,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Toaster position="top-center" richColors />
+          <Toaster position="top-right" richColors />
           <SessionProvider>{children}</SessionProvider>
         </ThemeProvider>
       </body>

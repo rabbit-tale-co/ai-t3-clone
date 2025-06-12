@@ -10,11 +10,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import {
-  CheckCircleFillIcon,
+  CheckCircleIcon,
   ChevronDownIcon,
   GlobeIcon,
   LockIcon,
-} from './icons';
+} from 'lucide-react';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 
 export type VisibilityType = 'private' | 'public';
@@ -64,14 +64,14 @@ export function VisibilitySelector({
       <DropdownMenuTrigger
         asChild
         className={cn(
-          'w-fit data-[state=open]:bg-accent data-[state=open]:text-accent-foreground',
+          'w-fit data-[state=open]:!bg-accent data-[state=open]:!text-accent-foreground',
           className,
         )}
       >
         <Button
           data-testid="visibility-selector"
           variant="outline"
-          className="hidden md:flex md:px-2 md:h-[34px]"
+          className="hidden md:flex"
         >
           {selectedVisibility?.icon}
           {selectedVisibility?.label}
@@ -100,7 +100,7 @@ export function VisibilitySelector({
               )}
             </div>
             <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100">
-              <CheckCircleFillIcon />
+              <CheckCircleIcon />
             </div>
           </DropdownMenuItem>
         ))}

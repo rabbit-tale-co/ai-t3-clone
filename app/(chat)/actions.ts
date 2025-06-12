@@ -14,6 +14,14 @@ import {
   getTagsByChatId,
   getTagsByUserId,
   updateChatVisiblityById,
+  getChatById,
+  addTagToChat,
+  removeTagFromChat,
+  removeChatFromFolder,
+  updateChatFolderId,
+  getSidebarThreadsByUserId,
+  deleteFolderById,
+  deleteTagById,
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
@@ -205,6 +213,119 @@ export async function deleteChatAction(chatId: string) {
     return { success: true };
   } catch (error) {
     console.error('Server Action: Failed to delete chat:', error);
+    throw error;
+  }
+}
+
+// Akcja do dodawania czatu do folderu
+export async function addChatToFolderAction({
+  chatId,
+  folderId,
+}: {
+  chatId: string;
+  folderId: string;
+}) {
+  try {
+    await updateChatFolderId({ chatId, folderId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to add chat to folder:', error);
+    throw error;
+  }
+}
+
+// Akcja do usuwania czatu z folderu
+export async function removeChatFromFolderAction(chatId: string) {
+  try {
+    await removeChatFromFolder({ chatId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to remove chat from folder:', error);
+    throw error;
+  }
+}
+
+// Akcja do dodawania tagu do czatu
+export async function addTagToChatAction({
+  chatId,
+  tagId,
+}: {
+  chatId: string;
+  tagId: string;
+}) {
+  try {
+    await addTagToChat({ chatId, tagId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to add tag to chat:', error);
+    throw error;
+  }
+}
+
+// Akcja do usuwania tagu z czatu
+export async function removeTagFromChatAction({
+  chatId,
+  tagId,
+}: {
+  chatId: string;
+  tagId: string;
+}) {
+  try {
+    await removeTagFromChat({ chatId, tagId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to remove tag from chat:', error);
+    throw error;
+  }
+}
+
+// Akcja do usuwania folderu
+export async function deleteFolderAction(folderId: string) {
+  'use server';
+
+  try {
+    await deleteFolderById({ folderId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to delete folder:', error);
+    throw error;
+  }
+}
+
+// Akcja do usuwania tagu
+export async function deleteTagAction(tagId: string) {
+  'use server';
+
+  try {
+    await deleteTagById({ tagId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to delete tag:', error);
+    throw error;
+  }
+}
+
+// Akcja do pobierania kompletnych danych sidebar - "threads" z wszystkimi danymi
+export async function getSidebarThreadsAction({
+  userId,
+  limit = 50,
+  startingAfter,
+  endingBefore,
+}: {
+  userId: string;
+  limit?: number;
+  startingAfter?: string | null;
+  endingBefore?: string | null;
+}) {
+  try {
+    return await getSidebarThreadsByUserId({
+      userId,
+      limit,
+      startingAfter,
+      endingBefore,
+    });
+  } catch (error) {
+    console.error('Server Action: Failed to get sidebar threads:', error);
     throw error;
   }
 }

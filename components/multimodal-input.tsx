@@ -16,7 +16,12 @@ import {
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
-import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
+import {
+  ArrowUpIcon,
+  PaperclipIcon,
+  StopCircleIcon,
+  ArrowDownIcon,
+} from 'lucide-react';
 import { PreviewAttachment } from './preview-attachment';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -24,7 +29,6 @@ import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import { ModelSelector } from './model-selector';
@@ -221,7 +225,7 @@ function PureMultimodalInput({
                 scrollToBottom();
               }}
             >
-              <ArrowDown />
+              <ArrowDownIcon />
             </Button>
           </motion.div>
         )}
@@ -379,7 +383,7 @@ function PureStopButton({
         setMessages((messages) => messages);
       }}
     >
-      <StopIcon size={14} />
+      <StopCircleIcon size={14} />
     </Button>
   );
 }

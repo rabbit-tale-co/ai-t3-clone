@@ -3,7 +3,14 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
-import { useState, useMemo, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useOptimistic,
+  startTransition,
+} from 'react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -22,66 +29,122 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
-import { LoaderIcon, Hash, Folder as FolderIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { LoaderIcon } from 'lucide-react';
 import useSWRInfinite from 'swr/infinite';
 import { useSWRConfig } from 'swr';
 import { useSession } from 'next-auth/react'; // For NextAuth session data
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+// Import new dialog components
+import { ManageFoldersDialog } from './manage-folders-dialog';
+import { ManageTagsDialog } from './manage-tags-dialog';
 
 // Import Drizzle schema types
 import type { Chat, Folder, Tag as TagType } from '@/lib/db/schema';
 
 // Import NEW Server Actions
 import {
-  createFolderAction, // Renamed from createFolder
-  createTagAction, // Renamed from createTag
-  getFoldersByUserIdAction, // Renamed from getFoldersByUserId
-  getTagsByUserIdAction, // Renamed from getTagsByUserId
-  deleteChatAction, // Renamed from deleteChatById
-} from '@/app/(chat)/actions'; // --- CHANGED IMPORT PATH
+  createFolderAction,
+  createTagAction,
+  deleteChatAction,
+  deleteFolderAction,
+  deleteTagAction,
+} from '@/app/(chat)/actions';
 
 // Import the new sub-components
 import { FolderItem } from './folder-item';
 import { UnfiledChatsList } from './unfilled-chats';
-import { ChatItem } from './chat-item'; // Used for search results
-import { getChatHistoryPaginationKey } from '@/lib/constants';
+import { ChatItem } from './chat-item';
+import {
+  clearLocalStorageByPrefix,
+  setSidebarCache,
+  getSidebarCache,
+  cn,
+} from '@/lib/utils';
 
 // --- CONSTANTS ---
 const PAGE_SIZE = 20;
 
-// --- COLOR MAPS (Moved outside to avoid re-renders) ---
-const tagColors = {
-  blue: 'bg-blue-500/20 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  purple:
-    'bg-purple-500/20 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  green:
-    'bg-green-500/20 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  orange:
-    'bg-orange-500/20 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-  pink: 'bg-pink-500/20 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-  gray: 'bg-gray-500/20 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300',
-};
+interface InitialData {
+  threads: SidebarThread[];
+  folders: Folder[];
+  tags: TagType[];
+  hasMore: boolean;
+}
 
-const folderColors = {
-  blue: 'text-blue-600 dark:text-blue-400',
-  purple: 'text-purple-600 dark:text-purple-400',
-  green: 'text-green-600 dark:text-green-400',
-  orange: 'text-orange-600 dark:text-orange-400',
-  pink: 'text-pink-600 dark:text-pink-400',
-  red: 'text-red-600 dark:text-red-400',
+interface SidebarThread extends Chat {
+  folder: {
+    name: string;
+    color: string;
+  } | null;
+  tags: Array<{
+    id: string;
+    label: string;
+    color: string;
+    userId: string;
+  }>;
+}
+
+const colorAccents = {
+  pink: {
+    light: '#FDF2F8',
+    dark: '#831843',
+    border: '#FBCFE8',
+    accent: '#EC4899',
+  },
+  purple: {
+    light: '#F5F3FF',
+    dark: '#5B21B6',
+    border: '#DDD6FE',
+    accent: '#8B5CF6',
+  },
+  blue: {
+    light: '#EFF6FF',
+    dark: '#1E40AF',
+    border: '#BFDBFE',
+    accent: '#3B82F6',
+  },
+  green: {
+    light: '#ECFDF5',
+    dark: '#065F46',
+    border: '#A7F3D0',
+    accent: '#10B981',
+  },
+  orange: {
+    light: '#FFF7ED',
+    dark: '#9A3412',
+    border: '#FFEDD5',
+    accent: '#F97316',
+  },
+  red: {
+    light: '#FEF2F2',
+    dark: '#991B1B',
+    border: '#FECACA',
+    accent: '#EF4444',
+  },
+  indigo: {
+    light: '#EEF2FF',
+    dark: '#3730A3',
+    border: '#C7D2FE',
+    accent: '#6366F1',
+  },
+  teal: {
+    light: '#F0FDFA',
+    dark: '#115E59',
+    border: '#99F6E4',
+    accent: '#14B8A6',
+  },
+  amber: {
+    light: '#FFFBEB',
+    dark: '#92400E',
+    border: '#FDE68A',
+    accent: '#F59E0B',
+  },
+  gray: {
+    light: '#F9FAFB',
+    dark: '#1F2937',
+    border: '#E5E7EB',
+    accent: '#6B7280',
+  },
 };
 
 export function SidebarHistory({
@@ -92,6 +155,7 @@ export function SidebarHistory({
   setShowCreateFolderDialog,
   showCreateTagDialog,
   setShowCreateTagDialog,
+  initialData,
 }: {
   user: User | undefined;
   searchTerm?: string;
@@ -100,6 +164,7 @@ export function SidebarHistory({
   setShowCreateFolderDialog?: (show: boolean) => void;
   showCreateTagDialog?: boolean;
   setShowCreateTagDialog?: (show: boolean) => void;
+  initialData?: InitialData;
 }) {
   const router = useRouter();
   const params = useParams();
@@ -111,11 +176,77 @@ export function SidebarHistory({
   // The `user` prop should ideally be `session.user` for consistency if coming from NextAuth.
   const userId = session?.user?.id;
 
-  // States for fetched data
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
-  const [tags, setTags] = useState<TagType[]>([]);
-  const [loadingTags, setLoadingTags] = useState(false);
+  // Najpierw sprawdzamy cache, potem initialData
+  const getCachedOrInitialData = () => {
+    if (!userId) return { folders: [], tags: [], threads: [] };
+
+    try {
+      const cached = getSidebarCache(userId);
+
+      // Priorytet: 1. Cache, 2. InitialData, 3. Puste array
+      return {
+        folders: Array.isArray((cached as any)?.folders)
+          ? (cached as any).folders
+          : initialData?.folders || [],
+        tags: Array.isArray((cached as any)?.tags)
+          ? (cached as any).tags
+          : initialData?.tags || [],
+        threads: Array.isArray((cached as any)?.threads)
+          ? (cached as any).threads
+          : initialData?.threads || [],
+      };
+    } catch (error) {
+      console.error('Error getting cached data:', error);
+      return {
+        folders: initialData?.folders || [],
+        tags: initialData?.tags || [],
+        threads: initialData?.threads || [],
+      };
+    }
+  };
+
+  const initialCachedData = getCachedOrInitialData();
+
+  // Używamy useOptimistic dla folders i tags
+  const [folders, optimisticFolders] = useOptimistic(
+    initialCachedData.folders,
+    (
+      state: Folder[],
+      action: { type: 'add' | 'delete' | 'update'; folder: Folder },
+    ) => {
+      switch (action.type) {
+        case 'add':
+          return [...state, action.folder];
+        case 'delete':
+          return state.filter((f) => f.id !== action.folder.id);
+        case 'update':
+          return state.map((f) =>
+            f.id === action.folder.id ? action.folder : f,
+          );
+        default:
+          return state;
+      }
+    },
+  );
+
+  const [tags, optimisticTags] = useOptimistic(
+    initialCachedData.tags,
+    (
+      state: TagType[],
+      action: { type: 'add' | 'delete' | 'update'; tag: TagType },
+    ) => {
+      switch (action.type) {
+        case 'add':
+          return [...state, action.tag];
+        case 'delete':
+          return state.filter((t) => t.id !== action.tag.id);
+        case 'update':
+          return state.map((t) => (t.id === action.tag.id ? action.tag : t));
+        default:
+          return state;
+      }
+    },
+  );
 
   // UI States
   const [expandedFolders, setExpandedFolders] = useState<
@@ -132,6 +263,15 @@ export function SidebarHistory({
   const [deleteId, setDeleteId] = useState<string | null>(null); // State to hold chat ID to delete
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); // State to control delete dialog visibility
 
+  // Add states for folder and tag deletion
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
+  const [deleteFolderName, setDeleteFolderName] = useState('');
+  const [showDeleteFolderDialog, setShowDeleteFolderDialog] = useState(false);
+
+  const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
+  const [deleteTagLabel, setDeleteTagLabel] = useState('');
+  const [showDeleteTagDialog, setShowDeleteTagDialog] = useState(false);
+
   // Use either external state or internal state for dialogs
   const actualShowCreateFolderDialog =
     showCreateFolderDialog ?? internalShowCreateFolderDialog;
@@ -142,42 +282,152 @@ export function SidebarHistory({
   const actualSetShowCreateTagDialog =
     setShowCreateTagDialog ?? setInternalShowCreateTagDialog;
 
-  // SWR for all chats (primarily for global search and unfiled chats display)
+  // Sprawdź czy mamy dane w cache żeby zdecydować czy pobierać z API
+  const hasDataInCache =
+    initialCachedData.threads.length > 0 || initialData?.threads;
+
+  // SWR for all threads (includes chats with tags and folder data)
   const {
-    data: allChatsPages,
+    data: allThreadsPages,
     size,
     setSize,
-    isLoading: isLoadingChats,
-  } = useSWRInfinite(getChatHistoryPaginationKey, async (url) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch unfiled chats');
-    return res.json();
-  });
-
-  const { isValidating: isValidatingChats } = useSWRInfinite(
+    isLoading: isLoadingThreads,
+    mutate: mutateThreads,
+  } = useSWRInfinite(
     (pageIndex, previousData) => {
       // Only fetch if user is logged in
       if (!userId) return null;
       if (previousData && !previousData.hasMore) return null;
 
-      const lastId = previousData?.chats.slice(-1)[0]?.id || '';
-      return `/api/history?limit=${PAGE_SIZE}&ending_before=${lastId}`;
+      const lastId = previousData?.threads.slice(-1)[0]?.id || '';
+      return pageIndex === 0 && !lastId
+        ? `/api/threads?limit=${PAGE_SIZE}`
+        : `/api/threads?limit=${PAGE_SIZE}&ending_before=${lastId}`;
     },
     async (url) => {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch chat history');
-      return response.json();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch threads');
+      return await res.json();
     },
     {
+      // Użyj dane z cache/initialData jako fallbackData
+      fallbackData: hasDataInCache
+        ? [
+            {
+              threads: initialCachedData.threads || initialData?.threads || [],
+              folders: initialCachedData.folders || initialData?.folders || [],
+              tags: initialCachedData.tags || initialData?.tags || [],
+              hasMore: initialData?.hasMore || false,
+            },
+          ]
+        : undefined,
+      revalidateOnMount: !hasDataInCache, // Nie rewaliduj jeśli mamy dane w cache
       revalidateOnFocus: false,
-      revalidateFirstPage: true,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+      revalidateIfStale: false,
+      refreshInterval: 0,
     },
   );
 
-  // Flatten all chats from SWR pages into a single array
+  // Flatten all threads from SWR pages into a single array
+  const allThreads = useMemo(() => {
+    try {
+      const threads = allThreadsPages
+        ? allThreadsPages.flatMap((page) => page.threads || [])
+        : [];
+      return threads.filter((thread) => thread?.id); // Filter out invalid threads
+    } catch (error) {
+      console.error('Error flattening threads:', error);
+      return [];
+    }
+  }, [allThreadsPages]);
+
+  // Optimistic updates dla threads (chats)
+  const [allThreadsOptimistic, optimisticThreads] = useOptimistic(
+    allThreads || [],
+    (
+      state: SidebarThread[],
+      action: {
+        type:
+          | 'moveToFolder'
+          | 'removeFromFolder'
+          | 'delete'
+          | 'addTag'
+          | 'removeTag';
+        chatId: string;
+        folderId?: string | null;
+        folder?: { name: string; color: string } | null;
+        tagId?: string;
+        tag?: { id: string; label: string; color: string; userId: string };
+      },
+    ) => {
+      if (!Array.isArray(state)) {
+        console.warn('OptimisticThreads: state is not an array', state);
+        return [];
+      }
+
+      try {
+        switch (action.type) {
+          case 'moveToFolder':
+            return state.map((thread) =>
+              thread.id === action.chatId
+                ? {
+                    ...thread,
+                    folderId: action.folderId,
+                    folder: action.folder,
+                  }
+                : thread,
+            );
+          case 'removeFromFolder':
+            return state.map((thread) =>
+              thread.id === action.chatId
+                ? { ...thread, folderId: null, folder: null }
+                : thread,
+            );
+          case 'delete':
+            return state.filter((thread) => thread.id !== action.chatId);
+          case 'addTag':
+            return state.map((thread) =>
+              thread.id === action.chatId && action.tag
+                ? { ...thread, tags: [...(thread.tags || []), action.tag] }
+                : thread,
+            );
+          case 'removeTag':
+            return state.map((thread) =>
+              thread.id === action.chatId
+                ? {
+                    ...thread,
+                    tags: (thread.tags || []).filter(
+                      (tag) => tag.id !== action.tagId,
+                    ),
+                  }
+                : thread,
+            );
+          default:
+            return state;
+        }
+      } catch (error) {
+        console.error('OptimisticThreads reducer error:', error, {
+          state,
+          action,
+        });
+        return state;
+      }
+    },
+  );
+
+  // Convert threads to simple chats for backward compatibility
   const allChats = useMemo(() => {
-    return allChatsPages ? allChatsPages.flatMap((page) => page.chats) : [];
-  }, [allChatsPages]);
+    return allThreadsOptimistic.map((thread) => ({
+      id: thread.id,
+      title: thread.title,
+      createdAt: thread.createdAt,
+      userId: thread.userId,
+      visibility: thread.visibility,
+      folderId: thread.folderId,
+    }));
+  }, [allThreadsOptimistic]);
 
   // Unfiled chats: derived from allChats for the dedicated "Unfiled Chats" section
   const unfiledChats = useMemo(() => {
@@ -193,43 +443,89 @@ export function SidebarHistory({
     );
   }, [allChats, searchTerm]);
 
-  // Effect to fetch folders and tags on component mount or user ID change
+  // Effect to clear cache when user changes
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (!userId) {
-        // If user is not logged in, clear existing data and stop loading
-        setFolders([]);
-        setTags([]);
-        return;
-      }
-
-      setLoadingFolders(true);
-      try {
-        // Call Server Action:
-        const fetchedFolders = await getFoldersByUserIdAction(userId);
-        setFolders(fetchedFolders);
-      } catch (error) {
-        console.error('Failed to fetch folders:', error);
-        toast.error('Failed to load folders');
-      } finally {
-        setLoadingFolders(false);
-      }
-
-      setLoadingTags(true);
-      try {
-        // Call Server Action:
-        const fetchedTags = await getTagsByUserIdAction(userId);
-        setTags(fetchedTags as TagType[]);
-      } catch (error) {
-        console.error('Failed to fetch tags:', error);
-        toast.error('Failed to load tags');
-      } finally {
-        setLoadingTags(false);
+    return () => {
+      if (typeof window !== 'undefined') {
+        Reflect.deleteProperty(window as any, 'addChatToSidebarCache');
       }
     };
+  }, [userId]);
 
-    fetchInitialData();
-  }, [userId]); // Re-fetch when userId (from session) changes
+  // Effect to save data to cache when they change
+  useEffect(() => {
+    if (!userId) {
+      // Wyczyść cache poprzedniego użytkownika
+      clearLocalStorageByPrefix('sidebar_data_');
+      clearLocalStorageByPrefix('cache_timestamp_');
+      return;
+    }
+
+    // Zapisz dane do cache gdy się zmienią
+    if (folders.length > 0 || tags.length > 0) {
+      const cacheData = {
+        threads: allThreadsOptimistic,
+        folders: folders,
+        tags: tags,
+        hasMore: false,
+      };
+      setSidebarCache(userId, cacheData);
+    }
+  }, [userId, folders, tags, allThreadsOptimistic]);
+
+  // Funkcja do dodawania nowego czatu do cache
+  const addChatToCache = useCallback(
+    (newChat: Chat) => {
+      // Convert Chat to SidebarThread format
+      const newThread: SidebarThread = {
+        ...newChat,
+        folder: null,
+        tags: [],
+      };
+
+      mutateThreads((pages) => {
+        if (!pages || pages.length === 0) {
+          return [
+            {
+              threads: [newThread],
+              folders: folders,
+              tags: tags,
+              hasMore: false,
+            },
+          ];
+        }
+
+        // Dodaj nowy thread na początek pierwszej strony
+        const newPages = [...pages];
+        newPages[0] = {
+          ...newPages[0],
+          threads: [newThread, ...newPages[0].threads],
+        };
+
+        return newPages;
+      }, false); // false = nie rewaliduj
+
+      // Zaktualizuj unified cache
+      if (userId) {
+        const updatedThreads = [newThread, ...allThreadsOptimistic];
+        const cacheData = {
+          threads: updatedThreads,
+          folders: folders,
+          tags: tags,
+          hasMore: false,
+        };
+        setSidebarCache(userId, cacheData);
+      }
+    },
+    [mutateThreads, folders, tags, allThreadsOptimistic, userId],
+  );
+
+  // Wyeksportuj funkcję poprzez ref callback (możemy to użyć później)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).addChatToSidebarCache = addChatToCache;
+    }
+  }, [addChatToCache]);
 
   // Handle infinite scroll for global chat history/search
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -239,8 +535,8 @@ export function SidebarHistory({
 
     if (
       isAtBottom &&
-      allChatsPages &&
-      allChatsPages[allChatsPages.length - 1]?.hasMore &&
+      allThreadsPages &&
+      allThreadsPages[allThreadsPages.length - 1]?.hasMore &&
       !searchTerm
     ) {
       setSize(size + 1);
@@ -268,26 +564,57 @@ export function SidebarHistory({
       return;
     }
 
+    // Optimistic update - tworzymy tymczasowy folder
+    const tempFolder = {
+      id: `temp-${Date.now()}`,
+      name: newFolderName,
+      userId: userId,
+      color: newFolderColor || 'blue',
+      createdAt: new Date(),
+    } as Folder;
+
+    // Natychmiast aktualizujemy UI
+    startTransition(() => {
+      optimisticFolders({ type: 'add', folder: tempFolder });
+    });
+
+    setNewFolderName('');
+    setNewFolderColor('blue');
+    actualSetShowCreateFolderDialog(false);
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [tempFolder.id]: true,
+    }));
+
     try {
-      // Call Server Action:
       const createdFolder = await createFolderAction({
-        // Returns single Folder object
-        name: newFolderName,
+        name: tempFolder.name,
         userId: userId,
-        color: newFolderColor,
+        color: tempFolder.color || 'blue',
       });
+
       if (createdFolder) {
-        setFolders((prev) => [...prev, createdFolder]); // Add new folder to state
-        setNewFolderName('');
-        setNewFolderColor('blue');
-        actualSetShowCreateFolderDialog(false);
-        setExpandedFolders((prev) => ({
-          ...prev,
-          [createdFolder.id]: true, // Expand the newly created folder
-        }));
+        // Zastąp tymczasowy folder prawdziwym
+        startTransition(() => {
+          optimisticFolders({ type: 'delete', folder: tempFolder });
+          optimisticFolders({ type: 'add', folder: createdFolder });
+        });
+
+        // Zaktualizuj expanded folders z prawdziwym ID
+        setExpandedFolders((prev) => {
+          const newState = { ...prev };
+          delete newState[tempFolder.id];
+          newState[createdFolder.id] = true;
+          return newState;
+        });
+
         toast.success('Folder created successfully!');
       }
     } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticFolders({ type: 'delete', folder: tempFolder });
+      });
       console.error('Failed to create folder:', error);
       toast.error('Failed to create folder');
     }
@@ -303,24 +630,124 @@ export function SidebarHistory({
       return;
     }
 
+    // Optimistic update - tworzymy tymczasowy tag
+    const tempTag = {
+      id: `temp-${Date.now()}`,
+      label: newTagName,
+      color: newTagColor,
+      userId: userId,
+    } as TagType;
+
+    // Natychmiast aktualizujemy UI
+    startTransition(() => {
+      optimisticTags({ type: 'add', tag: tempTag });
+    });
+
+    setNewTagName('');
+    setNewTagColor('gray');
+    actualSetShowCreateTagDialog(false);
+
     try {
-      // Call Server Action:
       const createdTag = await createTagAction({
-        // Returns single Tag object
-        label: newTagName,
-        color: newTagColor,
+        label: tempTag.label,
+        color: tempTag.color,
         userId: userId,
       });
+
       if (createdTag) {
-        setTags((prev) => [...prev, createdTag]); // Add new tag to state
-        setNewTagName('');
-        setNewTagColor('gray');
-        actualSetShowCreateTagDialog(false);
+        // Zastąp tymczasowy tag prawdziwym
+        startTransition(() => {
+          optimisticTags({ type: 'delete', tag: tempTag });
+          optimisticTags({ type: 'add', tag: createdTag });
+        });
+
         toast.success('Tag created successfully!');
       }
     } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticTags({ type: 'delete', tag: tempTag });
+      });
       console.error('Failed to create tag:', error);
       toast.error('Failed to create tag');
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    // Close manage dialog and open delete confirmation dialog
+    actualSetShowCreateFolderDialog(false);
+    setDeleteFolderId(folderId);
+    setDeleteFolderName(folderName);
+    setShowDeleteFolderDialog(true);
+  };
+
+  const confirmDeleteFolder = async () => {
+    if (!deleteFolderId) return;
+
+    const folderToDelete = folders.find((f) => f.id === deleteFolderId);
+    if (!folderToDelete) return;
+
+    // Optimistic update - usuń folder natychmiast
+    startTransition(() => {
+      optimisticFolders({ type: 'delete', folder: folderToDelete });
+    });
+
+    setShowDeleteFolderDialog(false);
+    setDeleteFolderId(null);
+    setDeleteFolderName('');
+
+    try {
+      await deleteFolderAction(deleteFolderId);
+      toast.success('Folder deleted successfully!');
+
+      // Refresh threads data to update moved chats
+      mutateThreads();
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticFolders({ type: 'add', folder: folderToDelete });
+      });
+      console.error('Failed to delete folder:', error);
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  const handleDeleteTag = (tagId: string, tagLabel: string) => {
+    // Close manage dialog and open delete confirmation dialog
+    actualSetShowCreateTagDialog(false);
+    setDeleteTagId(tagId);
+    setDeleteTagLabel(tagLabel);
+    setShowDeleteTagDialog(true);
+  };
+
+  const confirmDeleteTag = async () => {
+    if (!deleteTagId) return;
+
+    const tagToDelete = tags.find((t) => t.id === deleteTagId);
+    if (!tagToDelete) return;
+
+    // Optimistic update - usuń tag natychmiast
+    startTransition(() => {
+      optimisticTags({ type: 'delete', tag: tagToDelete });
+    });
+
+    setShowDeleteTagDialog(false);
+    setDeleteTagId(null);
+    setDeleteTagLabel('');
+
+    try {
+      await deleteTagAction(deleteTagId);
+      toast.success('Tag deleted successfully!');
+
+      // Refresh threads data to update chats that had this tag
+      mutateThreads();
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticTags({ type: 'add', tag: tagToDelete });
+      });
+      console.error('Failed to delete tag:', error);
+      toast.error('Failed to delete tag');
     }
   };
 
@@ -340,28 +767,23 @@ export function SidebarHistory({
     toast.promise(deletePromise, {
       loading: 'Deleting chat...',
       success: () => {
-        // Optimistically update SWR cache for all chats (used by search and unfiled)
-        mutate(
-          (key) => typeof key === 'string' && key.startsWith('/api/history'),
-          (chatHistories: any) => {
-            if (!chatHistories) return chatHistories;
+        // Optimistically update SWR cache for all threads (used by search and unfiled)
+        mutateThreads(
+          (threadHistories: any) => {
+            if (!threadHistories) return threadHistories;
 
-            return chatHistories.map((chatHistoryPage: any) => ({
-              ...chatHistoryPage,
-              chats: chatHistoryPage.chats.filter(
-                (chat: Chat) => chat.id !== deleteId,
+            return threadHistories.map((threadHistoryPage: any) => ({
+              ...threadHistoryPage,
+              threads: threadHistoryPage.threads.filter(
+                (thread: SidebarThread) => thread.id !== deleteId,
               ),
             }));
           },
           { revalidate: false },
         );
 
-        // Also, re-fetch folders and tags to ensure counts/associations are correct
-        // Call Server Actions:
-        if (userId) {
-          getFoldersByUserIdAction(userId).then(setFolders);
-          getTagsByUserIdAction(userId).then((t) => setTags(t as TagType[]));
-        }
+        // Nie pobieraj ponownie - dane folderów i tagów pozostają bez zmian
+        // Usuwanie czatu nie wpływa na foldery ani tagi, więc cache pozostaje aktualny
 
         return 'Chat deleted successfully';
       },
@@ -375,12 +797,111 @@ export function SidebarHistory({
     setDeleteId(null);
   };
 
-  // Adjusted logic for empty states: check if there are any chats OR folders OR tags
-  const hasEmptyContent =
-    allChats.length === 0 && folders.length === 0 && tags.length === 0;
+  // Optimistic update functions for passing to ChatItem
+  const handleMoveToFolder = useCallback(
+    (
+      chatId: string,
+      folderId: string,
+      folderName: string,
+      folderColor: string,
+    ) => {
+      console.log('handleMoveToFolder called:', {
+        chatId,
+        folderId,
+        folderName,
+        folderColor,
+      });
+      console.log('allThreads length:', allThreads?.length || 0);
+      console.log('optimisticThreads type:', typeof optimisticThreads);
 
-  if (!user) {
-    // Use the `user` prop from NextAuth session
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'moveToFolder',
+            chatId,
+            folderId,
+            folder: { name: folderName, color: folderColor },
+          });
+        });
+        console.log('optimisticThreads call succeeded');
+      } catch (error) {
+        console.error('handleMoveToFolder error:', error);
+        console.error(
+          'Error stack:',
+          error instanceof Error ? error.stack : 'Unknown error',
+        );
+      }
+    },
+    [optimisticThreads, allThreads],
+  );
+
+  const handleRemoveFromFolder = useCallback(
+    (chatId: string) => {
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'removeFromFolder',
+            chatId,
+          });
+        });
+      } catch (error) {
+        console.error('handleRemoveFromFolder error:', error);
+      }
+    },
+    [optimisticThreads],
+  );
+
+  const handleAddTagToChat = useCallback(
+    (
+      chatId: string,
+      tag: { id: string; label: string; color: string; userId: string },
+    ) => {
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'addTag',
+            chatId,
+            tag,
+          });
+        });
+      } catch (error) {
+        console.error('handleAddTagToChat error:', error);
+      }
+    },
+    [optimisticThreads],
+  );
+
+  const handleRemoveTagFromChat = useCallback(
+    (chatId: string, tagId: string) => {
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'removeTag',
+            chatId,
+            tagId,
+          });
+        });
+      } catch (error) {
+        console.error('handleRemoveTagFromChat error:', error);
+      }
+    },
+    [optimisticThreads],
+  );
+
+  // Sprawdź czy ładujemy dodatkowe dane (infinite scroll)
+  const isLoadingMore = allChats.length > 0 && isLoadingThreads && !searchTerm;
+
+  // Sprawdź czy mamy jeszcze stan ładowania (bez danych z SSR lub cache)
+  const isInitialLoading =
+    sessionStatus === 'loading' ||
+    (!initialData && isLoadingThreads && allThreads.length === 0);
+
+  if (!user && sessionStatus !== 'loading') {
+    // Use the `user` prop from NextAuth session - tylko gdy session nie ładuje się
     return (
       <SidebarGroup>
         <SidebarGroupContent>
@@ -392,43 +913,23 @@ export function SidebarHistory({
     );
   }
 
-  // Combined loading state for initial load
-  // `userLoading` (from useUser) is removed since we're using session.user.id
-  if (
-    sessionStatus === 'loading' ||
-    isLoadingChats ||
-    loadingFolders ||
-    loadingTags
-  ) {
+  // Pokaż loading podczas ładowania sesji lub początkowych danych
+  if (isInitialLoading) {
     return (
       <SidebarGroup>
-        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
-          Loading...
-        </div>
         <SidebarGroupContent>
-          <div className="flex flex-col">
-            {[44, 32, 28, 64, 52].map((item) => (
-              <div
-                key={item}
-                className="rounded-md h-8 flex gap-2 px-2 items-center"
-              >
-                <div
-                  className="h-4 rounded-md flex-1 max-w-[var(--skeleton-width)] bg-sidebar-accent-foreground/10"
-                  style={
-                    {
-                      '--skeleton-width': `${item}%`,
-                    } as React.CSSProperties
-                  }
-                />
-              </div>
-            ))}
+          <div className="px-2 py-4 flex justify-center">
+            <LoaderIcon className="size-4 animate-spin text-pink-500" />
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
     );
   }
 
-  // If no content, show prompt to create
+  // If no content, show prompt to create - tylko gdy na pewno załadowane
+  const hasEmptyContent =
+    !isLoadingThreads && allChats.length === 0 && folders.length === 0;
+
   if (hasEmptyContent) {
     return (
       <SidebarGroup>
@@ -448,14 +949,14 @@ export function SidebarHistory({
       onScroll={handleScroll}
     >
       {/* Folders Section */}
-      {folders.length > 0 && (
-        <SidebarGroup className="px-2">
-          <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-            Folders ({folders.length})
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {folders.map((folder) => (
+      <SidebarGroup className="px-2">
+        <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
+          Folders ({folders.length})
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {folders.length > 0 ? (
+              folders.map((folder) => (
                 <FolderItem
                   key={folder.id}
                   folder={folder}
@@ -464,18 +965,36 @@ export function SidebarHistory({
                   onDelete={() => {
                     /* Handle folder delete */
                   }}
+                  colorAccents={colorAccents}
+                  allThreads={allThreadsOptimistic}
+                  onMoveToFolder={handleMoveToFolder}
+                  onRemoveFromFolder={handleRemoveFromFolder}
+                  onAddTagToChat={handleAddTagToChat}
+                  onRemoveTagFromChat={handleRemoveTagFromChat}
                 />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
+              ))
+            ) : (
+              <div className="p-2">
+                <p className="text-xs text-pink-600/70 dark:text-pink-400/70 italic">
+                  No folders yet. Create one to organize your chats!
+                </p>
+              </div>
+            )}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
 
       {/* Unfiled Chats Section */}
       {unfiledChats.length > 0 && !searchTerm && (
         <UnfiledChatsList
           allChats={unfiledChats}
+          allThreads={allThreadsOptimistic}
           onDeleteChat={onDeleteChatClick}
+          colorAccents={colorAccents}
+          onMoveToFolder={handleMoveToFolder}
+          onRemoveFromFolder={handleRemoveFromFolder}
+          onAddTagToChat={handleAddTagToChat}
+          onRemoveTagFromChat={handleRemoveTagFromChat}
         />
       )}
 
@@ -487,29 +1006,41 @@ export function SidebarHistory({
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {filteredSearchChats.map((chat) => (
-                <ChatItem
-                  key={chat.id}
-                  chat={chat}
-                  isActive={isActiveChatId(chat.id)}
-                  onDelete={onDeleteChatClick}
-                  setOpenMobile={setOpenMobile}
-                />
-              ))}
+              {filteredSearchChats.map((chat) => {
+                // Find the corresponding thread to get tags
+                const thread = allThreadsOptimistic.find(
+                  (t) => t.id === chat.id,
+                );
+                return (
+                  <ChatItem
+                    key={chat.id}
+                    chat={chat}
+                    isActive={isActiveChatId(chat.id)}
+                    onDelete={onDeleteChatClick}
+                    setOpenMobile={setOpenMobile}
+                    tags={thread?.tags || []}
+                    colorAccents={colorAccents}
+                    onMoveToFolder={handleMoveToFolder}
+                    onRemoveFromFolder={handleRemoveFromFolder}
+                    onAddTagToChat={handleAddTagToChat}
+                    onRemoveTagFromChat={handleRemoveTagFromChat}
+                  />
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       )}
 
-      {/* Loading States */}
-      {(isLoadingChats || isValidatingChats) && (
+      {/* Loading więcej danych (infinite scroll) */}
+      {isLoadingMore && (
         <div className="flex justify-center py-2">
           <LoaderIcon className="size-4 animate-spin text-pink-500" />
         </div>
       )}
 
-      {/* Empty States */}
-      {!isLoadingChats && allChats.length === 0 && !searchTerm && (
+      {/* Empty States - tylko gdy nie mamy danych */}
+      {!isLoadingThreads && allChats.length === 0 && !searchTerm && (
         <div className="px-4 py-8 text-center">
           <p className="text-sm text-pink-700 dark:text-pink-300">
             No chats yet. Start a new conversation!
@@ -525,171 +1056,103 @@ export function SidebarHistory({
         </div>
       )}
 
-      {/* Folder Creation Dialog */}
-      <Dialog
+      {/* Manage Folders Dialog */}
+      <ManageFoldersDialog
         open={actualShowCreateFolderDialog}
         onOpenChange={actualSetShowCreateFolderDialog}
-      >
-        <DialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-pink-900 dark:text-pink-100">
-              Create New Folder
-            </DialogTitle>
-            <DialogDescription className="text-pink-700 dark:text-pink-300">
-              Add a new folder to organize your chats.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label
-                htmlFor="name"
-                className="text-pink-800 dark:text-pink-200"
-              >
-                Folder Name
-              </Label>
-              <Input
-                id="name"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="My Folder"
-                className="bg-white/70 dark:bg-black/40 border-pink-300 dark:border-pink-800/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-pink-800 dark:text-pink-200">
-                Folder Color
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(folderColors).map(([color, className]) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={cn(
-                      'w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700',
-                      color === newFolderColor
-                        ? 'ring-2 ring-pink-500 dark:ring-pink-400 ring-offset-2 dark:ring-offset-black'
-                        : '',
-                    )}
-                    style={{
-                      backgroundColor: `var(--${color}-500)`,
-                    }}
-                    onClick={() => setNewFolderColor(color)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => actualSetShowCreateFolderDialog(false)}
-              className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateFolder}
-              className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
-            >
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        folders={folders}
+        allThreads={allThreadsOptimistic}
+        newFolderName={newFolderName}
+        setNewFolderName={setNewFolderName}
+        newFolderColor={newFolderColor}
+        setNewFolderColor={setNewFolderColor}
+        onCreateFolder={handleCreateFolder}
+        onDeleteFolder={handleDeleteFolder}
+        colorAccents={colorAccents}
+      />
 
-      {/* Tag Creation Dialog */}
-      <Dialog
+      {/* Manage Tags Dialog */}
+      <ManageTagsDialog
         open={actualShowCreateTagDialog}
         onOpenChange={actualSetShowCreateTagDialog}
-      >
-        <DialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-pink-900 dark:text-pink-100">
-              Create New Tag
-            </DialogTitle>
-            <DialogDescription className="text-pink-700 dark:text-pink-300">
-              Add a new tag to categorize your chats.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label
-                htmlFor="tagName"
-                className="text-pink-800 dark:text-pink-200"
-              >
-                Tag Name
-              </Label>
-              <Input
-                id="tagName"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                placeholder="My Tag"
-                className="bg-white/70 dark:bg-black/40 border-pink-300 dark:border-pink-800/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-pink-800 dark:text-pink-200">
-                Tag Color
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(tagColors).map(([color, className]) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={cn(
-                      'w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700',
-                      color === newTagColor
-                        ? 'ring-2 ring-pink-500 dark:ring-pink-400 ring-offset-2 dark:ring-offset-black'
-                        : '',
-                    )}
-                    style={{
-                      backgroundColor: `var(--${color}-500)`,
-                    }}
-                    onClick={() => setNewTagColor(color)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => actualSetShowCreateTagDialog(false)}
-              className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateTag}
-              className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
-            >
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        tags={tags}
+        allThreads={allThreadsOptimistic}
+        newTagName={newTagName}
+        setNewTagName={setNewTagName}
+        newTagColor={newTagColor}
+        setNewTagColor={setNewTagColor}
+        onCreateTag={handleCreateTag}
+        onDeleteTag={handleDeleteTag}
+        colorAccents={colorAccents}
+      />
 
       {/* Delete Chat Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-pink-900 dark:text-pink-100">
-              Delete Chat
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-pink-700 dark:text-pink-300">
+            <AlertDialogTitle>Delete Chat</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete this chat? This action cannot be
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Folder Confirmation Dialog */}
+      <AlertDialog
+        open={showDeleteFolderDialog}
+        onOpenChange={setShowDeleteFolderDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteFolderName}&quot;?
+              All chats in this folder will be moved to unfiled.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteFolder}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Folder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Tag Confirmation Dialog */}
+      <AlertDialog
+        open={showDeleteTagDialog}
+        onOpenChange={setShowDeleteTagDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteTagLabel}&quot;? This
+              tag will be removed from all chats.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteTag}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Tag
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

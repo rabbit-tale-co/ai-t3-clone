@@ -15,6 +15,13 @@
       "when": 1749713612748,
       "tag": "0001_many_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749727675137,
+      "tag": "0002_old_sway",
+      "breakpoints": true
     }
   ]
 }

@@ -3,11 +3,11 @@ import { CodeEditor } from '@/components/code-editor';
 import {
   CopyIcon,
   LogsIcon,
-  MessageIcon,
+  MessageSquareIcon,
   PlayIcon,
   RedoIcon,
   UndoIcon,
-} from '@/components/icons';
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { generateUUID } from '@/lib/utils';
 import {
@@ -247,7 +247,7 @@ export const codeArtifact = new Artifact<'code', Metadata>({
   ],
   toolbar: [
     {
-      icon: <MessageIcon />,
+      icon: <MessageSquareIcon />,
       description: 'Add comments',
       onClick: ({ appendMessage }) => {
         appendMessage({

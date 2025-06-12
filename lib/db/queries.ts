@@ -589,7 +589,7 @@ export async function createFolder({
   try {
     return await db
       .insert(folder)
-      .values({ name, userId, createdAt: new Date() })
+      .values({ name, userId, color, createdAt: new Date() })
       .returning();
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to create folder');
@@ -840,6 +840,216 @@ export async function getChatsByFolderId({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get chats by folder id',
+    );
+  }
+}
+
+// Aktualizuj folderId dla czatu
+export async function updateChatFolderId({
+  chatId,
+  folderId,
+}: {
+  chatId: string;
+  folderId: string;
+}) {
+  try {
+    return await db.update(chat).set({ folderId }).where(eq(chat.id, chatId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update chat folder id',
+    );
+  }
+}
+
+// Get complete sidebar data - "threads" with all related data
+export async function getSidebarThreadsByUserId({
+  userId,
+  limit = 50,
+  startingAfter,
+  endingBefore,
+}: {
+  userId: string;
+  limit?: number;
+  startingAfter?: string | null;
+  endingBefore?: string | null;
+}) {
+  try {
+    const extendedLimit = limit + 1;
+
+    // Get chats with folder and tag information in one query
+    let chatsQuery = db
+      .select({
+        // Chat data
+        id: chat.id,
+        title: chat.title,
+        createdAt: chat.createdAt,
+        userId: chat.userId,
+        visibility: chat.visibility,
+        folderId: chat.folderId,
+        // Folder data (if exists)
+        folderName: folder.name,
+        folderColor: folder.color,
+        // Tag data (if exists)
+        tagId: tag.id,
+        tagLabel: tag.label,
+        tagColor: tag.color,
+        tagUserId: tag.userId,
+      })
+      .from(chat)
+      .leftJoin(folder, eq(chat.folderId, folder.id))
+      .leftJoin(chatTag, eq(chat.id, chatTag.chatId))
+      .leftJoin(tag, eq(chatTag.tagId, tag.id))
+      .where(eq(chat.userId, userId))
+      .orderBy(desc(chat.createdAt))
+      .limit(extendedLimit * 10); // Multiply by 10 because each chat might have multiple tag rows
+
+    // Handle pagination
+    if (startingAfter) {
+      const [selectedChat] = await db
+        .select()
+        .from(chat)
+        .where(eq(chat.id, startingAfter))
+        .limit(1);
+
+      if (!selectedChat) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Chat with id ${startingAfter} not found`,
+        );
+      }
+
+      chatsQuery = db
+        .select({
+          id: chat.id,
+          title: chat.title,
+          createdAt: chat.createdAt,
+          userId: chat.userId,
+          visibility: chat.visibility,
+          folderId: chat.folderId,
+          folderName: folder.name,
+          folderColor: folder.color,
+          tagId: tag.id,
+          tagLabel: tag.label,
+          tagColor: tag.color,
+          tagUserId: tag.userId,
+        })
+        .from(chat)
+        .leftJoin(folder, eq(chat.folderId, folder.id))
+        .leftJoin(chatTag, eq(chat.id, chatTag.chatId))
+        .leftJoin(tag, eq(chatTag.tagId, tag.id))
+        .where(
+          and(
+            eq(chat.userId, userId),
+            gt(chat.createdAt, selectedChat.createdAt),
+          ),
+        )
+        .orderBy(desc(chat.createdAt))
+        .limit(extendedLimit * 10);
+    } else if (endingBefore) {
+      const [selectedChat] = await db
+        .select()
+        .from(chat)
+        .where(eq(chat.id, endingBefore))
+        .limit(1);
+
+      if (!selectedChat) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Chat with id ${endingBefore} not found`,
+        );
+      }
+
+      chatsQuery = db
+        .select({
+          id: chat.id,
+          title: chat.title,
+          createdAt: chat.createdAt,
+          userId: chat.userId,
+          visibility: chat.visibility,
+          folderId: chat.folderId,
+          folderName: folder.name,
+          folderColor: folder.color,
+          tagId: tag.id,
+          tagLabel: tag.label,
+          tagColor: tag.color,
+          tagUserId: tag.userId,
+        })
+        .from(chat)
+        .leftJoin(folder, eq(chat.folderId, folder.id))
+        .leftJoin(chatTag, eq(chat.id, chatTag.chatId))
+        .leftJoin(tag, eq(chatTag.tagId, tag.id))
+        .where(
+          and(
+            eq(chat.userId, userId),
+            lt(chat.createdAt, selectedChat.createdAt),
+          ),
+        )
+        .orderBy(desc(chat.createdAt))
+        .limit(extendedLimit * 10);
+    }
+
+    const results = await chatsQuery.execute();
+
+    // Group results by chat ID and aggregate tags
+    const chatMap = new Map();
+
+    for (const row of results) {
+      if (!chatMap.has(row.id)) {
+        chatMap.set(row.id, {
+          id: row.id,
+          title: row.title,
+          createdAt: row.createdAt,
+          userId: row.userId,
+          visibility: row.visibility,
+          folderId: row.folderId,
+          folder: row.folderName
+            ? {
+                name: row.folderName,
+                color: row.folderColor,
+              }
+            : null,
+          tags: [],
+        });
+      }
+
+      // Add tag if it exists
+      if (row.tagId) {
+        const chatData = chatMap.get(row.id);
+        chatData.tags.push({
+          id: row.tagId,
+          label: row.tagLabel,
+          color: row.tagColor,
+          userId: row.tagUserId,
+        });
+      }
+    }
+
+    const threads = Array.from(chatMap.values())
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, limit);
+
+    const hasMore = Array.from(chatMap.values()).length > limit;
+
+    // Get all unique folders and tags for this user
+    const [folders, tags] = await Promise.all([
+      getFoldersByUserId({ userId }),
+      getTagsByUserId({ userId }),
+    ]);
+
+    return {
+      threads,
+      folders,
+      tags,
+      hasMore,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get sidebar threads by user id',
     );
   }
 }
