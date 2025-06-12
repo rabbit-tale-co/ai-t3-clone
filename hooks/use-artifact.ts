@@ -3,6 +3,14 @@
 import useSWR from 'swr';
 import type { UIArtifact } from '@/components/artifact';
 import { useCallback, useMemo } from 'react';
+import type { Suggestion } from '@/lib/db/schema';
+import type { ConsoleOutput } from '@/components/console';
+
+interface ArtifactMetadata {
+  modelId?: string;
+  suggestions?: Array<Suggestion>;
+  outputs?: Array<ConsoleOutput>;
+}
 
 export const initialArtifactData: UIArtifact = {
   documentId: 'init',
@@ -64,7 +72,7 @@ export function useArtifact() {
   );
 
   const { data: localArtifactMetadata, mutate: setLocalArtifactMetadata } =
-    useSWR<{ modelId: string }>(
+    useSWR<ArtifactMetadata | null>(
       () =>
         artifact.documentId ? `artifact-metadata-${artifact.documentId}` : null,
       null,
@@ -78,7 +86,9 @@ export function useArtifact() {
       artifact,
       setArtifact,
       metadata: localArtifactMetadata || { modelId: 'gemini-2.0-flash' },
-      setMetadata: setLocalArtifactMetadata,
+      setMetadata: setLocalArtifactMetadata as unknown as React.Dispatch<
+        React.SetStateAction<ArtifactMetadata>
+      >,
     }),
     [artifact, setArtifact, localArtifactMetadata, setLocalArtifactMetadata],
   );

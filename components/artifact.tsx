@@ -313,7 +313,7 @@ function PureArtifact({
 
   useEffect(() => {
     if (!metadata.modelId) {
-      setMetadata((prev: { modelId?: string }) => ({
+      setMetadata((prev) => ({
         ...prev,
         modelId: 'gemini-2.0-flash',
       }));
@@ -475,13 +475,17 @@ function PureArtifact({
                 mode={mode}
                 status={artifact.status}
                 currentVersionIndex={currentVersionIndex}
-                suggestions={[]}
+                suggestions={metadata?.suggestions || []}
                 onSaveContent={saveContent}
                 isInline={false}
                 isCurrentVersion={isCurrentVersion}
                 getDocumentContentById={getDocumentContentById}
                 isLoading={isDocumentsFetching && !artifact.content}
-                metadata={metadata}
+                metadata={{
+                  ...metadata,
+                  suggestions: metadata?.suggestions || [],
+                  outputs: metadata?.outputs || [],
+                }}
                 setMetadata={setMetadata}
               />
 
