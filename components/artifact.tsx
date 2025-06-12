@@ -252,6 +252,14 @@ function PureArtifact({
   const safeWidth = windowWidth || defaultWidth;
   const safeHeight = windowHeight || defaultHeight;
 
+  // Bezpieczne wartosci dla boundingBox
+  const safeBoundingBox = {
+    left: artifact.boundingBox?.left || 0,
+    top: artifact.boundingBox?.top || 0,
+    height: artifact.boundingBox?.height || safeHeight,
+    width: artifact.boundingBox?.width || safeWidth,
+  };
+
   useEffect(() => {
     if (artifact.documentId !== 'init') {
       if (artifactDefinition.initialize) {
@@ -273,12 +281,12 @@ function PureArtifact({
   }, [metadata.modelId, setMetadata]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {artifact.isVisible && (
         <motion.div
           data-testid="artifact"
           className="flex flex-row h-dvh w-dvw fixed top-0 left-0 z-50 bg-transparent"
-          initial={{ opacity: 1 }}
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { delay: 0.4 } }}
         >
@@ -369,18 +377,18 @@ function PureArtifact({
               isMobile
                 ? {
                     opacity: 1,
-                    x: artifact.boundingBox.left,
-                    y: artifact.boundingBox.top,
-                    height: artifact.boundingBox.height,
-                    width: artifact.boundingBox.width,
+                    x: safeBoundingBox.left,
+                    y: safeBoundingBox.top,
+                    height: safeBoundingBox.height,
+                    width: safeBoundingBox.width,
                     borderRadius: 50,
                   }
                 : {
                     opacity: 1,
-                    x: artifact.boundingBox.left,
-                    y: artifact.boundingBox.top,
-                    height: artifact.boundingBox.height,
-                    width: artifact.boundingBox.width,
+                    x: safeBoundingBox.left,
+                    y: safeBoundingBox.top,
+                    height: safeBoundingBox.height,
+                    width: safeBoundingBox.width,
                     borderRadius: 50,
                   }
             }
@@ -398,7 +406,6 @@ function PureArtifact({
                       type: 'spring',
                       stiffness: 200,
                       damping: 30,
-                      duration: 5000,
                     },
                   }
                 : {
@@ -413,7 +420,6 @@ function PureArtifact({
                       type: 'spring',
                       stiffness: 200,
                       damping: 30,
-                      duration: 5000,
                     },
                   }
             }

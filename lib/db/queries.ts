@@ -74,7 +74,7 @@ export async function createGuestUser() {
   const password = generateHashedPassword(generateUUID());
 
   try {
-    console.log('Creating guest user:', { email, password });
+    // console.log('Creating guest user:', { email, password });
     return await db.insert(user).values({ email, password }).returning({
       id: user.id,
       email: user.email,
@@ -85,7 +85,7 @@ export async function createGuestUser() {
       'Failed to create guest user',
     );
   } finally {
-    console.log('Guest user created:', { email, password });
+    // console.log('Guest user created:', { email, password });
   }
 }
 

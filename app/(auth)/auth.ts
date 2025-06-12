@@ -39,8 +39,15 @@ export const {
   ...authConfig,
   providers: [
     Credentials({
-      credentials: {},
+      id: 'credentials',
+      name: 'Credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
       async authorize({ email, password }: any) {
+        if (!email || !password) return null;
+
         const users = await getUser(email);
 
         if (users.length === 0) {
@@ -64,6 +71,7 @@ export const {
     }),
     Credentials({
       id: 'guest',
+      name: 'Guest',
       credentials: {},
       async authorize() {
         const [guestUser] = await createGuestUser();
@@ -87,6 +95,13 @@ export const {
       }
 
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Pozwol na przekierowania do wewnetrznych stron
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // Pozwol na przekierowania do tego samego hosta
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
     },
   },
 });
