@@ -19,6 +19,7 @@
     "test": "export PLAYWRIGHT=True && bunx playwright test"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.19",
     "@ai-sdk/react": "^1.2.11",
     "@ai-sdk/xai": "^1.2.15",
     "@codemirror/lang-javascript": "^6.2.2",
