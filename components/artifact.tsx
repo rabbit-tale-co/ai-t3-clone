@@ -277,12 +277,16 @@ function PureArtifact({
             <motion.div
               className="fixed bg-background h-dvh"
               initial={{
-                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                width: isSidebarOpen
+                  ? (windowWidth || 0) - 256
+                  : windowWidth || 0,
                 right: 0,
               }}
-              animate={{ width: windowWidth, right: 0 }}
+              animate={{ width: windowWidth || 0, right: 0 }}
               exit={{
-                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                width: isSidebarOpen
+                  ? (windowWidth || 0) - 256
+                  : windowWidth || 0,
                 right: 0,
               }}
             />
@@ -381,8 +385,8 @@ function PureArtifact({
                     opacity: 1,
                     x: 0,
                     y: 0,
-                    height: windowHeight,
-                    width: windowWidth ? windowWidth : 'calc(100dvw)',
+                    height: windowHeight || '100dvh',
+                    width: windowWidth ? windowWidth : '100dvw',
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -396,10 +400,10 @@ function PureArtifact({
                     opacity: 1,
                     x: 400,
                     y: 0,
-                    height: windowHeight,
+                    height: windowHeight || '100dvh',
                     width: windowWidth
                       ? windowWidth - 400
-                      : 'calc(100dvw-400px)',
+                      : 'calc(100dvw - 400px)',
                     borderRadius: 0,
                     transition: {
                       delay: 0,
