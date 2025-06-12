@@ -257,16 +257,21 @@ export function ManageFoldersDialog({
                             key={color}
                             variant="ghost"
                             size={'sm'}
-                            className={cn(
-                              color === newFolderColor && 'scale-105 ring-2',
-                              'hover:brightness-[80%]',
-                            )}
                             style={{
-                              backgroundColor: darkenColor(values.accent, 0.18),
-                              ...(color === newFolderColor && {
-                                '--tw-ring-color': borderColor,
-                                borderColor: borderColor,
-                              }),
+                              backgroundColor: values.accent,
+                              boxShadow:
+                                color === newFolderColor
+                                  ? `0 0 0 2px ${darkenColor(values.accent, 0.18)}`
+                                  : undefined,
+                              transition: 'box-shadow 0.2s, background 0.2s',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                darkenColor(values.accent, 0.18);
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                values.accent;
                             }}
                             onClick={() => setNewFolderColor(color)}
                           >

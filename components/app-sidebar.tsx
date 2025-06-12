@@ -3,8 +3,7 @@
 import * as React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { MessageSquare, Search, LogIn, X, Hash, PlusIcon } from 'lucide-react';
-import { Folder as FolderIcon } from 'lucide-react';
+import { LogIn, X, Hash, Folder as FolderIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +31,7 @@ import { SidebarHistory } from '@/components/sidebar/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar/sidebar-user-nav';
 
 import type { Session } from 'next-auth';
-import type { Chat, Folder, Tag } from '@/lib/db/schema';
+import type { Folder, Tag } from '@/lib/db/schema';
 import Link from 'next/link';
 
 interface InitialData {

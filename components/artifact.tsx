@@ -254,6 +254,15 @@ function PureArtifact({
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
 
+  useEffect(() => {
+    if (!metadata.modelId) {
+      setMetadata((prev: { modelId?: string }) => ({
+        ...prev,
+        modelId: 'gemini-2.0-flash',
+      }));
+    }
+  }, [metadata.modelId, setMetadata]);
+
   return (
     <AnimatePresence>
       {artifact.isVisible && (
@@ -329,16 +338,16 @@ function PureArtifact({
                     chatId={chatId}
                     input={input}
                     setInput={setInput}
-                    handleSubmit={handleSubmit}
                     status={status}
                     stop={stop}
                     attachments={attachments}
                     setAttachments={setAttachments}
                     messages={messages}
-                    append={append}
-                    className="bg-background dark:bg-muted"
                     setMessages={setMessages}
+                    append={append}
+                    handleSubmit={handleSubmit}
                     selectedVisibilityType={selectedVisibilityType}
+                    selectedModelId={metadata.modelId || 'gemini-2.0-flash'}
                   />
                 </form>
               </div>

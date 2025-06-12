@@ -2,18 +2,18 @@ import { NextResponse } from 'next/server';
 import { getChatsByFolderId } from '@/lib/db/queries';
 import { auth } from '@/app/(auth)/auth';
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function GET(request: Request, context: RouteContext) {
   try {
     const session = await auth();
+    const { id: folderId } = await context.params;
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const folderId = params.id;
 
     if (!folderId) {
       return NextResponse.json(

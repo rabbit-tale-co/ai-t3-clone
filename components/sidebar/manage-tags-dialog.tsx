@@ -247,16 +247,12 @@ export function ManageTagsDialog({
                         const textColor = getColorjsContrastTextColor(
                           values.accent,
                         );
-                        const borderColor = getReadableBorderColor(
-                          values.accent,
-                        );
 
                         return (
                           <Button
                             key={color}
                             variant="ghost"
                             size={'sm'}
-                            className={cn(color === newTagColor && 'scale-105')}
                             style={{
                               backgroundColor: values.accent,
                               boxShadow:
