@@ -260,6 +260,46 @@ function PureArtifact({
     width: artifact.boundingBox?.width || safeWidth,
   };
 
+  // Zabezpieczenie przed null w animacjach
+  const initialAnimation = {
+    opacity: 1,
+    x: safeBoundingBox.left,
+    y: safeBoundingBox.top,
+    height: safeBoundingBox.height,
+    width: safeBoundingBox.width,
+    borderRadius: 50,
+  };
+
+  const mobileAnimation = {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    height: safeHeight,
+    width: safeWidth,
+    borderRadius: 0,
+    transition: {
+      delay: 0,
+      type: 'spring',
+      stiffness: 200,
+      damping: 30,
+    },
+  };
+
+  const desktopAnimation = {
+    opacity: 1,
+    x: 400,
+    y: 0,
+    height: safeHeight,
+    width: safeWidth - 400,
+    borderRadius: 0,
+    transition: {
+      delay: 0,
+      type: 'spring',
+      stiffness: 200,
+      damping: 30,
+    },
+  };
+
   useEffect(() => {
     if (artifact.documentId !== 'init') {
       if (artifactDefinition.initialize) {
@@ -373,56 +413,8 @@ function PureArtifact({
 
           <motion.div
             className="fixed dark:bg-muted bg-background h-dvh flex flex-col overflow-y-scroll md:border-l dark:border-zinc-700 border-zinc-200"
-            initial={
-              isMobile
-                ? {
-                    opacity: 1,
-                    x: safeBoundingBox.left,
-                    y: safeBoundingBox.top,
-                    height: safeBoundingBox.height,
-                    width: safeBoundingBox.width,
-                    borderRadius: 50,
-                  }
-                : {
-                    opacity: 1,
-                    x: safeBoundingBox.left,
-                    y: safeBoundingBox.top,
-                    height: safeBoundingBox.height,
-                    width: safeBoundingBox.width,
-                    borderRadius: 50,
-                  }
-            }
-            animate={
-              isMobile
-                ? {
-                    opacity: 1,
-                    x: 0,
-                    y: 0,
-                    height: safeHeight,
-                    width: safeWidth,
-                    borderRadius: 0,
-                    transition: {
-                      delay: 0,
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 30,
-                    },
-                  }
-                : {
-                    opacity: 1,
-                    x: 400,
-                    y: 0,
-                    height: safeHeight,
-                    width: safeWidth - 400,
-                    borderRadius: 0,
-                    transition: {
-                      delay: 0,
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 30,
-                    },
-                  }
-            }
+            initial={initialAnimation}
+            animate={isMobile ? mobileAnimation : desktopAnimation}
             exit={{
               opacity: 0,
               scale: 0.5,
