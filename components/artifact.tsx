@@ -235,6 +235,11 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
+  // Dodajemy wartosci domyslne dla animacji
+  const defaultWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const defaultHeight =
+    typeof window !== 'undefined' ? window.innerHeight : 768;
+
   const artifactDefinition = artifactDefinitions.find(
     (definition) => definition.kind === artifact.kind,
   );
@@ -242,6 +247,10 @@ function PureArtifact({
   if (!artifactDefinition) {
     throw new Error('Artifact definition not found!');
   }
+
+  // Uzywamy wartosci domyslnych jesli windowWidth/windowHeight sa null
+  const safeWidth = windowWidth || defaultWidth;
+  const safeHeight = windowHeight || defaultHeight;
 
   useEffect(() => {
     if (artifact.documentId !== 'init') {
@@ -277,16 +286,12 @@ function PureArtifact({
             <motion.div
               className="fixed bg-background h-dvh"
               initial={{
-                width: isSidebarOpen
-                  ? (windowWidth || 0) - 256
-                  : windowWidth || 0,
+                width: isSidebarOpen ? safeWidth - 256 : safeWidth,
                 right: 0,
               }}
-              animate={{ width: windowWidth || 0, right: 0 }}
+              animate={{ width: safeWidth, right: 0 }}
               exit={{
-                width: isSidebarOpen
-                  ? (windowWidth || 0) - 256
-                  : windowWidth || 0,
+                width: isSidebarOpen ? safeWidth - 256 : safeWidth,
                 right: 0,
               }}
             />
@@ -385,8 +390,8 @@ function PureArtifact({
                     opacity: 1,
                     x: 0,
                     y: 0,
-                    height: windowHeight || '100dvh',
-                    width: windowWidth ? windowWidth : '100dvw',
+                    height: safeHeight,
+                    width: safeWidth,
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -400,10 +405,8 @@ function PureArtifact({
                     opacity: 1,
                     x: 400,
                     y: 0,
-                    height: windowHeight || '100dvh',
-                    width: windowWidth
-                      ? windowWidth - 400
-                      : 'calc(100dvw - 400px)',
+                    height: safeHeight,
+                    width: safeWidth - 400,
                     borderRadius: 0,
                     transition: {
                       delay: 0,
