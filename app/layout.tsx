@@ -70,10 +70,10 @@ export default async function RootLayout({
             __html: THEME_COLOR_SCRIPT,
           }}
         />
-        <Script
+        {/* <Script
           src="//unpkg.com/react-scan/dist/auto.global.js"
           strategy="beforeInteractive"
-        />
+        /> */}
       </head>
       <body className="antialiased">
         <ThemeProvider
