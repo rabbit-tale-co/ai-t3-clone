@@ -27,6 +27,9 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  folder,
+  tag,
+  chatTag,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -57,9 +60,12 @@ export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 
   try {
+    console.log('Creating user:', { email, password: hashedPassword });
     return await db.insert(user).values({ email, password: hashedPassword });
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to create user');
+  } finally {
+    console.log('User created:', { email, password: hashedPassword });
   }
 }
 
@@ -68,6 +74,7 @@ export async function createGuestUser() {
   const password = generateHashedPassword(generateUUID());
 
   try {
+    console.log('Creating guest user:', { email, password });
     return await db.insert(user).values({ email, password }).returning({
       id: user.id,
       email: user.email,
@@ -77,6 +84,8 @@ export async function createGuestUser() {
       'bad_request:database',
       'Failed to create guest user',
     );
+  } finally {
+    console.log('Guest user created:', { email, password });
   }
 }
 
@@ -85,12 +94,16 @@ export async function saveChat({
   userId,
   title,
   visibility,
+  folderId, // Add folderId parameter
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
+  folderId?: string | null; // Make folderId optional and allow null
 }) {
+  console.log('Saving chat:', { id, userId, title, visibility, folderId });
+
   try {
     return await db.insert(chat).values({
       id,
@@ -98,8 +111,10 @@ export async function saveChat({
       userId,
       title,
       visibility,
+      folderId, // Add folderId to the values
     });
   } catch (error) {
+    console.error('Failed to save chat:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to save chat');
   }
 }
@@ -128,26 +143,37 @@ export async function getChatsByUserId({
   limit,
   startingAfter,
   endingBefore,
+  folderId, // Add folderId parameter
 }: {
   id: string;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
+  folderId?: string | null; // Make folderId optional
 }) {
   try {
     const extendedLimit = limit + 1;
 
-    const query = (whereCondition?: SQL<any>) =>
-      db
+    const query = (whereCondition?: SQL<any>) => {
+      // Start with the base query
+      let baseQuery = db
         .select()
         .from(chat)
-        .where(
-          whereCondition
-            ? and(whereCondition, eq(chat.userId, id))
-            : eq(chat.userId, id),
-        )
+        .where(eq(chat.userId, id))
         .orderBy(desc(chat.createdAt))
         .limit(extendedLimit);
+
+      // Add where parameters
+      if (whereCondition) {
+        baseQuery = db
+          .select()
+          .from(chat)
+          .where(and(eq(chat.userId, id), whereCondition))
+          .orderBy(desc(chat.createdAt))
+          .limit(extendedLimit);
+      }
+      return baseQuery;
+    };
 
     let filteredChats: Array<Chat> = [];
 
@@ -182,7 +208,16 @@ export async function getChatsByUserId({
 
       filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
     } else {
-      filteredChats = await query();
+      //Start with basic where
+      let whereClause: SQL<any> | undefined = undefined;
+
+      //If there is a folder to select, add folder
+      if (folderId) {
+        whereClause = eq(chat.folderId, folderId);
+      }
+
+      //Now run the query
+      filteredChats = await query(whereClause);
     }
 
     const hasMore = filteredChats.length > limit;
@@ -533,6 +568,278 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get stream ids by chat id',
+    );
+  }
+}
+
+// ------------------------------
+// Folder and Tag Queries
+// ------------------------------
+
+// Create Folder
+export async function createFolder({
+  name,
+  userId,
+  color,
+}: {
+  name: string;
+  userId: string;
+  color: string;
+}) {
+  try {
+    return await db
+      .insert(folder)
+      .values({ name, userId, createdAt: new Date() })
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to create folder');
+  }
+}
+
+// Get Folders by User ID
+export async function getFoldersByUserId({ userId }: { userId: string }) {
+  try {
+    return await db.select().from(folder).where(eq(folder.userId, userId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get folders by user id',
+    );
+  }
+}
+
+// Get Folders by Chat ID
+export async function getFoldersByChatId({ chatId }: { chatId: string }) {
+  try {
+    // Assuming you want to get folders that contain the chat with chatId
+    const folders = await db
+      .select({
+        id: folder.id,
+        name: folder.name,
+        createdAt: folder.createdAt,
+        userId: folder.userId,
+      })
+      .from(folder)
+      .innerJoin(chat, eq(folder.id, chat.folderId))
+      .where(eq(chat.id, chatId));
+    return folders;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get folders by chat id',
+    );
+  }
+}
+
+// Add Chat to Folder - (Not needed, since this is a part of saveChat)
+// Remove Chat from Folder (Set Folder ID to Null) - rename because original name wrong
+export async function removeChatFromFolder({ chatId }: { chatId: string }) {
+  try {
+    await db.update(chat).set({ folderId: null }).where(eq(chat.id, chatId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to remove chat from folder',
+    );
+  }
+}
+
+// Delete Folder by ID
+export async function deleteFolderById({
+  folderId,
+}: {
+  folderId: string;
+}) {
+  try {
+    // Update chats in the deleted folder to have folderId = null
+    await db
+      .update(chat)
+      .set({ folderId: null })
+      .where(eq(chat.folderId, folderId));
+
+    // Delete the folder
+    await db.delete(folder).where(eq(folder.id, folderId));
+
+    return { success: true };
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to delete folder');
+  }
+}
+
+// Create Tag
+export async function createTag({
+  label,
+  color,
+  userId,
+}: {
+  label: string;
+  color: string;
+  userId: string;
+}) {
+  try {
+    return await db.insert(tag).values({ label, color, userId }).returning();
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to create tag');
+  }
+}
+
+// Get Tags by User ID
+export async function getTagsByUserId({ userId }: { userId: string }) {
+  try {
+    return await db.select().from(tag).where(eq(tag.userId, userId));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get tags by user id',
+    );
+  }
+}
+
+// Get Tags by Chat ID
+export async function getTagsByChatId({ chatId }: { chatId: string }) {
+  try {
+    // The query fetches the tag data and returns all the Tag data
+    const tags = await db
+      .select({
+        id: tag.id,
+        label: tag.label,
+        color: tag.color,
+        userId: tag.userId,
+      })
+      .from(chatTag)
+      .innerJoin(tag, eq(chatTag.tagId, tag.id))
+      .where(eq(chatTag.chatId, chatId));
+    return tags;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get tags by chat id',
+    );
+  }
+}
+
+// Add Tag to Chat
+export async function addTagToChat({
+  chatId,
+  tagId,
+}: {
+  chatId: string;
+  tagId: string;
+}) {
+  try {
+    // The query fetches the tag data and returns all the Tag data
+    await db.insert(chatTag).values({ chatId: chatId, tagId: tagId }).execute();
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to add tag to chat');
+  }
+}
+
+// Remove Tag from Chat
+export async function removeTagFromChat({
+  chatId,
+  tagId,
+}: {
+  chatId: string;
+  tagId: string;
+}) {
+  try {
+    // The query fetches the tag data and returns all the Tag data
+    await db
+      .delete(chatTag)
+      .where(and(eq(chatTag.chatId, chatId), eq(chatTag.tagId, tagId)))
+      .execute();
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to remove tag from chat',
+    );
+  }
+}
+
+// Delete Tag by ID
+export async function deleteTagById({ tagId }: { tagId: string }) {
+  try {
+    // First remove all associations to this tag
+    await db.delete(chatTag).where(eq(chatTag.tagId, tagId));
+
+    // Then delete the tag
+    await db.delete(tag).where(eq(tag.id, tagId));
+    return { success: true };
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to delete tag');
+  }
+}
+
+//Get chats by folder id - the function was missing!
+
+export async function getChatsByFolderId({
+  folderId,
+  limit,
+  startingAfter,
+  endingBefore,
+}: {
+  folderId: string;
+  limit: number;
+  startingAfter: string | null;
+  endingBefore: string | null;
+}) {
+  try {
+    const extendedLimit = limit + 1;
+
+    const query = (whereCondition?: SQL<any>) =>
+      db
+        .select()
+        .from(chat)
+        .where(eq(chat.folderId, folderId))
+        .orderBy(desc(chat.createdAt))
+        .limit(extendedLimit);
+
+    let filteredChats: Array<Chat> = [];
+
+    if (startingAfter) {
+      const [selectedChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, startingAfter), eq(chat.folderId, folderId)))
+        .limit(1);
+
+      if (!selectedChat) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Chat with id ${startingAfter} not found in folder ${folderId}`,
+        );
+      }
+
+      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
+    } else if (endingBefore) {
+      const [selectedChat] = await db
+        .select()
+        .from(chat)
+        .where(and(eq(chat.id, endingBefore), eq(chat.folderId, folderId)))
+        .limit(1);
+
+      if (!selectedChat) {
+        throw new ChatSDKError(
+          'not_found:database',
+          `Chat with id ${endingBefore} not found in folder ${folderId}`,
+        );
+      }
+
+      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
+    } else {
+      filteredChats = await query();
+    }
+
+    const hasMore = filteredChats.length > limit;
+
+    return {
+      chats: hasMore ? filteredChats.slice(0, limit) : filteredChats,
+      hasMore,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get chats by folder id',
     );
   }
 }

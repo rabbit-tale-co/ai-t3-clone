@@ -3,11 +3,19 @@
 import * as React from 'react';
 import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { Search, X, MoreHorizontal, Trash, LogIn } from 'lucide-react';
-import { SidebarHistory } from '@/components/sidebar-history';
-import { SidebarUserNav } from '@/components/sidebar-user-nav';
+import {
+  Search,
+  X,
+  MoreHorizontal,
+  Trash,
+  LogIn,
+  FolderPlus,
+  Tag,
+} from 'lucide-react';
+import { SidebarHistory } from '@/components/sidebar/sidebar-history';
+import { SidebarUserNav } from '@/components/sidebar/sidebar-user-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -38,6 +46,7 @@ import { toast } from 'sonner';
 import { signIn, useSession } from 'next-auth/react';
 import { UserType } from '@/app/(auth)/auth';
 import { useMessageCount } from '@/hooks/use-message-count';
+import { Skeleton } from './ui/skeleton';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -46,7 +55,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const { data: session } = useSession();
-  const { messagesLeft } = useMessageCount(session);
+  const { messagesLeft, status } = useMessageCount(session);
+  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showCreateTagDialog, setShowCreateTagDialog] = useState(false);
 
   const handleNewChat = () => {
     setOpenMobile(false);
@@ -142,12 +153,40 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 className="pl-10 bg-pink-50 dark:bg-black/40 border-pink-300 dark:border-pink-800/50 text-pink-900 dark:text-gray-100 placeholder:text-pink-600/70 dark:placeholder:text-pink-400/70 focus:border-pink-500 dark:focus:border-pink-600 shadow-sm h-12 sm:h-auto text-sm"
               />
             </div>
+
+            {/* Folder and Tag Management Buttons */}
+            <div className="flex justify-between items-center mt-2 px-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCreateFolderDialog(true)}
+                className="flex-1 mr-1 h-8 bg-pink-50 dark:bg-black/40 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/30 border border-pink-200 dark:border-pink-800/30 rounded-md"
+              >
+                <FolderPlus size={14} className="mr-1" />
+                <span className="text-xs">New Folder</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCreateTagDialog(true)}
+                className="flex-1 ml-1 h-8 bg-pink-50 dark:bg-black/40 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/30 border border-pink-200 dark:border-pink-800/30 rounded-md"
+              >
+                <Tag size={14} className="mr-1" />
+                <span className="text-xs">New Tag</span>
+              </Button>
+            </div>
+
             {/* Messages left counter */}
-            {messagesLeft !== null && (
+            {/* TODO: refresh on agent response */}
+            {status === 'success' && messagesLeft !== null && (
               <div className="mt-2 text-sm text-pink-700 dark:text-pink-300 px-3 text-center">
                 <span className="font-medium">{messagesLeft}</span> messages
                 left today
               </div>
+            )}
+            {status === 'loading' && (
+              <Skeleton className="mx-auto w-3/4 h-4 mt-2" />
             )}
           </div>
         </SidebarHeader>
@@ -184,6 +223,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 </DropdownMenu>
               </div>
             )}
+            showCreateFolderDialog={showCreateFolderDialog}
+            setShowCreateFolderDialog={setShowCreateFolderDialog}
+            showCreateTagDialog={showCreateTagDialog}
+            setShowCreateTagDialog={setShowCreateTagDialog}
           />
         </SidebarContent>
 

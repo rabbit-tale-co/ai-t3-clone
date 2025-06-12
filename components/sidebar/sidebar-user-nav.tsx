@@ -19,8 +19,8 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useRouter } from 'next/navigation';
-import { toast } from './toast';
-import { LoaderIcon } from './icons';
+import { toast } from '../toast';
+import { LoaderIcon } from '../icons';
 import { guestRegex } from '@/lib/constants';
 
 export function SidebarUserNav({ user }: { user: User }) {
@@ -74,7 +74,9 @@ export function SidebarUserNav({ user }: { user: User }) {
             <DropdownMenuItem
               data-testid="user-nav-item-theme"
               className="cursor-pointer"
-              onSelect={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              onSelect={() =>
+                setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
+              }
             >
               {`Toggle ${resolvedTheme === 'light' ? 'dark' : 'light'} mode`}
             </DropdownMenuItem>

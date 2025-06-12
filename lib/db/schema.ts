@@ -19,9 +19,21 @@ export const user = pgTable('User', {
 
 export type User = InferSelectModel<typeof user>;
 
+// --- ADD FOLDER TABLE ---
+export const folder = pgTable('Folder', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(), // Added defaultNow
+  name: varchar('name', { length: 256 }).notNull(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+});
+
+export type Folder = InferSelectModel<typeof folder>;
+
 export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp('createdAt').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(), // Added defaultNow
   title: text('title').notNull(),
   userId: uuid('userId')
     .notNull()
@@ -29,9 +41,41 @@ export const chat = pgTable('Chat', {
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
+  // --- ADD FOLDER ID FOREIGN KEY ---
+  folderId: uuid('folderId').references(() => folder.id), // Can be null if chat isn't in a folder
 });
 
 export type Chat = InferSelectModel<typeof chat>;
+
+// --- ADD TAG TABLE ---
+export const tag = pgTable('Tag', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  label: varchar('label', { length: 64 }).notNull(),
+  color: varchar('color', { length: 7 }).notNull(), // Assuming hex code for color
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+});
+
+export type Tag = InferSelectModel<typeof tag>;
+
+// --- ADD CHAT-TAG RELATION TABLE ---
+export const chatTag = pgTable(
+  'ChatTag',
+  {
+    chatId: uuid('chatId')
+      .notNull()
+      .references(() => chat.id),
+    tagId: uuid('tagId')
+      .notNull()
+      .references(() => tag.id),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.chatId, table.tagId] }),
+  }),
+);
+
+export type ChatTag = InferSelectModel<typeof chatTag>;
 
 // DEPRECATED: The following schema is deprecated and will be removed in the future.
 // Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts

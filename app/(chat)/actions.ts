@@ -3,10 +3,17 @@
 import { generateText, type UIMessage } from 'ai';
 import { cookies } from 'next/headers';
 import {
+  createFolder,
+  createTag,
+  deleteChatById,
   deleteMessagesByChatIdAfterTimestamp,
+  getChatsByFolderId,
+  getFoldersByUserId,
   getMessageById,
-  updateChatVisiblityById,
   getMessageCountByUserId,
+  getTagsByChatId,
+  getTagsByUserId,
+  updateChatVisiblityById,
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
@@ -17,6 +24,7 @@ import {
 } from '@/lib/ai/models';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import type { UserType } from '@/app/(auth)/auth';
+import type { Chat, Folder, Tag } from '@/lib/db/schema';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -93,12 +101,110 @@ export async function getUserMessageCount(userId: string, userType: UserType) {
 
     const maxMessages =
       entitlementsByUserType[userType]?.maxMessagesPerDay || 0;
+
+    const messagesLeft = Math.max(0, maxMessages - messageCount);
+    // console.log('Messages left:', messagesLeft);
     return {
-      messagesLeft: Math.max(0, maxMessages - messageCount),
+      messagesLeft,
       success: true,
     };
   } catch (error) {
     console.error('Failed to fetch message count', error);
     return { messagesLeft: null, success: false };
+  }
+}
+
+export async function createFolderAction({
+  name,
+  userId,
+  color,
+}: { name: string; userId: string; color: string }): Promise<
+  Folder | undefined
+> {
+  try {
+    const newFolders = await createFolder({ name, userId, color });
+    return newFolders[0]; // Assuming createFolder returns an array and you want the first one
+  } catch (error) {
+    console.error('Server Action: Failed to create folder:', error);
+    throw error; // Re-throw or return an error object
+  }
+}
+
+export async function getFoldersByUserIdAction(
+  userId: string,
+): Promise<Folder[]> {
+  try {
+    return await getFoldersByUserId({ userId });
+  } catch (error) {
+    console.error('Server Action: Failed to get folders by user ID:', error);
+    throw error;
+  }
+}
+
+export async function createTagAction({
+  label,
+  color,
+  userId,
+}: { label: string; color: string; userId: string }): Promise<Tag | undefined> {
+  try {
+    const newTags = await createTag({ label, color, userId });
+    return newTags[0]; // Assuming createTag returns an array and you want the first one
+  } catch (error) {
+    console.error('Server Action: Failed to create tag:', error);
+    throw error;
+  }
+}
+
+export async function getTagsByUserIdAction(userId: string): Promise<Tag[]> {
+  try {
+    return await getTagsByUserId({ userId });
+  } catch (error) {
+    console.error('Server Action: Failed to get tags by user ID:', error);
+    throw error;
+  }
+}
+
+export async function getChatsByFolderIdAction({
+  folderId,
+  limit,
+  startingAfter,
+  endingBefore,
+}: {
+  folderId: string;
+  limit: number;
+  startingAfter: string | null;
+  endingBefore: string | null;
+}): Promise<{ chats: Chat[]; hasMore: boolean }> {
+  try {
+    return await getChatsByFolderId({
+      folderId,
+      limit,
+      startingAfter,
+      endingBefore,
+    });
+  } catch (error) {
+    console.error('Server Action: Failed to get chats by folder ID:', error);
+    throw error;
+  }
+}
+
+export async function getTagsByChatIdAction(chatId: string): Promise<Tag[]> {
+  try {
+    return await getTagsByChatId({ chatId });
+  } catch (error) {
+    console.error('Server Action: Failed to get tags by chat ID:', error);
+    throw error;
+  }
+}
+
+// You already have your /api/history route, so `getChatsByUserId` is exposed via that.
+// If you need to call `deleteChatById` from client side, you might need a Server Action for it too.
+export async function deleteChatAction(chatId: string) {
+  try {
+    await deleteChatById({ id: chatId });
+    return { success: true };
+  } catch (error) {
+    console.error('Server Action: Failed to delete chat:', error);
+    throw error;
   }
 }
