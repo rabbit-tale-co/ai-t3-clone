@@ -19,6 +19,8 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   useSidebar,
+  SidebarGroupLabel,
+  SidebarMenu,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { LoaderIcon, Hash, Folder as FolderIcon } from 'lucide-react';
@@ -441,138 +443,116 @@ export function SidebarHistory({
   }
 
   return (
-    <>
-      {/* Search results, if any */}
-      {searchTerm && filteredSearchChats.length > 0 && (
-        <SidebarGroup>
+    <div
+      className="flex flex-col gap-2 overflow-y-auto pr-1"
+      onScroll={handleScroll}
+    >
+      {/* Folders Section */}
+      {folders.length > 0 && (
+        <SidebarGroup className="px-2">
+          <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
+            Folders ({folders.length})
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <h3 className="text-xs font-semibold px-2 pb-1 text-pink-700 dark:text-pink-300">
-              Search Results
-            </h3>
-            <div className="flex flex-col gap-1 overflow-auto max-h-96">
+            <SidebarMenu>
+              {folders.map((folder) => (
+                <FolderItem
+                  key={folder.id}
+                  folder={folder}
+                  isExpanded={!!expandedFolders[folder.id]}
+                  onToggle={() => toggleFolder(folder.id)}
+                  onDelete={() => {
+                    /* Handle folder delete */
+                  }}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+
+      {/* Unfiled Chats Section */}
+      {unfiledChats.length > 0 && !searchTerm && (
+        <UnfiledChatsList
+          allChats={unfiledChats}
+          onDeleteChat={onDeleteChatClick}
+        />
+      )}
+
+      {/* Search Results Section */}
+      {searchTerm && filteredSearchChats.length > 0 && (
+        <SidebarGroup className="px-2">
+          <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
+            Search Results ({filteredSearchChats.length})
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
               {filteredSearchChats.map((chat) => (
                 <ChatItem
                   key={chat.id}
                   chat={chat}
-                  isActive={false}
-                  onDelete={() => {}}
-                  setOpenMobile={() => {}}
+                  isActive={isActiveChatId(chat.id)}
+                  onDelete={onDeleteChatClick}
+                  setOpenMobile={setOpenMobile}
                 />
               ))}
-              {isLoadingChats && !isValidatingChats && (
-                <div className="flex justify-center py-2">
-                  <LoaderIcon className="animate-spin" />
-                </div>
-              )}
-            </div>
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       )}
 
-      {/* Tags section - display all tags */}
-      {tags.length > 0 && !searchTerm && (
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <h3 className="text-xs font-semibold px-2 pb-1 text-pink-700 dark:text-pink-300">
-              Tags
-            </h3>
-            <div className="flex flex-wrap gap-1 px-2">
-              {tags.map((tag) => (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className={cn(
-                    'text-xs rounded-md border-transparent cursor-pointer',
-                    tagColors[tag.color as keyof typeof tagColors] ||
-                      tagColors.gray,
-                  )}
-                  onClick={() => {
-                    // Implement tag filtering logic here
-                    // e.g., router.push(`/chats?tag=${tag.id}`);
-                    toast.info(`Filtering by tag: ${tag.label}`);
-                  }}
-                >
-                  <Hash className="size-2.5 mr-1" />
-                  {tag.label}
-                </Badge>
-              ))}
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      {/* Loading States */}
+      {(isLoadingChats || isValidatingChats) && (
+        <div className="flex justify-center py-2">
+          <LoaderIcon className="size-4 animate-spin text-pink-500" />
+        </div>
       )}
 
-      {/* Folders with Chats */}
-      {folders.length > 0 &&
-        !searchTerm &&
-        folders.map((folder) => (
-          <SidebarGroup key={folder.id}>
-            <SidebarGroupContent>
-              <FolderItem expanded={expandedFolders[folder.id]} />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-
-      {/* Unfiled Chats as a separate section */}
-      {allChats.length > 0 && !searchTerm && (
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <UnfiledChatsList allChats={allChats} />
-          </SidebarGroupContent>
-        </SidebarGroup>
+      {/* Empty States */}
+      {!isLoadingChats && allChats.length === 0 && !searchTerm && (
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm text-pink-700 dark:text-pink-300">
+            No chats yet. Start a new conversation!
+          </p>
+        </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              chat and remove it from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                handleDelete();
-                setShowDeleteDialog(false);
-              }}
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {searchTerm && filteredSearchChats.length === 0 && (
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm text-pink-700 dark:text-pink-300">
+            No chats matching &quot;{searchTerm}&quot;
+          </p>
+        </div>
+      )}
 
-      {/* Create Folder Dialog */}
+      {/* Folder Creation Dialog */}
       <Dialog
         open={actualShowCreateFolderDialog}
         onOpenChange={actualSetShowCreateFolderDialog}
       >
-        <DialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg sm:max-w-md">
+        <DialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-pink-900 dark:text-pink-100">
-              Create new folder
+              Create New Folder
             </DialogTitle>
             <DialogDescription className="text-pink-700 dark:text-pink-300">
-              Add a new folder to organize your chats
+              Add a new folder to organize your chats.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label
-                htmlFor="folder-name"
+                htmlFor="name"
                 className="text-pink-800 dark:text-pink-200"
               >
                 Folder Name
               </Label>
               <Input
-                id="folder-name"
-                placeholder="Work, Research, etc."
+                id="name"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                className="bg-pink-50 dark:bg-black/40 border-pink-300 dark:border-pink-800/50"
+                placeholder="My Folder"
+                className="bg-white/70 dark:bg-black/40 border-pink-300 dark:border-pink-800/50"
               />
             </div>
             <div className="space-y-2">
@@ -580,23 +560,21 @@ export function SidebarHistory({
                 Folder Color
               </Label>
               <div className="flex flex-wrap gap-2">
-                {Object.entries(folderColors).map(([color]) => (
+                {Object.entries(folderColors).map(([color, className]) => (
                   <button
                     key={color}
                     type="button"
-                    onClick={() => setNewFolderColor(color)}
                     className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center border-2',
-                      `bg-${color}-100 dark:bg-${color}-900/30`,
-                      newFolderColor === color
-                        ? `border-${color}-500 dark:border-${color}-400`
-                        : 'border-transparent',
+                      'w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700',
+                      color === newFolderColor
+                        ? 'ring-2 ring-pink-500 dark:ring-pink-400 ring-offset-2 dark:ring-offset-black'
+                        : '',
                     )}
-                  >
-                    <FolderIcon
-                      className={`size-4 ${folderColors[color as keyof typeof folderColors]}`}
-                    />
-                  </button>
+                    style={{
+                      backgroundColor: `var(--${color}-500)`,
+                    }}
+                    onClick={() => setNewFolderColor(color)}
+                  />
                 ))}
               </div>
             </div>
@@ -605,72 +583,70 @@ export function SidebarHistory({
             <Button
               variant="ghost"
               onClick={() => actualSetShowCreateFolderDialog(false)}
-              className="border border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300"
+              className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateFolder}
-              className="bg-pink-600 hover:bg-pink-700 text-white"
+              className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
             >
-              Create Folder
+              Create
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Create Tag Dialog */}
+      {/* Tag Creation Dialog */}
       <Dialog
         open={actualShowCreateTagDialog}
         onOpenChange={actualSetShowCreateTagDialog}
       >
-        <DialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg sm:max-w-md">
+        <DialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
           <DialogHeader>
             <DialogTitle className="text-pink-900 dark:text-pink-100">
-              Create new tag
+              Create New Tag
             </DialogTitle>
             <DialogDescription className="text-pink-700 dark:text-pink-300">
-              Add a new tag to categorize your chats
+              Add a new tag to categorize your chats.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label
-                htmlFor="tag-name"
+                htmlFor="tagName"
                 className="text-pink-800 dark:text-pink-200"
               >
                 Tag Name
               </Label>
               <Input
-                id="tag-name"
-                placeholder="ai, research, coding, etc."
+                id="tagName"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                className="bg-pink-50 dark:bg-black/40 border-pink-300 dark:border-pink-800/50"
+                placeholder="My Tag"
+                className="bg-white/70 dark:bg-black/40 border-pink-300 dark:border-pink-800/50"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-pink-800 dark:text-pink-200">
                 Tag Color
               </Label>
-              <div className="flex gap-2">
-                {Object.entries(tagColors).map(([color]) => (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(tagColors).map(([color, className]) => (
                   <button
                     key={color}
                     type="button"
-                    onClick={() => setNewTagColor(color)}
                     className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center border-2',
-                      `bg-${color}-100 dark:bg-${color}-900/30`,
-                      newTagColor === color
-                        ? `border-${color}-500 dark:border-${color}-400`
-                        : 'border-transparent',
+                      'w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700',
+                      color === newTagColor
+                        ? 'ring-2 ring-pink-500 dark:ring-pink-400 ring-offset-2 dark:ring-offset-black'
+                        : '',
                     )}
-                  >
-                    <Hash
-                      className={`size-4 ${folderColors[color as keyof typeof folderColors]}`}
-                    />
-                  </button>
+                    style={{
+                      backgroundColor: `var(--${color}-500)`,
+                    }}
+                    onClick={() => setNewTagColor(color)}
+                  />
                 ))}
               </div>
             </div>
@@ -679,19 +655,45 @@ export function SidebarHistory({
             <Button
               variant="ghost"
               onClick={() => actualSetShowCreateTagDialog(false)}
-              className="border border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300"
+              className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateTag}
-              className="bg-pink-600 hover:bg-pink-700 text-white"
+              className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
             >
-              Create Tag
+              Create
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+
+      {/* Delete Chat Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-pink-900 dark:text-pink-100">
+              Delete Chat
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-pink-700 dark:text-pink-300">
+              Are you sure you want to delete this chat? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

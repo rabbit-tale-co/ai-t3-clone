@@ -86,13 +86,22 @@ export const ChatItem = memo(
 
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={isActive}>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive}
+          className={cn(
+            'relative p-2 h-auto rounded-md transition-colors border border-transparent',
+            isActive
+              ? 'bg-pink-500/20 dark:bg-pink-900/30 border-pink-300 dark:border-pink-700'
+              : 'hover:bg-pink-100 dark:hover:bg-black/40 hover:border-pink-200 dark:hover:border-transparent',
+          )}
+        >
           <Link
             href={`/chat/${chat.id}`}
             onClick={() => setOpenMobile(false)}
-            className="flex items-start p-2 gap-2 w-full"
+            className="peer flex items-start space-x-2 sm:space-x-3 flex-1 min-w-0"
           >
-            <MessageSquare className="mt-0.5 size-4 text-pink-500 dark:text-pink-400" />
+            <MessageSquare className="size-3 sm:size-4 mt-1 text-pink-500 dark:text-pink-400" />
             <div className="flex-1 min-w-0 pr-8">
               <p className="text-sm font-medium truncate text-pink-900 dark:text-gray-100">
                 {chat.title}
@@ -107,11 +116,9 @@ export const ChatItem = memo(
                   : new Date(chat.createdAt).toLocaleDateString()}
               </p>
 
-              <div className="flex flex-wrap gap-1 mt-1">
-                {loadingTags ? (
-                  <span className="text-xs text-gray-500">Loading tags...</span>
-                ) : chatTags.length > 0 ? (
-                  chatTags.map((tag) => (
+              {chatTags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {chatTags.map((tag) => (
                     <Badge
                       key={tag.id}
                       variant="outline"
@@ -124,11 +131,9 @@ export const ChatItem = memo(
                       <Hash className="size-2.5 mr-1" />
                       {tag.label}
                     </Badge>
-                  ))
-                ) : (
-                  <span className="text-xs text-gray-500 italic">No tags</span>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </Link>
         </SidebarMenuButton>
