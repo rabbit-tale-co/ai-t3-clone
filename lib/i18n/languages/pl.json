@@ -1,0 +1,633 @@
+{
+  "toast": {
+    "settings": {
+      "profile": {
+        "profileUpdated": "Profil został zaktualizowany pomyślnie!"
+      },
+      "contact": {
+        "messageSent": "Wiadomość została wysłana pomyślnie!"
+      }
+    }
+  },
+  "chat": {
+    "buttons": {
+      "private": "Prywatne",
+      "public": "Publiczne",
+      "privateDescription": "Tylko Ty możesz uzyskać do niej dostęp",
+      "publicDescription": "Każdy z linkiem może uzyskać do niej dostęp"
+    },
+    "greetings": {
+      "hello": "Cześć! Jak mogę Ci pomóc?",
+      "subtitle": "Zadaj pytanie lub wybierz kategorię poniżej",
+      "placeholder": "Napisz wiadomość...",
+      "placeholderNoUsage": "Brak pozostałych wiadomości..."
+    },
+    "input": {
+      "send": "Wyślij",
+      "sending": "Wysyłanie...",
+      "sendMessage": "Wyślij wiadomość",
+      "attachFiles": "Dołącz pliki",
+      "search": "Wyszukaj",
+      "enableSearch": "Włącz wyszukiwanie",
+      "disableSearch": "Wyłącz wyszukiwanie",
+      "selectModel": "Wybierz Model",
+      "allModels": "Wszystkie modele...",
+      "filters": "Filtry",
+      "clearAll": "Wyczyść wszystkie",
+      "placeholder": "Napisz wiadomość...",
+      "stop": "Zatrzymaj",
+      "attach": "Załącz plik",
+      "attachTooltip": "Załącz plik (Ctrl+U)"
+    },
+    "categories": {
+      "create": "Twórz",
+      "explore": "Odkrywaj",
+      "code": "Koduj",
+      "learn": "Ucz się"
+    },
+    "examples": {
+      "general": {
+        "example1": "Napisz kreatywną historię o podróży w czasie",
+        "example2": "Wyjaśnij mi mechanikę kwantową w prosty sposób",
+        "example3": "Pomóż mi stworzyć plan biznesowy dla startupu",
+        "example4": "Napisz kod do sortowania listy w Pythonie"
+      },
+      "create": {
+        "writeEmail": "Napisz profesjonalny email do klienta",
+        "writeStory": "Stwórz krótką historię science fiction",
+        "createPresentation": "Przygotuj prezentację o AI",
+        "designLogo": "Pomóż zaprojektować logo dla firmy"
+      },
+      "explore": {
+        "explainConcept": "Wyjaśnij pojęcie blockchain",
+        "researchTopic": "Zbadaj temat odnawialnych źródeł energii",
+        "compareIdeas": "Porównaj różne filozofie życiowe",
+        "analyzeData": "Przeanalizuj trendy w danych sprzedażowych"
+      },
+      "code": {
+        "createFunction": "Napisz funkcję do walidacji emaila",
+        "debugCode": "Pomóż debugować ten kod JavaScript",
+        "optimizePerformance": "Zoptymalizuj wydajność tej aplikacji",
+        "reviewCode": "Przejrzyj i oceń jakość tego kodu"
+      },
+      "learn": {
+        "learnLanguage": "Naucz mnie podstaw języka hiszpańskiego",
+        "explainMath": "Wyjaśnij równania kwadratowe",
+        "studyHistory": "Opowiedz o II wojnie światowej",
+        "practiceSkill": "Pomóż mi ćwiczyć umiejętności prezentacji"
+      }
+    },
+    "attachments": {
+      "title": "Załączniki",
+      "removeAll": "Usuń wszystkie",
+      "removeFile": "Usuń plik",
+      "uploading": "Przesyłanie plików...",
+      "added": "Dodano {{count}} plik(ów)",
+      "tooLarge": "Niektóre pliki są za duże (max 10MB). Pliki: {{files}}"
+    },
+    "models": {
+      "changed": "Model zmieniony na {{name}}. Nowe rozmowy będą używać tego modelu.",
+      "select": "Wybierz model",
+      "current": "Aktualny model"
+    },
+    "search": {
+      "enabled": "Wyszukiwanie w internecie zostało włączone. Twoje zapytania będą wzbogacone o aktualne informacje z sieci."
+    },
+    "usage": {
+      "remaining": "Pozostało Ci {{remaining}} z {{limit}} darmowych wiadomości.",
+      "loginToContinue": " Zaloguj się aby kontynuować.",
+      "loginToIncrease": " Zaloguj się aby zwiększyć limity.",
+      "noRemaining": "Brak pozostałych wiadomości"
+    }
+  },
+  "auth": {
+    "actions": {
+      "login": "Zaloguj się",
+      "register": "Zarejestruj się",
+      "logout": "Wyloguj się",
+      "signIn": "Zaloguj się",
+      "signOut": "Wyloguj się",
+      "signUp": "Zarejestruj się"
+    },
+    "roles": {
+      "guest": "Gość",
+      "regular": "Zwykły",
+      "pro": "Pro",
+      "admin": "Admin"
+    },
+    "plans": {
+      "pro": "Pro",
+      "admin": "Admin"
+    },
+    "messages": {
+      "accountCreated": "Konto zostało utworzone pomyślnie!",
+      "accountExists": "Konto już istnieje!",
+      "createAccountFailed": "Nie udało się utworzyć konta!",
+      "loginFailed": "Nieprawidłowe dane logowania!"
+    }
+  },
+  "ui": {
+    "buttons": {
+      "loading": "Ładowanie...",
+      "cancel": "Anuluj",
+      "confirm": "Potwierdź",
+      "save": "Zapisz",
+      "delete": "Usuń",
+      "edit": "Edytuj",
+      "close": "Zamknij",
+      "back": "Wstecz",
+      "next": "Dalej",
+      "previous": "Poprzedni",
+      "yes": "Tak",
+      "no": "Nie",
+      "download": "Pobierz",
+      "loadMore": "Załaduj więcej",
+      "saveChanges": "Zapisz zmiany",
+      "upgradeNow": "Przejdź na Pro",
+      "deleteAccount": "Usuń konto",
+      "upgradeToPro": "Przejdź na Pro",
+      "send": "Wyślij"
+    },
+    "status": {
+      "error": "Błąd",
+      "success": "Sukces",
+      "warning": "Ostrzeżenie",
+      "info": "Informacja",
+      "loading": "Ładowanie...",
+      "checking": "Sprawdzanie...",
+      "available": "Dostępny",
+      "unknown": "Nieznany"
+    },
+    "forms": {
+      "required": "Wymagane",
+      "optional": "Opcjonalne",
+      "placeholder": "Wprowadź wartość...",
+      "search": "Szukaj...",
+      "searchFiles": "Szukaj plików...",
+      "selectOption": "Wybierz opcję",
+      "noOptionsAvailable": "Brak dostępnych opcji"
+    }
+  },
+  "navigation": {
+    "header": {
+      "appName": "AI T3 Clone",
+      "newChat": "Nowy Chat",
+      "search": "Wyszukaj",
+      "startNewChat": "Rozpocznij nową rozmowę",
+      "settings": "Ustawienia",
+      "yourChats": "Twoje rozmowy",
+      "toggleSidebar": "Przełącz panel boczny"
+    },
+    "folderItem": {
+      "noChatsInFolder": "Brak rozmów w tym folderze"
+    },
+    "history": {
+      "chats": "Kowersacje",
+      "folders": "Foldery",
+      "searchResults": "Wyniki wyszukiwania"
+    },
+    "dropdown": {
+      "more": "Więcej",
+      "organization": "Organizacja",
+      "currentlyInFolder": "Aktualnie w folderze",
+      "tags": "tagi",
+      "assigned": "przypisane",
+      "removeFromFolder": "Usuń z folderu",
+      "moveToFolder": "Przenieś do folderu",
+      "loadingFolders": "Ładowanie folderów...",
+      "noFoldersAvailable": "Brak dostępnych folderów",
+      "manageTags": "Zarządzaj tagami",
+      "loadingTags": "Ładowanie tagów...",
+      "noTagsAvailable": "Brak dostępnych tagów",
+      "sharing": "Udostępnianie",
+      "visibility": "Widoczność",
+      "private": "Prywatne",
+      "public": "Publiczne",
+      "dangerZone": "Strefa niebezpieczeństwa",
+      "deleteChat": "Usuń rozmowę"
+    },
+    "management": {
+      "folders": "Foldery",
+      "manageFolders": "Zarządzaj folderami",
+      "tags": "Tagi",
+      "manageTags": "Zarządzaj tagami"
+    },
+    "messages": {
+      "noChats": "Brak kowersacji. Rozpocznij nową kowersację!",
+      "signInToSeeYourChatHistory": "Zaloguj się, aby zobaczyć historię rozmów",
+      "deleteFolder": "Usuń folder",
+      "areYouSureYouWantToDeleteFolder": "Czy na pewno chcesz usunąć folder \"{{folderName}}\"? Ta akcja jest nieodwracalna.",
+      "deleteTag": "Usuń tag",
+      "areYouSureYouWantToDeleteTag": "Czy na pewno chcesz usunąć tag \"{{tagName}}\"? Ta akcja jest nieodwracalna."
+    }
+  },
+  "settings": {
+    "sections": {
+      "account": "Konto",
+      "customization": "Personalizacja",
+      "history": "Historia i synchronizacja",
+      "models": "Modele",
+      "apiKeys": "Klucze API",
+      "attachments": "Załączniki",
+      "contact": "Kontakt"
+    },
+    "profile": {
+      "title": "Informacje o profilu",
+      "description": "Zaktualizuj swoje dane osobowe i ustawienia konta",
+      "fullName": "Imię i nazwisko",
+      "email": "Email",
+      "name": "Imię",
+      "avatar": "Awatar",
+      "changeAvatar": "Zmień awatar",
+      "avatarDescription": "JPG, PNG lub GIF. Maksymalny rozmiar 2MB.",
+      "accountCreated": "Konto utworzone",
+      "lastUpdated": "Ostatnia aktualizacja",
+      "upgradeToPro": "Przejdź na Pro",
+      "perMonth": "na miesiąc",
+      "perYear": "na rok",
+      "card": {
+        "accessToAllModels": {
+          "title": "Dostęp do wszystkich modeli",
+          "description": "Uzyskaj dostęp do naszego pełnego zestawu modeli, w tym Claude, o3-mini-high i innych!"
+        },
+        "generousLimits": {
+          "title": "Hojne limity",
+          "description": "Otrzymuj 1500 standardowych kredytów miesięcznie, plus 100 kredytów premium* miesięcznie."
+        },
+        "prioritySupport": {
+          "title": "Wsparcie priorytetowe",
+          "description": "Uzyskaj szybsze odpowiedzi i dedykowaną pomoc od zespołu T3, kiedy tylko potrzebujesz pomocy!"
+        }
+      },
+      "premiumCreditsNote": "* Kredyty premium są używane do Generacji obrazów GPT, Claude Sonnet i Grok 3. Dodatkowe kredyty premium można kupić osobno."
+    },
+    "customization": {
+      "title": "Personalizacja",
+      "description": "Zaktualizuj swoje dane osobowe i ustawienia konta",
+      "themeAppearance": "Motyw i wygląd",
+      "darkMode": "Tryb ciemny",
+      "darkModeDescription": "Tryb ciemny dla bardziej komfortowego doświadczenia",
+      "language": "Język",
+      "languageDescription": "Zmień język aplikacji"
+    },
+    "privacy": {
+      "title": "Dane osobowe",
+      "description": "Zarządzaj swoimi danymi osobowymi i preferencjami",
+      "dataCollection": "Zbieranie danych",
+      "dataCollectionDescription": "Zezwól na zbieranie danych użytkowania w celu poprawy usługi",
+      "analytics": "Analityka",
+      "analyticsDescription": "Pomóż nam się rozwijać, udostępniając anonimowe dane analityczne",
+      "marketingEmails": "Emaile marketingowe",
+      "marketingEmailsDescription": "Otrzymuj aktualizacje o nowych funkcjach i ulepszeniach"
+    },
+    "history": {
+      "title": "Historia rozmów i synchronizacja",
+      "description": "Zarządzaj historią rozmów i preferencjami synchronizacji",
+      "info": "Historia rozmów jest automatycznie zapisywana lokalnie i synchronizowana między urządzeniami po zalogowaniu.",
+      "autoSave": "Automatyczne zapisywanie rozmów",
+      "autoSaveDescription": "Automatycznie zapisuj wszystkie rozmowy",
+      "syncDevices": "Synchronizuj między urządzeniami",
+      "syncDescription": "Utrzymuj rozmowy zsynchronizowane na wszystkich urządzeniach",
+      "exportHistory": "Eksportuj historię rozmów"
+    },
+    "models": {
+      "title": "Modele AI",
+      "description": "Skonfiguruj preferowane modele AI i sprawdź status dostawców",
+      "available": "Dostępne modele",
+      "forPlan": "Modele dostępne dla Twojego planu:",
+      "providers": {
+        "openai": {
+          "name": "OpenAI",
+          "description": "Model OpenAI GPT"
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "description": "Model Anthropic Claude"
+        },
+        "google": {
+          "name": "Google",
+          "description": "Model AI Google Gemini"
+        }
+      }
+    },
+    "keyboardShortcuts": "Skróty klawiszowe",
+    "dangerZone": {
+      "title": "Strefa niebezpieczeństwa",
+      "description": "Trwale usuń swoje konto i wszystkie powiązane dane.",
+      "deleteAccount": "Usuń konto"
+    },
+    "apiKeys": {
+      "title": "Osobiste klucze API",
+      "description": "Dodaj własne klucze API aby używać własnych limitów i uzyskać dostęp do dodatkowych modeli",
+      "successMessages": {
+        "apiKeysSaved": "Klucze API zostały zapisane pomyślnie!"
+      },
+      "upgradeToProApiKeys": "Przejdź na Pro aby dodać własne klucze API i uzyskać dostęp do dodatkowych modeli z własnymi limitami.",
+      "secure": "Twoje klucze API są zaszyfrowane i bezpiecznie przechowywane. Będą używane tylko dla Twoich zapytań i mogą odblokować dodatkowe modele oraz wyższe limity."
+    },
+    "attachments": {
+      "title": "Załączniki",
+      "description": "Skonfiguruj preferencje przesyłania plików i załączników",
+      "sent": "Wysłane załączniki",
+      "sentDescription": "Wyświetl i zarządzaj plikami, które wysłałeś w swoich rozmowach",
+      "totalFiles": "Łączna liczba plików",
+      "totalSize": "Łączny rozmiar",
+      "lastUpload": "Ostatnie przesyłanie",
+      "searchFiles": "Wyszukaj pliki...",
+      "allTypes": "Wszystkie typy",
+      "images": "Obrazy",
+      "documents": "Dokumenty",
+      "code": "Kod",
+      "from": "Z"
+    },
+    "contact": {
+      "title": "Skontaktuj się z pomocą techniczną",
+      "description": "Uzyskaj pomoc od naszego zespołu wsparcia lub prześlij opinię",
+      "subject": "Temat",
+      "subjectPlaceholder": "W czym możemy pomóc?",
+      "message": "Wiadomość",
+      "messagePlaceholder": "Opisz szczegółowo swój problem lub opinię...",
+      "messageHelp": "Bądź jak najbardziej szczegółowy, aby pomóc nam lepiej Ci pomóc.",
+      "sendMessage": "Wyślij wiadomość",
+      "emailSupport": "Wsparcie email",
+      "responseTime": "Czas odpowiedzi",
+      "responseTimeValue": "Zwykle w ciągu 24h"
+    }
+  },
+  "subscription": {
+    "plans": {
+      "guest": "Gość",
+      "regular": "Zwykły",
+      "pro": "Pro",
+      "admin": "Admin",
+      "free": "Darmowy plan"
+    },
+    "upgrade": {
+      "title": "Przejdź na Pro",
+      "now": "Przejdź na wyższy plan teraz",
+      "required": "Wymagane jest konto Pro",
+      "message": "Ta funkcja jest dostępna tylko dla użytkowników Pro",
+      "features": {
+        "allModels": {
+          "title": "Dostęp do wszystkich modeli",
+          "description": "Uzyskaj dostęp do naszego pełnego zestawu modeli, w tym Claude, o3-mini-high i innych!"
+        },
+        "generousLimits": {
+          "title": "Hojne limity",
+          "description": "Otrzymuj 1500 standardowych kredytów miesięcznie, plus 100 kredytów premium* miesięcznie."
+        },
+        "prioritySupport": {
+          "title": "Wsparcie priorytetowe",
+          "description": "Uzyskaj szybsze odpowiedzi i dedykowaną pomoc od zespołu T3, kiedy tylko potrzebujesz pomocy!"
+        }
+      },
+      "premiumCreditsNote": "* Kredyty premium są używane do GPT Image Gen, Claude Sonnet i Grok 3. Dodatkowe kredyty premium można kupić osobno."
+    },
+    "usage": {
+      "title": "Wykorzystanie wiadomości",
+      "standard": "Standard",
+      "remaining": "pozostałe wiadomości",
+      "dailyLimit": "Dzienny limit",
+      "accountStats": "Statystyki konta",
+      "maxFolders": "Maks. folderów",
+      "maxTags": "Maks. tagów",
+      "reset": {
+        "at": "o",
+        "today": "Restart dzisiaj",
+        "tomorrow": "Restart jutro",
+        "on": "Restart"
+      }
+    }
+  },
+  "shortcuts": {
+    "title": "Skróty klawiszowe",
+    "description": "Skróty klawiszowe do pomocy w nawigacji w aplikacji",
+    "search": "Wyszukaj",
+    "newChat": "Nowa rozmowa",
+    "toggleSidebar": "Przełącz panel boczny"
+  },
+  "api": {
+    "messages": {
+      "checking": "Sprawdzanie...",
+      "messageUsage": "Użycie wiadomości",
+      "messagesRemaining": "pozostałe wiadomości",
+      "resetsAt": "Restart o",
+      "restartToday": "Restart dzisiaj",
+      "restartTomorrow": "Restart jutro",
+      "restartOn": "Restart",
+      "at": "o"
+    },
+    "keys": {
+      "title": "Klucze API",
+      "personal": "Osobiste klucze API",
+      "description": "Dodaj własne klucze API aby używać własnych limitów i uzyskać dostęp do dodatkowych modeli",
+      "info": "Twoje osobiste klucze API będą zaszyfrowane i bezpiecznie przechowywane. Będą używane tylko dla Twoich zapytań i mogą odblokować dodatkowe modele oraz wyższe limity.",
+      "save": "Zapisz klucze API",
+      "openai": {
+        "key": "Klucz API OpenAI",
+        "description": "Twój osobisty klucz API OpenAI do dostępu do modeli GPT z własnym limitem"
+      },
+      "anthropic": {
+        "key": "Klucz API Anthropic",
+        "description": "Twój osobisty klucz API Anthropic do dostępu do modeli Claude z własnym limitem"
+      }
+    }
+  },
+  "files": {
+    "attachments": {
+      "title": "Załączniki plików",
+      "sent": "Wysłane załączniki",
+      "description": "Wyświetl i zarządzaj plikami, które wysłałeś w swoich rozmowach",
+      "from": "Z",
+      "size": "Rozmiar",
+      "type": "Typ",
+      "date": "Data",
+      "sentIn": "Wysłane w",
+      "statistics": {
+        "totalFiles": "Łączna liczba plików",
+        "totalSize": "Łączny rozmiar",
+        "daysAgo": "Dni temu"
+      },
+      "filters": {
+        "allTypes": "Wszystkie typy",
+        "images": "Obrazy",
+        "documents": "Dokumenty",
+        "code": "Kod"
+      }
+    },
+    "upload": {
+      "maxSize": "Maksymalny rozmiar pliku (MB)",
+      "maxSizeDescription": "Maksymalny rozmiar pliku do przesyłania (1-50 MB)",
+      "uploading": "Przesyłanie plików...",
+      "added": "Dodano {{count}} plik(ów)",
+      "tooLarge": "Niektóre pliki są za duże (max 10MB). Pliki: {{files}}",
+      "autoAnalyzeImages": "Automatyczna analiza obrazów",
+      "autoAnalyzeDescription": "Automatycznie opisuj przesłane obrazy",
+      "syntaxHighlighting": "Podświetlanie składni plików kodu",
+      "syntaxDescription": "Włącz podświetlanie składni dla plików kodu",
+      "saveSettings": "Zapisz ustawienia załączników"
+    }
+  },
+  "support": {
+    "contact": {
+      "title": "Skontaktuj się z pomocą techniczną",
+      "description": "Uzyskaj pomoc od naszego zespołu wsparcia lub prześlij opinię",
+      "subject": "Temat",
+      "subjectPlaceholder": "W czym możemy pomóc?",
+      "message": "Wiadomość",
+      "messagePlaceholder": "Opisz szczegółowo swój problem lub opinię...",
+      "messageHelp": "Bądź jak najbardziej szczegółowy, aby pomóc nam lepiej Ci pomóc.",
+      "send": "Wyślij wiadomość",
+      "email": "Wsparcie email",
+      "responseTime": "Czas odpowiedzi",
+      "responseTimeValue": "Zwykle w ciągu 24h"
+    }
+  },
+  "folders": {
+    "manageFolders": "Zarządzaj folderami",
+    "organizeConversations": "Organizuj swoje rozmowy w foldery dla lepszej produktywności",
+    "yourFolders": "Twoje foldery",
+    "folderCount": "{{count}} folder{{count, plural, one {} other {y}}}",
+    "createNewFolder": "Stwórz nowy folder",
+    "folderName": "Nazwa folderu",
+    "folderNamePlaceholder": "np. Projekty robocze, Osobiste...",
+    "createFolder": "Stwórz folder",
+    "quickStats": "Szybkie statystyki",
+    "foldersUsed": "Użyte foldery",
+    "organizedChats": "Zorganizowane rozmowy",
+    "unfiledChats": "Niezorganizowane rozmowy",
+    "title": "Foldery",
+    "manage": "Zarządzaj folderami",
+    "organize": "Organizuj swoje rozmowy w foldery dla lepszej produktywności",
+    "your": "Twoje foldery",
+    "count": "{{count}} folder{{count, plural, one {} other {y}}}",
+    "chatCount": "{{count}} rozmow{{count, plural, one {a} few {y} other {}}}",
+    "none": "Brak folderów",
+    "createFirst": "Stwórz swój pierwszy folder aby zorganizować rozmowy",
+    "createNew": "Stwórz nowy folder",
+    "name": "Nazwa folderu",
+    "namePlaceholder": "np. Projekty robocze, Osobiste...",
+    "colorTheme": "Motyw kolorystyczny",
+    "create": "Stwórz folder",
+    "delete": "Usuń folder",
+    "confirmDelete": "Czy na pewno chcesz usunąć folder \"{{folderName}}\"? Ta akcja jest nieodwracalna.",
+    "statistics": {
+      "quick": "Szybkie statystyki",
+      "used": "Użyte foldery",
+      "organized": "Zorganizowane rozmowy",
+      "unfiled": "Niezorganizowane rozmowy"
+    },
+    "states": {
+      "saving": "Zapisywanie...",
+      "limitReached": "Osiągnięto limit"
+    }
+  },
+  "tags": {
+    "manageTags": "Zarządzaj tagami",
+    "categorizeConversations": "Kategoryzuj i oznaczaj swoje rozmowy dla łatwego wyszukiwania",
+    "yourTags": "Twoje tagi",
+    "tagCount": "{{count}} tag{{count, plural, one {} few {i} other {ów}}}",
+    "noTagsYet": "Brak tagów",
+    "createFirstTag": "Stwórz swój pierwszy tag aby kategoryzować rozmowy",
+    "createNewTag": "Stwórz nowy tag",
+    "tagName": "Nazwa tagu",
+    "tagNamePlaceholder": "np. Ważne, Praca, Badania...",
+    "createTag": "Stwórz tag",
+    "tagStatistics": "Statystyki tagów",
+    "tagsUsed": "Użyte tagi",
+    "taggedChats": "Oznaczone rozmowy",
+    "untaggedChats": "Nieoznaczone rozmowy",
+    "avgTagsPerChat": "Śr. tagów/rozmowę",
+    "title": "Tagi",
+    "manage": "Zarządzaj tagami",
+    "categorize": "Kategoryzuj i oznaczaj swoje rozmowy dla łatwego wyszukiwania",
+    "your": "Twoje tagi",
+    "count": "{{count}} tag{{count, plural, one {} few {i} other {ów}}}",
+    "chatCount": "{{count}} rozmow{{count, plural, one {a} few {y} other {}}}",
+    "none": "Brak tagów",
+    "createFirst": "Stwórz swój pierwszy tag aby kategoryzować rozmowy",
+    "createNew": "Stwórz nowy tag",
+    "name": "Nazwa tagu",
+    "namePlaceholder": "np. Ważne, Praca, Badania...",
+    "colorTheme": "Motyw kolorystyczny",
+    "create": "Stwórz tag",
+    "delete": "Usuń tag",
+    "confirmDelete": "Czy na pewno chcesz usunąć tag \"{{tagName}}\"? Ta akcja jest nieodwracalna.",
+    "statistics": {
+      "title": "Statystyki tagów",
+      "used": "Użyte tagi",
+      "tagged": "Oznaczone rozmowy",
+      "untagged": "Nieoznaczone rozmowy",
+      "average": "Śr. tagów/rozmowę"
+    },
+    "states": {
+      "saving": "Zapisywanie...",
+      "limitReached": "Osiągnięto limit"
+    }
+  },
+  "features": {
+    "pro": {
+      "fileUpload": "Funkcja przesyłania plików jest dostępna tylko dla użytkowników Pro. Przejdź na plan Pro aby odblokować tę funkcję!",
+      "webSearch": "Funkcja wyszukiwania w internecie jest dostępna tylko dla użytkowników Pro. Przejdź na plan Pro aby odblokować tę funkcję!",
+      "apiKeys": "Przejdź na plan Pro aby dodać własne klucze API i uzyskać dostęp do dodatkowych modeli z własnymi limitami.",
+      "feature": "Funkcja Pro"
+    }
+  },
+  "capabilities": {
+    "text": "Tekst",
+    "image": "Obrazy",
+    "images": "Obrazy",
+    "audio": "Audio",
+    "video": "Video"
+  },
+  "theme": {
+    "light": "Jasny",
+    "dark": "Ciemny",
+    "system": "System",
+    "toggle": "Zmień motyw"
+  },
+  "languages": {
+    "polish": "Polski",
+    "english": "English",
+    "select": "Wybierz język"
+  },
+  "validation": {
+    "errors": {
+      "nameMinLength": "Imię musi mieć co najmniej 2 znaki",
+      "nameTooLong": "Imię jest za długie",
+      "invalidEmail": "Nieprawidłowy adres email",
+      "subjectMinLength": "Temat musi mieć co najmniej 5 znaków",
+      "subjectTooLong": "Temat jest za długi",
+      "messageMinLength": "Wiadomość musi mieć co najmniej 10 znaków",
+      "messageTooLong": "Wiadomość jest za długa"
+    },
+    "success": {
+      "profileUpdated": "Profil został zaktualizowany pomyślnie!",
+      "apiKeysUpdated": "Klucze API zostały zaktualizowane pomyślnie!",
+      "attachmentsUpdated": "Ustawienia załączników zostały zaktualizowane pomyślnie!",
+      "messageSent": "Wiadomość została wysłana pomyślnie!"
+    }
+  },
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "description": "Model OpenAI GPT"
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "description": "Model Anthropic Claude"
+    },
+    "google": {
+      "name": "Google",
+      "description": "Model AI Google Gemini"
+    }
+  },
+  "common": {
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "deleteFolder": "Usuń folder",
+    "areYouSureYouWantToDeleteFolder": "Czy na pewno chcesz usunąć ten folder? Ta akcja jest nieodwracalna.",
+    "deleteTag": "Usuń tag",
+    "areYouSureYouWantToDeleteTag": "Czy na pewno chcesz usunąć ten tag? Ta akcja jest nieodwracalna."
+  }
+}

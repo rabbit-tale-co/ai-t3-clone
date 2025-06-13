@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn, getReadableBorderColor } from '@/lib/utils';
+import { useLanguage } from '@/hooks/use-language';
 import type { Folder } from '@/lib/db/schema';
 import type { UserType } from '@/app/(auth)/auth';
 import { getUserEntitlements } from '@/lib/ai/entitlements';
@@ -103,6 +104,7 @@ export function ManageFoldersDialog({
   userType,
   colorAccents,
 }: ManageFoldersDialogProps) {
+  const { t } = useLanguage();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:min-w-4xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl rounded-2xl">
@@ -112,11 +114,10 @@ export function ManageFoldersDialog({
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold text-pink-900 dark:text-gray-100 flex items-center gap-3">
                   <FolderIcon className="size-5" />
-                  Manage Folders
+                  {t('folders.manageFolders')}
                 </h2>
                 <p className="text-xs sm:text-sm text-pink-600 dark:text-pink-400 mt-0.5">
-                  Organize your conversations into folders for better
-                  productivity
+                  {t('folders.organizeConversations')}
                 </p>
               </div>
             </div>
@@ -129,10 +130,10 @@ export function ManageFoldersDialog({
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
-                  Your Folders
+                  {t('folders.yourFolders')}
                 </h3>
                 <span className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100 dark:bg-pink-900/30 px-2 py-1 rounded-full">
-                  {folders.length} folder{folders.length !== 1 ? 's' : ''}
+                  {t('folders.folderCount', { count: folders.length })}
                 </span>
               </div>
 
@@ -190,8 +191,9 @@ export function ManageFoldersDialog({
                           </Button>
                         </div>
                         <div className="text-xs text-pink-600 dark:text-pink-400">
-                          {folderChats.length} chat
-                          {folderChats.length !== 1 ? 's' : ''}
+                          {t('folders.chatCount', {
+                            count: folderChats.length,
+                          })}
                           {recentChat && (
                             <span className="ml-2">
                               •{' '}
@@ -211,11 +213,10 @@ export function ManageFoldersDialog({
                     <FolderIcon className="size-8 text-pink-500 dark:text-pink-400" />
                   </div>
                   <h3 className="text-lg font-medium mb-2 text-pink-900 dark:text-pink-100">
-                    No folders yet
+                    {t('folders.noFoldersYet')}
                   </h3>
                   <p className="text-sm text-pink-600 dark:text-pink-400">
-                    Create your first folder to start organizing your
-                    conversations
+                    {t('folders.createFirstFolder')}
                   </p>
                 </div>
               )}
@@ -225,7 +226,7 @@ export function ManageFoldersDialog({
             <div className="space-y-6">
               <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
                 <h3 className="font-medium mb-4 text-pink-900 dark:text-pink-100">
-                  Create New Folder
+                  {t('folders.createNewFolder')}
                 </h3>
 
                 <div className="space-y-4">
@@ -234,20 +235,20 @@ export function ManageFoldersDialog({
                       htmlFor="folderName"
                       className="text-pink-800 dark:text-pink-200"
                     >
-                      Folder Name
+                      {t('folders.folderName')}
                     </Label>
                     <Input
                       id="folderName"
                       value={newFolderName}
                       onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="e.g., Work Projects, Personal..."
+                      placeholder={t('folders.folderNamePlaceholder')}
                       className="border-pink-200 dark:border-pink-800/50 bg-white/80 dark:bg-black/50 text-pink-900 dark:text-pink-100 placeholder:text-pink-500 dark:placeholder:text-pink-400 focus:border-pink-400 dark:focus:border-pink-600"
                     />
                   </div>
 
                   <div className="space-y-3">
                     <Label className="text-pink-800 dark:text-pink-200">
-                      Color Theme
+                      {t('folders.colorTheme')}
                     </Label>
                     <div className="grid grid-cols-3 gap-2">
                       {Object.entries(colorAccents).map(([color, values]) => {
@@ -310,16 +311,16 @@ export function ManageFoldersDialog({
                   >
                     <FolderIcon className="size-4 mr-2" />
                     {isCreating
-                      ? 'Saving...'
+                      ? t('folders.saving')
                       : (() => {
                           const entitlements = getUserEntitlements(userType);
                           if (
                             entitlements.maxFolders !== -1 &&
                             folders.length >= entitlements.maxFolders
                           ) {
-                            return 'Limit Reached';
+                            return t('folders.limitReached');
                           }
-                          return 'Create Folder';
+                          return t('folders.createFolder');
                         })()}
                   </Button>
                 </div>
@@ -328,12 +329,12 @@ export function ManageFoldersDialog({
               {/* Quick Stats */}
               <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
                 <h4 className="text-sm font-medium mb-3 text-pink-900 dark:text-pink-100">
-                  Quick Stats
+                  {t('folders.quickStats')}
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Folders Used:
+                      {t('folders.foldersUsed')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {folders.length}
@@ -347,7 +348,7 @@ export function ManageFoldersDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Organized Chats:
+                      {t('folders.organizedChats')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {allThreads.filter((t) => t.folderId).length}
@@ -355,7 +356,7 @@ export function ManageFoldersDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Unfiled Chats:
+                      {t('folders.unfiledChats')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {allThreads.filter((t) => !t.folderId).length}
@@ -377,7 +378,7 @@ export function ManageFoldersDialog({
             }}
             className="border-pink-200 dark:border-pink-800/50 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20"
           >
-            Close
+            {t('common.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

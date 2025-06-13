@@ -1,4 +1,4 @@
-import { PreviewMessage, ThinkingMessage } from './message';
+import { PreviewMessage, ThinkingMessage } from './chat/message';
 import type { Vote } from '@/lib/db/schema';
 import type { UIMessage } from 'ai';
 import { memo } from 'react';

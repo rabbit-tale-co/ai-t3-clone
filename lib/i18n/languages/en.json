@@ -1,0 +1,597 @@
+{
+  "toast": {
+    "settings": {
+      "profile": {
+        "profileUpdated": "Profile updated successfully!"
+      },
+      "contact": {
+        "messageSent": "Message sent successfully!"
+      }
+    }
+  },
+  "chat": {
+    "buttons": {
+      "private": "Private",
+      "public": "Public",
+      "privateDescription": "Only you can access this chat",
+      "publicDescription": "Anyone with the link can access this chat"
+    },
+    "greetings": {
+      "hello": "Hello! How can I help you?",
+      "subtitle": "Ask a question or choose a category below",
+      "placeholder": "Write a message...",
+      "placeholderNoUsage": "No remaining messages..."
+    },
+    "input": {
+      "send": "Send",
+      "sending": "Sending...",
+      "sendMessage": "Send message",
+      "attachFiles": "Attach files",
+      "search": "Search",
+      "enableSearch": "Enable search",
+      "disableSearch": "Disable search",
+      "selectModel": "Select Model",
+      "allModels": "All models...",
+      "filters": "Filters",
+      "clearAll": "Clear all",
+      "placeholder": "Type a message...",
+      "stop": "Stop",
+      "attach": "Attach file",
+      "attachTooltip": "Attach file (Ctrl+U)"
+    },
+    "categories": {
+      "create": "Create",
+      "explore": "Explore",
+      "code": "Code",
+      "learn": "Learn"
+    },
+    "examples": {
+      "general": {
+        "example1": "Write a creative story about time travel",
+        "example2": "Explain quantum mechanics in simple terms",
+        "example3": "Help me create a business plan for a startup",
+        "example4": "Write code to sort a list in Python"
+      },
+      "create": {
+        "writeEmail": "Write a professional email to a client",
+        "writeStory": "Create a short science fiction story",
+        "createPresentation": "Prepare a presentation about AI",
+        "designLogo": "Help design a logo for a company"
+      },
+      "explore": {
+        "explainConcept": "Explain the concept of blockchain",
+        "researchTopic": "Research renewable energy sources",
+        "compareIdeas": "Compare different life philosophies",
+        "analyzeData": "Analyze trends in sales data"
+      },
+      "code": {
+        "createFunction": "Write a function for email validation",
+        "debugCode": "Help debug this JavaScript code",
+        "optimizePerformance": "Optimize this application's performance",
+        "reviewCode": "Review and assess this code quality"
+      },
+      "learn": {
+        "learnLanguage": "Teach me Spanish basics",
+        "explainMath": "Explain quadratic equations",
+        "studyHistory": "Tell me about World War II",
+        "practiceSkill": "Help me practice presentation skills"
+      }
+    },
+    "attachments": {
+      "title": "Attachments",
+      "removeAll": "Remove all",
+      "removeFile": "Remove file",
+      "uploading": "Uploading files...",
+      "added": "Added {{count}} file(s)",
+      "tooLarge": "Some files are too large (max 10MB). Files: {{files}}"
+    },
+    "models": {
+      "changed": "Model changed to {{name}}. New conversations will use this model.",
+      "select": "Select model",
+      "current": "Current model"
+    },
+    "search": {
+      "enabled": "Web search has been enabled. Your queries will be enriched with current information from the web."
+    },
+    "usage": {
+      "remaining": "You have {{remaining}} of {{limit}} free messages remaining.",
+      "loginToContinue": " Please log in to continue.",
+      "loginToIncrease": " Please log in to increase limits.",
+      "noRemaining": "No remaining messages"
+    }
+  },
+  "auth": {
+    "actions": {
+      "login": "Log in",
+      "register": "Sign up",
+      "logout": "Log out",
+      "signIn": "Sign In",
+      "signOut": "Sign Out",
+      "signUp": "Sign Up"
+    },
+    "roles": {
+      "guest": "Guest",
+      "regular": "Regular",
+      "pro": "Pro",
+      "admin": "Admin"
+    },
+    "plans": {
+      "pro": "Pro",
+      "free": "Free Plan"
+    },
+    "messages": {
+      "accountCreated": "Account created successfully!",
+      "accountExists": "Account already exists!",
+      "createAccountFailed": "Failed to create account!",
+      "loginFailed": "Invalid login credentials!"
+    }
+  },
+  "ui": {
+    "buttons": {
+      "loading": "Loading...",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "save": "Save",
+      "delete": "Delete",
+      "edit": "Edit",
+      "close": "Close",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "yes": "Yes",
+      "no": "No",
+      "download": "Download",
+      "loadMore": "Load More Files",
+      "saveChanges": "Save Changes",
+      "upgradeNow": "Upgrade Now",
+      "deleteAccount": "Delete Account",
+      "upgradeToPro": "Upgrade to Pro",
+      "send": "Send"
+    },
+    "status": {
+      "error": "Error",
+      "success": "Success",
+      "warning": "Warning",
+      "info": "Information",
+      "loading": "Loading...",
+      "checking": "Checking...",
+      "available": "Available",
+      "unknown": "Unknown"
+    },
+    "forms": {
+      "search": "Search",
+      "searchFiles": "Search files...",
+      "allTypes": "All Types",
+      "images": "Images",
+      "documents": "Documents",
+      "code": "Code"
+    }
+  },
+  "navigation": {
+    "header": {
+      "appName": "AI T3 Clone",
+      "newChat": "New Chat",
+      "search": "Search",
+      "startNewChat": "Start new conversation",
+      "settings": "Settings",
+      "yourChats": "Your chats",
+      "toggleSidebar": "Toggle sidebar"
+    },
+    "folderItem": {
+      "noChatsInFolder": "No chats in this folder"
+    },
+    "history": {
+      "chats": "Chats",
+      "folders": "Folders",
+      "searchResults": "Search results"
+    },
+    "dropdown": {
+      "more": "More",
+      "organization": "Organization",
+      "currentlyInFolder": "Currently in a folder",
+      "tags": "tags",
+      "assigned": "assigned",
+      "removeFromFolder": "Remove from folder",
+      "moveToFolder": "Move to folder",
+      "loadingFolders": "Loading folders...",
+      "noFoldersAvailable": "No folders available",
+      "manageTags": "Manage tags",
+      "loadingTags": "Loading tags...",
+      "noTagsAvailable": "No tags available",
+      "sharing": "Sharing",
+      "visibility": "Visibility",
+      "private": "Private",
+      "public": "Public",
+      "dangerZone": "Danger Zone",
+      "deleteChat": "Delete chat"
+    },
+    "management": {
+      "folders": "Folders",
+      "manageFolders": "Manage folders",
+      "tags": "Tags",
+      "manageTags": "Manage tags"
+    },
+    "messages": {
+      "noChats": "No chats yet. Start a new conversation!",
+      "signInToSeeYourChatHistory": "Sign in to see your chat history",
+      "deleteFolder": "Delete folder",
+      "areYouSureYouWantToDeleteFolder": "Are you sure you want to delete folder \"{{folderName}}\"? This action cannot be undone.",
+      "deleteTag": "Delete tag",
+      "areYouSureYouWantToDeleteTag": "Are you sure you want to delete tag \"{{tagName}}\"? This action cannot be undone."
+    }
+  },
+  "settings": {
+    "sections": {
+      "account": "Account",
+      "customization": "Customization",
+      "history": "History & Sync",
+      "models": "Models",
+      "apiKeys": "API Keys",
+      "attachments": "Attachments",
+      "contact": "Contact Us"
+    },
+    "profile": {
+      "title": "Profile Information",
+      "description": "Update your personal information and account settings",
+      "fullName": "Full Name",
+      "email": "Email",
+      "name": "Name",
+      "avatar": "Avatar",
+      "changeAvatar": "Change Avatar",
+      "avatarDescription": "JPG, PNG or GIF. Max size 2MB.",
+      "accountCreated": "Account Created",
+      "lastUpdated": "Last Updated",
+      "upgradeToPro": "Upgrade to Pro",
+      "perMonth": "per month",
+      "perYear": "per year",
+      "card": {
+        "accessToAllModels": {
+          "title": "Access to All Models",
+          "description": "Get access to our full suite of models including Claude, o3-mini-high, and more!"
+        },
+        "generousLimits": {
+          "title": "Generous Limits",
+          "description": "Receive 1500 standard credits per month, plus 100 premium credits* per month."
+        },
+        "prioritySupport": {
+          "title": "Priority Support",
+          "description": "Get faster responses and dedicated assistance from the T3 team whenever you need help!"
+        }
+      },
+      "premiumCreditsNote": "* Premium credits are used for GPT Image Gen, Claude Sonnet, and Grok 3. Additional Premium credits can be purchased separately."
+    },
+    "customization": {
+      "title": "Customization",
+      "description": "Update your personal information and account settings",
+      "themeAppearance": "Theme & Appearance",
+      "darkMode": "Dark Mode",
+      "darkModeDescription": "Dark mode for a more comfortable experience",
+      "language": "Language",
+      "languageDescription": "Change the language of the application"
+    },
+    "history": {
+      "title": "Chat History & Sync",
+      "description": "Manage your conversation history and synchronization preferences",
+      "info": "Chat history is automatically saved locally and synced across your devices when signed in.",
+      "autoSave": "Auto-save conversations",
+      "autoSaveDescription": "Automatically save all chat conversations",
+      "syncDevices": "Sync across devices",
+      "syncDescription": "Keep conversations synchronized on all devices",
+      "exportHistory": "Export Chat History"
+    },
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "dangerZone": {
+      "title": "Danger Zone",
+      "description": "Permanently delete your account and all associated data.",
+      "deleteAccount": "Delete Account"
+    },
+    "models": {
+      "title": "AI Models",
+      "description": "Configure your preferred AI models and check provider status",
+      "available": "Available Models",
+      "forPlan": "Models available for your plan:",
+      "settings": "Model Settings",
+      "default": "Default",
+      "gpt4Description": "Most capable GPT model with vision and web access",
+      "temperature": "Temperature",
+      "fast": "Fast",
+      "gpt4MiniDescription": "Fast and efficient GPT model for simple tasks",
+      "geminiDescription": "Google Gemini AI model",
+      "gptDescription": "OpenAI GPT model",
+      "claudeDescription": "Anthropic Claude model"
+    },
+    "apiKeys": {
+      "title": "Personal API Keys",
+      "description": "Add your own API keys to use your personal quotas and access additional models",
+      "successMessages": {
+        "apiKeysSaved": "API keys saved successfully!"
+      },
+      "upgradeToProApiKeys": "Upgrade to Pro to add your own API keys and access additional models with your personal quotas.",
+      "secure": "Your API keys are encrypted and stored securely. They are only used to make requests on your behalf."
+    },
+    "attachments": {
+      "title": "Attachments",
+      "description": "Configure file upload and attachment preferences",
+      "sent": "Sent Attachments",
+      "sentDescription": "View and manage files you have sent in your conversations",
+      "totalFiles": "Total Files",
+      "totalSize": "Total Size",
+      "lastUpload": "Last Upload",
+      "searchFiles": "Search files...",
+      "allTypes": "All Types",
+      "images": "Images",
+      "documents": "Documents",
+      "code": "Code",
+      "from": "From"
+    },
+    "contact": {
+      "title": "Contact Us",
+      "description": "Get help from our support team or provide feedback",
+      "subject": "Subject",
+      "subjectPlaceholder": "What can we help you with?",
+      "message": "Message",
+      "messagePlaceholder": "Describe your issue or feedback in detail...",
+      "messageHelp": "Be as detailed as possible to help us assist you better.",
+      "sendMessage": "Send Message",
+      "emailSupport": "Email Support",
+      "responseTime": "Response Time",
+      "responseTimeValue": "Usually within 24h"
+    }
+  },
+  "subscription": {
+    "plans": {
+      "premium": "Premium Plan",
+      "free": "Free Plan",
+      "guest": "Guest",
+      "regular": "Regular",
+      "pro": "Pro",
+      "admin": "Admin"
+    },
+    "usage": {
+      "title": "Message Usage",
+      "standard": "Standard",
+      "remaining": "messages remaining",
+      "resetsAt": "Restart tomorrow",
+      "restartToday": "Restart today",
+      "restartTomorrow": "Restart tomorrow",
+      "restartOn": "Restart on",
+      "at": "at",
+      "accountStats": "Account Statistics",
+      "dailyLimit": "Daily Limit",
+      "maxFolders": "Max Folders",
+      "maxTags": "Max Tags"
+    },
+    "upgrade": {
+      "title": "Access to All Models",
+      "description": "Get access to our full suite of models including Claude, o3-mini-high, and more!",
+      "generousLimits": "Generous Limits",
+      "generousLimitsDescription": "Receive 1500 standard credits per month, plus 100 premium credits* per month.",
+      "prioritySupport": "Priority Support",
+      "prioritySupportDescription": "Get faster responses and dedicated assistance from the T3 team whenever you need help!",
+      "upgradeNow": "Upgrade Now",
+      "premiumCreditsNote": "* Premium credits are used for GPT Image Gen, Claude Sonnet, and Grok 3. Additional Premium credits can be purchased separately."
+    }
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "description": "Keyboard shortcuts to help you navigate the application",
+    "search": "Search",
+    "newChat": "New Chat",
+    "toggleSidebar": "Toggle Sidebar"
+  },
+  "api": {
+    "messages": {
+      "checking": "Checking...",
+      "messageUsage": "Message Usage",
+      "messagesRemaining": "messages remaining",
+      "resetsAt": "Restart at",
+      "restartToday": "Restart today",
+      "restartTomorrow": "Restart tomorrow",
+      "restartOn": "Restart on",
+      "at": "at"
+    },
+    "keys": {
+      "title": "API Keys",
+      "description": "Manage your API keys for external integrations",
+      "info": "API keys are encrypted and stored securely. They are only used for your requests.",
+      "personalDescription": "Add your own API keys to use your personal quotas and access additional models",
+      "personalInfo": "Your personal API keys will be encrypted and stored securely. They will only be used for your requests and can unlock additional models and higher limits.",
+      "openaiKey": "OpenAI API Key",
+      "openaiKeyDescription": "Your OpenAI API key for GPT models",
+      "personalOpenaiKeyDescription": "Your personal OpenAI API key to access GPT models with your own quota",
+      "anthropicKey": "Anthropic API Key",
+      "anthropicKeyDescription": "Your Anthropic API key for Claude models",
+      "personalAnthropicKeyDescription": "Your personal Anthropic API key to access Claude models with your own quota",
+      "saveApiKeys": "Save API Keys"
+    }
+  },
+  "files": {
+    "attachments": {
+      "title": "File Attachments",
+      "sent": "Sent Attachments",
+      "description": "Configure file upload and attachment preferences",
+      "sentDescription": "View and manage files you have sent in your conversations",
+      "totalFiles": "Total Files",
+      "totalSize": "Total Size",
+      "daysAgo": "Days Ago",
+      "sentIn": "Sent in"
+    },
+    "upload": {
+      "autoAnalyzeImages": "Auto-analyze images",
+      "autoAnalyzeDescription": "Automatically describe uploaded images",
+      "syntaxHighlighting": "Code file syntax highlighting",
+      "syntaxDescription": "Enable syntax highlighting for code files",
+      "maxFileSize": "Maximum file size (MB)",
+      "fileSizeDescription": "Set the maximum file size for uploads (1-50 MB)",
+      "saveAttachments": "Save Attachment Settings"
+    }
+  },
+  "support": {
+    "contact": {
+      "title": "Contact Support",
+      "description": "Get help from our support team or provide feedback",
+      "subject": "Subject",
+      "subjectPlaceholder": "What can we help you with?",
+      "message": "Message",
+      "messagePlaceholder": "Describe your issue or feedback in detail...",
+      "messageHelp": "Be as detailed as possible to help us assist you better.",
+      "sendMessage": "Send Message",
+      "emailSupport": "Email Support",
+      "responseTime": "Response Time",
+      "responseTimeValue": "Usually within 24h"
+    },
+    "privacy": {
+      "personalData": "Personal Data",
+      "personalDataDescription": "Manage your personal information and preferences",
+      "dataCollection": "Data Collection",
+      "dataCollectionDescription": "Allow collection of usage data to improve the service",
+      "analytics": "Analytics",
+      "analyticsDescription": "Help us improve by sharing anonymous usage analytics",
+      "marketingEmails": "Marketing Emails",
+      "marketingEmailsDescription": "Receive updates about new features and improvements"
+    }
+  },
+  "folders": {
+    "manageFolders": "Manage Folders",
+    "organizeConversations": "Organize your conversations into folders for better productivity",
+    "yourFolders": "Your Folders",
+    "folderCount": "{{count}} folder{{count, plural, one {} other {s}}}",
+    "createNewFolder": "Create New Folder",
+    "folderName": "Folder Name",
+    "folderNamePlaceholder": "e.g., Work Projects, Personal...",
+    "createFolder": "Create Folder",
+    "quickStats": "Quick Stats",
+    "foldersUsed": "Folders Used",
+    "organizedChats": "Organized Chats",
+    "unfiledChats": "Unfiled Chats",
+    "title": "Manage Folders",
+    "organize": "Organize your conversations into folders for better productivity",
+    "your": "Your Folders",
+    "count": "{{count}} folder{{count, plural, one {} other {s}}}",
+    "chatCount": "{{count}} chat{{count, plural, one {} other {s}}}",
+    "none": "No folders yet",
+    "createFirst": "Create your first folder to start organizing your conversations",
+    "createNew": "Create New Folder",
+    "name": "Folder Name",
+    "namePlaceholder": "e.g., Work Projects, Personal...",
+    "colorTheme": "Color Theme",
+    "create": "Create Folder",
+    "statistics": {
+      "quick": "Quick Stats",
+      "used": "Folders Used",
+      "organized": "Organized Chats",
+      "unfiled": "Unfiled Chats"
+    },
+    "states": {
+      "saving": "Saving...",
+      "limitReached": "Limit Reached"
+    }
+  },
+  "tags": {
+    "manageTags": "Manage Tags",
+    "categorizeConversations": "Categorize and label your conversations for easy discovery",
+    "yourTags": "Your Tags",
+    "tagCount": "{{count}} tag{{count, plural, one {} other {s}}}",
+    "noTagsYet": "No tags yet",
+    "createFirstTag": "Create your first tag to start categorizing your conversations",
+    "createNewTag": "Create New Tag",
+    "tagName": "Tag Name",
+    "tagNamePlaceholder": "e.g., Important, Work, Research...",
+    "createTag": "Create Tag",
+    "tagStatistics": "Tag Statistics",
+    "tagsUsed": "Tags Used",
+    "taggedChats": "Tagged Chats",
+    "untaggedChats": "Untagged Chats",
+    "avgTagsPerChat": "Avg Tags/Chat",
+    "title": "Manage Tags",
+    "categorize": "Categorize and label your conversations for easy discovery",
+    "your": "Your Tags",
+    "count": "{{count}} tag{{count, plural, one {} other {s}}}",
+    "chatCount": "{{count}} chat{{count, plural, one {} other {s}}}",
+    "none": "No tags yet",
+    "createFirst": "Create your first tag to start categorizing your conversations",
+    "createNew": "Create New Tag",
+    "name": "Tag Name",
+    "namePlaceholder": "e.g., Important, Work, Research...",
+    "colorTheme": "Color Theme",
+    "create": "Create Tag",
+    "statistics": {
+      "title": "Tag Statistics",
+      "used": "Tags Used",
+      "tagged": "Tagged Chats",
+      "untagged": "Untagged Chats",
+      "average": "Avg Tags/Chat"
+    },
+    "states": {
+      "saving": "Saving...",
+      "limitReached": "Limit Reached"
+    }
+  },
+  "features": {
+    "pro": {
+      "fileUpload": "File upload feature is only available for Pro users. Upgrade to Pro to unlock this feature!",
+      "webSearch": "Web search feature is only available for Pro users. Upgrade to Pro to unlock this feature!",
+      "upgradeRequired": "Pro account required",
+      "upgradeMessage": "This feature is only available for Pro users",
+      "apiKeys": "Upgrade to Pro to add your own API keys and access additional models with your personal quotas.",
+      "feature": "Pro Feature"
+    }
+  },
+  "capabilities": {
+    "text": "Text",
+    "image": "Images",
+    "images": "Images",
+    "audio": "Audio",
+    "video": "Video"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "toggle": "Toggle theme"
+  },
+  "languages": {
+    "polish": "Polski",
+    "english": "English",
+    "select": "Select language"
+  },
+  "validation": {
+    "errors": {
+      "nameMinLength": "Name must be at least 2 characters",
+      "nameTooLong": "Name too long",
+      "invalidEmail": "Invalid email address",
+      "subjectMinLength": "Subject must be at least 5 characters",
+      "subjectTooLong": "Subject too long",
+      "messageMinLength": "Message must be at least 10 characters",
+      "messageTooLong": "Message too long"
+    },
+    "success": {
+      "profileUpdated": "Profile updated successfully!",
+      "apiKeysUpdated": "API keys updated successfully!",
+      "attachmentsUpdated": "Attachment settings updated successfully!",
+      "messageSent": "Message sent successfully!"
+    }
+  },
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "description": "OpenAI GPT model"
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "description": "Anthropic Claude model"
+    },
+    "google": {
+      "name": "Google",
+      "description": "Google Gemini AI model"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "deleteFolder": "Delete Folder",
+    "areYouSureYouWantToDeleteFolder": "Are you sure you want to delete this folder? This action cannot be undone.",
+    "deleteTag": "Delete Tag",
+    "areYouSureYouWantToDeleteTag": "Are you sure you want to delete this tag? This action cannot be undone."
+  }
+}

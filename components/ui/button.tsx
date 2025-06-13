@@ -12,6 +12,12 @@ const buttonVariants = cva(
         default: 'bg-t3-pink-500 text-t3-pink-50 hover:bg-t3-pink-400',
         destructive:
           'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
+        destructiveOutline:
+          'ring-destructive ring-1 text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20',
+        warning:
+          'bg-yellow-500 text-white hover:bg-yellow-400 focus-visible:ring-yellow-200 dark:focus-visible:ring-yellow-400 dark:bg-yellow-600',
+        warningOutline:
+          'ring-yellow-500 ring-1 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/20',
         outline:
           'ring-t3-pink-300 ring-1 dark:ring-pink-800/50 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-black/40 hover:text-pink-800 dark:hover:text-pink-200',
         secondary:

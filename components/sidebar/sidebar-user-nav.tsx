@@ -1,115 +1,91 @@
 'use client';
 
-import Image from 'next/image';
 import type { User } from 'next-auth';
-import { signOut, useSession } from 'next-auth/react';
-import { useTheme } from 'next-themes';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useRouter } from 'next/navigation';
-import { toast } from '../toast';
-import { LoaderIcon, ChevronUp } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { LoaderIcon } from 'lucide-react';
 import { guestRegex } from '@/lib/constants';
+import { SettingsDialog } from '@/components/settings';
 
 export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
   const { data, status } = useSession();
-  const { setTheme, resolvedTheme } = useTheme();
 
   const isGuest = guestRegex.test(data?.user?.email ?? '');
 
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            {status === 'loading' ? (
-              <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10 justify-between">
-                <div className="flex flex-row gap-2">
-                  <div className="size-6 bg-zinc-500/30 rounded-full animate-pulse" />
-                  <span className="bg-zinc-500/30 text-transparent rounded-md animate-pulse">
-                    Loading auth status
-                  </span>
-                </div>
-                <div className="animate-spin text-zinc-500">
-                  <LoaderIcon />
-                </div>
-              </SidebarMenuButton>
-            ) : (
-              <SidebarMenuButton
-                data-testid="user-nav-button"
-                className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10"
-              >
-                <Image
-                  src={`https://avatar.vercel.sh/${user.email}`}
-                  alt={user.email ?? 'User Avatar'}
-                  width={24}
-                  height={24}
-                  className="rounded-full"
-                />
-                <span data-testid="user-email" className="truncate">
-                  {isGuest ? 'Guest' : user?.email}
-                </span>
-                <ChevronUp className="ml-auto" />
-              </SidebarMenuButton>
-            )}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            data-testid="user-nav-menu"
-            side="top"
-            className="w-(--radix-popper-anchor-width)"
+  // Loading state
+  if (status === 'loading') {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="lg"
+            className="data-[state=open]:bg-sidebar-accent/30 data-[state=open]:text-sidebar-accent-foreground"
           >
-            <DropdownMenuItem
-              data-testid="user-nav-item-theme"
-              className="cursor-pointer"
-              onSelect={() =>
-                setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-              }
-            >
-              {`Toggle ${resolvedTheme === 'light' ? 'dark' : 'light'} mode`}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild data-testid="user-nav-item-auth">
-              <button
-                type="button"
-                className="w-full cursor-pointer"
-                onClick={() => {
-                  if (status === 'loading') {
-                    toast({
-                      type: 'error',
-                      description:
-                        'Checking authentication status, please try again!',
-                    });
+            <Avatar className="size-8 rounded-lg">
+              <AvatarFallback className="rounded-lg bg-zinc-500/30 animate-pulse">
+                <LoaderIcon className="size-4 animate-spin" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium bg-zinc-500/30 text-transparent rounded animate-pulse">
+                Loading user...
+              </span>
+              <span className="truncate text-xs bg-zinc-500/20 text-transparent rounded animate-pulse">
+                Loading status...
+              </span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
-                    return;
-                  }
+  // Guest user - redirect to login instead of opening settings
+  if (isGuest) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="lg"
+            className="data-[state=open]:bg-sidebar-accent/30 data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
+            onClick={() => router.push('/login')}
+          >
+            <Avatar className="size-8 rounded-lg">
+              <AvatarFallback className="rounded-lg bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300">
+                G
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">Guest User</span>
+              <span className="truncate text-xs text-muted-foreground">
+                Click to sign in
+              </span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
-                  if (isGuest) {
-                    router.push('/login');
-                  } else {
-                    signOut({
-                      redirectTo: '/',
-                    });
-                  }
-                }}
-              >
-                {isGuest ? 'Login to your account' : 'Sign out'}
-              </button>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+  // Authenticated user - wrap in SettingsDialog
+  return (
+    <SettingsDialog
+      user={{
+        id: user.id || '',
+        email: user.email || '',
+        full_name: user.name || user.email?.split('@')[0] || 'User',
+        avatar_url: `https://avatar.vercel.sh/${user.email}`,
+        is_premium: false,
+        type: user.type,
+      }}
+    />
   );
 }

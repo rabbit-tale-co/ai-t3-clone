@@ -15,9 +15,40 @@ export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   email: varchar('email', { length: 64 }).notNull(),
   password: varchar('password', { length: 64 }),
+  fullName: varchar('fullName', { length: 100 }),
+  avatarUrl: text('avatarUrl'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  // Subscription fields
+  subscriptionId: varchar('subscriptionId', { length: 255 }), // Stripe subscription ID
+  subscriptionStatus: varchar('subscriptionStatus', {
+    enum: ['active', 'canceled', 'past_due', 'unpaid', 'incomplete'],
+  }),
+  subscriptionCurrentPeriodEnd: timestamp('subscriptionCurrentPeriodEnd'),
+  subscriptionCurrentPeriodStart: timestamp('subscriptionCurrentPeriodStart'),
+  customerId: varchar('customerId', { length: 255 }), // Stripe customer ID
 });
 
 export type User = InferSelectModel<typeof user>;
+
+// User API Keys table
+export const userApiKey = pgTable('UserApiKey', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', {
+    enum: ['openai', 'anthropic', 'google', 'xai', 'openrouter'],
+  }).notNull(),
+  keyName: varchar('keyName', { length: 100 }).notNull(), // User-friendly name
+  encryptedKey: text('encryptedKey').notNull(), // Encrypted API key
+  isActive: boolean('isActive').notNull().default(true),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  lastUsedAt: timestamp('lastUsedAt'),
+});
+
+export type UserApiKey = InferSelectModel<typeof userApiKey>;
 
 // --- ADD FOLDER TABLE ---
 export const folder = pgTable('Folder', {

@@ -121,6 +121,28 @@ function PureMultimodalInput({
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
 
   const submitForm = useCallback(() => {
+    console.log('submitForm called, messages.length:', messages.length);
+    console.log('input:', input);
+    console.log('chatId:', chatId);
+
+    // Optimistic update - add new chat to sidebar if it's the first message
+    if (messages.length === 0 && typeof window !== 'undefined') {
+      console.log('First message detected, attempting optimistic update');
+      const addNewChatOptimistic = (window as any).addNewChatOptimistic;
+      console.log('addNewChatOptimistic function:', addNewChatOptimistic);
+
+      if (addNewChatOptimistic && input.trim()) {
+        // Use first words of the message as the title
+        const title = 'New Chat';
+        console.log('Calling addNewChatOptimistic with:', chatId, title);
+        addNewChatOptimistic(chatId, title);
+      } else {
+        console.log('Skipping optimistic update - no function or empty input');
+      }
+    } else {
+      console.log('Not first message or no window object');
+    }
+
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
     handleSubmit(undefined, {
@@ -141,6 +163,8 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    messages.length,
+    input,
   ]);
 
   const uploadFile = async (file: File) => {
@@ -296,6 +320,7 @@ function PureMultimodalInput({
             if (status !== 'ready') {
               toast.error('Please wait for the model to finish its response!');
             } else {
+              console.log('Enter pressed, calling submitForm');
               submitForm();
             }
           }
@@ -405,6 +430,12 @@ function PureSendButton({
       className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
       onClick={(event) => {
         event.preventDefault();
+        console.log(
+          'SendButton clicked, input length:',
+          input.length,
+          'uploadQueue length:',
+          uploadQueue.length,
+        );
         submitForm();
       }}
       disabled={input.length === 0 || uploadQueue.length > 0}

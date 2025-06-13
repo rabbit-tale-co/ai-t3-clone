@@ -52,6 +52,8 @@ import {
   getSidebarCache,
   cn,
 } from '@/lib/utils';
+import { useLanguage } from '@/hooks/use-language';
+import { Skeleton } from '../ui/skeleton';
 
 // --- CONSTANTS ---
 const PAGE_SIZE = 20;
@@ -172,27 +174,18 @@ export function SidebarHistory({
   // Cache functions przeniesione do app-sidebar.tsx
 
   // Używamy dane z props - już zarządzane w app-sidebar.tsx
-  const folders = initialData?.folders || [];
-  const tags = initialData?.tags || [];
+  const folders = useMemo(() => initialData?.folders || [], [initialData]);
+  const tags = useMemo(() => initialData?.tags || [], [initialData]);
 
   // UI States
   const [expandedFolders, setExpandedFolders] = useState<
     Record<string, boolean>
   >({});
-  const [deleteId, setDeleteId] = useState<string | null>(null); // State to hold chat ID to delete
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // State to control delete dialog visibility
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Use external state from props (zarządzane w app-sidebar.tsx)
-  const actualShowCreateFolderDialog = showCreateFolderDialog ?? false;
-  const actualSetShowCreateFolderDialog =
-    setShowCreateFolderDialog ?? (() => {});
-  const actualShowCreateTagDialog = showCreateTagDialog ?? false;
-  const actualSetShowCreateTagDialog = setShowCreateTagDialog ?? (() => {});
-
-  // Sprawdź czy mamy dane z initialData
   const hasDataInCache = initialData?.threads && initialData.threads.length > 0;
 
-  // SWR for all threads (includes chats with tags and folder data)
   const {
     data: allThreadsPages,
     size,
@@ -201,7 +194,6 @@ export function SidebarHistory({
     mutate: mutateThreads,
   } = useSWRInfinite(
     (pageIndex, previousData) => {
-      // Only fetch if user is logged in
       if (!userId) return null;
       if (previousData && !previousData.hasMore) return null;
 
@@ -216,7 +208,6 @@ export function SidebarHistory({
       return await res.json();
     },
     {
-      // Użyj dane z initialData jako fallbackData
       fallbackData: hasDataInCache
         ? [
             {
@@ -227,7 +218,7 @@ export function SidebarHistory({
             },
           ]
         : undefined,
-      revalidateOnMount: !hasDataInCache, // Nie rewaliduj jeśli mamy dane w cache
+      revalidateOnMount: !hasDataInCache,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 60000,
@@ -237,21 +228,23 @@ export function SidebarHistory({
   );
 
   // Flatten all threads from SWR pages into a single array
-  const allThreads = useMemo(() => {
+  const baseThreads = useMemo(() => {
     try {
       const threads = allThreadsPages
         ? allThreadsPages.flatMap((page) => page.threads || [])
         : [];
-      return threads.filter((thread) => thread?.id); // Filter out invalid threads
+      return threads.filter((thread) => thread?.id);
     } catch (error) {
       console.error('Error flattening threads:', error);
       return [];
     }
   }, [allThreadsPages]);
 
-  // Optimistic updates dla threads (chats)
-  const [allThreadsOptimistic, optimisticThreads] = useOptimistic(
-    allThreads || [],
+  // Stable state for useOptimistic - only update when threads actually change
+  const [stableThreads, setStableThreads] = useState<SidebarThread[]>([]);
+
+  // Pure reducer function for optimistic updates
+  const optimisticReducer = useCallback(
     (
       state: SidebarThread[],
       action: {
@@ -260,68 +253,147 @@ export function SidebarHistory({
           | 'removeFromFolder'
           | 'delete'
           | 'addTag'
-          | 'removeTag';
+          | 'removeTag'
+          | 'addNewChat';
         chatId: string;
         folderId?: string | null;
         folder?: { name: string; color: string } | null;
         tagId?: string;
         tag?: { id: string; label: string; color: string; userId: string };
+        newChat?: SidebarThread;
       },
-    ) => {
-      if (!Array.isArray(state)) {
-        console.warn('OptimisticThreads: state is not an array', state);
-        return [];
+    ): SidebarThread[] => {
+      // Ensure state is always an array
+      const currentState = Array.isArray(state) ? state : [];
+
+      // Only log for addNewChat and delete actions
+      if (action.type === 'addNewChat' || action.type === 'delete') {
+        console.log('Optimistic reducer called:', action.type, action.chatId);
+        console.log('Current state length:', currentState.length);
       }
 
-      try {
-        switch (action.type) {
-          case 'moveToFolder':
-            return state.map((thread) =>
-              thread.id === action.chatId
-                ? {
-                    ...thread,
-                    folderId: action.folderId,
-                    folder: action.folder,
-                  }
-                : thread,
-            );
-          case 'removeFromFolder':
-            return state.map((thread) =>
-              thread.id === action.chatId
-                ? { ...thread, folderId: null, folder: null }
-                : thread,
-            );
-          case 'delete':
-            return state.filter((thread) => thread.id !== action.chatId);
-          case 'addTag':
-            return state.map((thread) =>
-              thread.id === action.chatId && action.tag
-                ? { ...thread, tags: [...(thread.tags || []), action.tag] }
-                : thread,
-            );
-          case 'removeTag':
-            return state.map((thread) =>
-              thread.id === action.chatId
-                ? {
-                    ...thread,
-                    tags: (thread.tags || []).filter(
-                      (tag) => tag.id !== action.tagId,
-                    ),
-                  }
-                : thread,
-            );
-          default:
-            return state;
+      switch (action.type) {
+        case 'moveToFolder':
+          return currentState.map((thread) =>
+            thread.id === action.chatId
+              ? {
+                  ...thread,
+                  folderId: action.folderId || null,
+                  folder: action.folder || null,
+                }
+              : thread,
+          );
+
+        case 'removeFromFolder':
+          return currentState.map((thread) =>
+            thread.id === action.chatId
+              ? { ...thread, folderId: null, folder: null }
+              : thread,
+          );
+
+        case 'delete': {
+          const filteredState = currentState.filter(
+            (thread) => thread.id !== action.chatId,
+          );
+          console.log('Delete result length:', filteredState.length);
+          return filteredState;
         }
-      } catch (error) {
-        console.error('OptimisticThreads reducer error:', error, {
-          state,
-          action,
-        });
-        return state;
+
+        case 'addTag': {
+          const tag = action.tag;
+          if (!tag) return currentState;
+          return currentState.map((thread) =>
+            thread.id === action.chatId
+              ? {
+                  ...thread,
+                  tags: [...(thread.tags || []), tag],
+                }
+              : thread,
+          );
+        }
+
+        case 'removeTag': {
+          const tagId = action.tagId;
+          if (!tagId) return currentState;
+          return currentState.map((thread) =>
+            thread.id === action.chatId
+              ? {
+                  ...thread,
+                  tags: (thread.tags || []).filter((tag) => tag.id !== tagId),
+                }
+              : thread,
+          );
+        }
+
+        case 'addNewChat': {
+          const newChat = action.newChat;
+          if (!newChat) {
+            console.log('No newChat provided');
+            return currentState;
+          }
+          // Check if chat already exists to prevent duplicates
+          const exists = currentState.some(
+            (thread) => thread.id === newChat.id,
+          );
+          console.log('Chat exists:', exists);
+          if (exists) {
+            console.log('Chat already exists, returning current state');
+            return currentState;
+          }
+          const newState = [newChat, ...currentState];
+          console.log('Adding new chat, new state length:', newState.length);
+          return newState;
+        }
+
+        default:
+          console.log('Unknown action type:', action.type);
+          return currentState;
       }
     },
+    [],
   );
+
+  // Optimistic updates dla threads (chats) - use stable threads as base
+  const [allThreadsOptimistic, optimisticThreads] = useOptimistic(
+    stableThreads,
+    optimisticReducer,
+  );
+
+  // Update stableThreads only when baseThreads actually change and no optimistic updates are pending
+  useEffect(() => {
+    // Only update stable threads if the actual data changed (not just reference)
+    // AND if we're not in the middle of an optimistic update
+    const hasOptimisticChanges =
+      allThreadsOptimistic.length > baseThreads.length;
+
+    if (hasOptimisticChanges) {
+      console.log(
+        'Skipping stableThreads update - optimistic changes in progress',
+      );
+      return;
+    }
+
+    if (
+      baseThreads.length !== stableThreads.length ||
+      baseThreads.some(
+        (thread, index) => thread.id !== stableThreads[index]?.id,
+      )
+    ) {
+      console.log(
+        'Updating stable threads from',
+        stableThreads.length,
+        'to',
+        baseThreads.length,
+      );
+      setStableThreads(baseThreads);
+    }
+  }, [baseThreads, stableThreads, allThreadsOptimistic.length]);
+
+  // Debug logs
+  useEffect(() => {
+    console.log('stableThreads changed:', stableThreads.length);
+    console.log('allThreadsOptimistic changed:', allThreadsOptimistic.length);
+  }, [stableThreads, allThreadsOptimistic]);
 
   // Convert threads to simple chats for backward compatibility
   const allChats = useMemo(() => {
@@ -361,13 +433,11 @@ export function SidebarHistory({
   // Effect to save data to cache when they change
   useEffect(() => {
     if (!userId) {
-      // Wyczyść cache poprzedniego użytkownika
       clearLocalStorageByPrefix('sidebar_data_');
       clearLocalStorageByPrefix('cache_timestamp_');
       return;
     }
 
-    // Zapisz dane do cache gdy się zmienią
     if (folders.length > 0 || tags.length > 0) {
       const cacheData = {
         threads: allThreadsOptimistic,
@@ -379,10 +449,54 @@ export function SidebarHistory({
     }
   }, [userId, folders, tags, allThreadsOptimistic]);
 
-  // Funkcja do dodawania nowego czatu do cache
+  const handleAddNewChatOptimistic = useCallback(
+    (chatId: string, title: string) => {
+      console.log('handleAddNewChatOptimistic called with:', chatId, title);
+
+      if (!userId) {
+        console.log('No userId, skipping optimistic update');
+        return;
+      }
+
+      const newChat: SidebarThread = {
+        id: chatId,
+        title: title || 'New Chat',
+        createdAt: new Date(),
+        userId: userId,
+        visibility: 'private',
+        folderId: null,
+        folder: null,
+        tags: [],
+      };
+
+      console.log('Adding optimistic chat:', newChat);
+
+      try {
+        startTransition(() => {
+          optimisticThreads({
+            type: 'addNewChat',
+            chatId,
+            newChat,
+          });
+        });
+        console.log('Optimistic update completed');
+      } catch (error) {
+        console.error('handleAddNewChatOptimistic error:', error);
+      }
+    },
+    [optimisticThreads, userId],
+  );
+
   const addChatToCache = useCallback(
     (newChat: Chat) => {
-      // Convert Chat to SidebarThread format
+      console.log('addChatToCache called with:', newChat.id, newChat.title);
+
+      // Check if chat already exists in optimistic state
+      const existsInOptimistic = allThreadsOptimistic.some(
+        (thread) => thread.id === newChat.id,
+      );
+      console.log('existsInOptimistic:', existsInOptimistic);
+
       const newThread: SidebarThread = {
         ...newChat,
         folder: null,
@@ -391,6 +505,7 @@ export function SidebarHistory({
 
       mutateThreads((pages) => {
         if (!pages || pages.length === 0) {
+          console.log('No pages, creating new page with thread');
           return [
             {
               threads: [newThread],
@@ -401,18 +516,36 @@ export function SidebarHistory({
           ];
         }
 
-        // Dodaj nowy thread na początek pierwszej strony
         const newPages = [...pages];
-        newPages[0] = {
-          ...newPages[0],
-          threads: [newThread, ...newPages[0].threads],
-        };
+
+        // Check if chat already exists in the first page
+        const existsInFirstPage = newPages[0].threads.some(
+          (thread: SidebarThread) => thread.id === newChat.id,
+        );
+        console.log('existsInFirstPage:', existsInFirstPage);
+
+        if (!existsInFirstPage) {
+          console.log('Adding new thread to first page');
+          newPages[0] = {
+            ...newPages[0],
+            threads: [newThread, ...newPages[0].threads],
+          };
+        } else {
+          console.log('Updating existing thread in first page');
+          // Update existing chat
+          newPages[0] = {
+            ...newPages[0],
+            threads: newPages[0].threads.map((thread: SidebarThread) =>
+              thread.id === newChat.id ? newThread : thread,
+            ),
+          };
+        }
 
         return newPages;
-      }, false); // false = nie rewaliduj
+      }, false);
 
-      // Zaktualizuj unified cache
-      if (userId) {
+      if (userId && !existsInOptimistic) {
+        console.log('Updating cache with new thread');
         const updatedThreads = [newThread, ...allThreadsOptimistic];
         const cacheData = {
           threads: updatedThreads,
@@ -421,17 +554,21 @@ export function SidebarHistory({
           hasMore: false,
         };
         setSidebarCache(userId, cacheData);
+      } else {
+        console.log(
+          'Skipping cache update - exists in optimistic or no userId',
+        );
       }
     },
     [mutateThreads, folders, tags, allThreadsOptimistic, userId],
   );
 
-  // Wyeksportuj funkcję poprzez ref callback (możemy to użyć później)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).addChatToSidebarCache = addChatToCache;
+      (window as any).addNewChatOptimistic = handleAddNewChatOptimistic;
     }
-  }, [addChatToCache]);
+  }, [addChatToCache, handleAddNewChatOptimistic]);
 
   // Handle infinite scroll for global chat history/search
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -460,65 +597,32 @@ export function SidebarHistory({
     }));
   };
 
-  const handleCreateFolder = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleCreateFolder called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const handleCreateTag = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleCreateTag called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const handleDeleteFolder = (folderId: string, folderName: string) => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleDeleteFolder called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const confirmDeleteFolder = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'confirmDeleteFolder called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const handleDeleteTag = (tagId: string, tagLabel: string) => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleDeleteTag called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const confirmDeleteTag = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'confirmDeleteTag called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  // This handler is passed down to ChatItem to trigger the delete dialog
   const onDeleteChatClick = (chatId: string) => {
     setDeleteId(chatId);
     setShowDeleteDialog(true);
   };
 
   const handleDelete = async () => {
-    // This function executes the actual deletion after confirmation
     if (!deleteId) return;
 
-    // Call Server Action:
-    const deletePromise = deleteChatAction(deleteId); // --- CHANGED TO SERVER ACTION
+    // Optimistic update - usuń chat natychmiast z UI
+    try {
+      startTransition(() => {
+        optimisticThreads({
+          type: 'delete',
+          chatId: deleteId,
+        });
+      });
+    } catch (error) {
+      console.error('Optimistic delete error:', error);
+    }
+
+    const deletePromise = deleteChatAction(deleteId);
 
     toast.promise(deletePromise, {
+      // TODO: add translation
       loading: 'Deleting chat...',
       success: () => {
-        // Optimistically update SWR cache for all threads (used by search and unfiled)
         mutateThreads(
           (threadHistories: any) => {
             if (!threadHistories) return threadHistories;
@@ -532,13 +636,16 @@ export function SidebarHistory({
           },
           { revalidate: false },
         );
-
-        // Nie pobieraj ponownie - dane folderów i tagów pozostają bez zmian
-        // Usuwanie czatu nie wpływa na foldery ani tagi, więc cache pozostaje aktualny
-
+        // TODO: add translation
         return 'Chat deleted successfully';
       },
-      error: 'Failed to delete chat',
+      // TODO: add translation
+      error: (error) => {
+        // Jeśli usuwanie się nie powiodło, przywróć chat (rollback optimistic update)
+        // Tutaj moglibyśmy dodać logikę przywracania, ale na razie zostawiamy
+        console.error('Delete failed:', error);
+        return 'Failed to delete chat';
+      },
     });
 
     setShowDeleteDialog(false);
@@ -556,17 +663,7 @@ export function SidebarHistory({
       folderName: string,
       folderColor: string,
     ) => {
-      console.log('handleMoveToFolder called:', {
-        chatId,
-        folderId,
-        folderName,
-        folderColor,
-      });
-      console.log('allThreads length:', allThreads?.length || 0);
-      console.log('optimisticThreads type:', typeof optimisticThreads);
-
       try {
-        // Optimistic update UI natychmiast
         startTransition(() => {
           optimisticThreads({
             type: 'moveToFolder',
@@ -575,7 +672,6 @@ export function SidebarHistory({
             folder: { name: folderName, color: folderColor },
           });
         });
-        console.log('optimisticThreads call succeeded');
       } catch (error) {
         console.error('handleMoveToFolder error:', error);
         console.error(
@@ -584,13 +680,12 @@ export function SidebarHistory({
         );
       }
     },
-    [optimisticThreads, allThreads],
+    [optimisticThreads],
   );
 
   const handleRemoveFromFolder = useCallback(
     (chatId: string) => {
       try {
-        // Optimistic update UI natychmiast
         startTransition(() => {
           optimisticThreads({
             type: 'removeFromFolder',
@@ -610,7 +705,6 @@ export function SidebarHistory({
       tag: { id: string; label: string; color: string; userId: string },
     ) => {
       try {
-        // Optimistic update UI natychmiast
         startTransition(() => {
           optimisticThreads({
             type: 'addTag',
@@ -628,7 +722,6 @@ export function SidebarHistory({
   const handleRemoveTagFromChat = useCallback(
     (chatId: string, tagId: string) => {
       try {
-        // Optimistic update UI natychmiast
         startTransition(() => {
           optimisticThreads({
             type: 'removeTag',
@@ -643,20 +736,20 @@ export function SidebarHistory({
     [optimisticThreads],
   );
 
-  // Sprawdź czy ładujemy dodatkowe dane (infinite scroll)
   const isLoadingMore = allChats.length > 0 && isLoadingThreads && !searchTerm;
 
-  // Sprawdź czy mamy jeszcze stan ładowania (bez danych z SSR lub cache)
   const isInitialLoading =
     sessionStatus === 'loading' ||
-    (!initialData && isLoadingThreads && allThreads.length === 0);
+    (!initialData && isLoadingThreads && stableThreads.length === 0);
+
+  const { t } = useLanguage();
 
   if (!user && sessionStatus !== 'loading') {
-    // Use the `user` prop from NextAuth session - tylko gdy session nie ładuje się
     return (
       <SidebarGroup>
         <SidebarGroupContent>
           <div className="px-2 text-zinc-500 w-full flex flex-row justify-center items-center text-sm gap-2">
+            {/* TODO: add translation */}
             Login to save and revisit previous chats!
           </div>
         </SidebarGroupContent>
@@ -664,20 +757,20 @@ export function SidebarHistory({
     );
   }
 
-  // Pokaż loading podczas ładowania sesji lub początkowych danych
   if (isInitialLoading) {
     return (
       <SidebarGroup>
         <SidebarGroupContent>
-          <div className="px-2 py-4 flex justify-center">
-            <LoaderIcon className="size-4 animate-spin text-pink-500" />
+          <div className="px-2 py-4 flex flex-col gap-2 justify-center">
+            {/* TODO: change to skeletons */}
+            <Skeleton className="size-4 w-full h-8 opacity-12" />
+            <Skeleton className="size-4 w-full h-8 opacity-12" />
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
     );
   }
 
-  // If no content, show prompt to create - tylko gdy na pewno załadowane
   const hasEmptyContent =
     !isLoadingThreads && allChats.length === 0 && folders.length === 0;
 
@@ -687,7 +780,8 @@ export function SidebarHistory({
         <SidebarGroupContent>
           <div className="px-4 py-8 text-center">
             <p className="text-sm text-pink-700 dark:text-pink-300">
-              No chats yet. Start a new conversation!
+              {/* TODO: add translation */}
+              {t('navigation.messages.noChats')}
             </p>
           </div>
         </SidebarGroupContent>
@@ -704,7 +798,8 @@ export function SidebarHistory({
       {folders.length > 0 && (
         <SidebarGroup className="px-2">
           <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-            Folders ({folders.length})
+            {/* TODO: add translation */}
+            {t('navigation.history.folders')} ({folders.length})
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -748,7 +843,9 @@ export function SidebarHistory({
       {searchTerm && filteredSearchChats.length > 0 && (
         <SidebarGroup className="px-2">
           <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-            Search Results ({filteredSearchChats.length})
+            {/* TODO: add translation */}
+            {t('navigation.history.searchResults')} (
+            {filteredSearchChats.length})
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">

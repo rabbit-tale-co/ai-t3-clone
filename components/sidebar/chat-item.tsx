@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/hooks/use-language';
 
 // Default color accents if not provided
 const defaultColorAccents = {
@@ -171,6 +172,7 @@ export const ChatItem = memo(
         activeColorAccents[tagColor as keyof typeof activeColorAccents] ||
         activeColorAccents.gray;
 
+      // FIXME: use colorjs
       // Convert hex to rgba with opacity
       const hexToRgba = (hex: string, opacity: number) => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -232,7 +234,6 @@ export const ChatItem = memo(
     const handleAddToFolder = async (folderId: string) => {
       const folder = availableFolders.find((f) => f.id === folderId);
 
-      // Optimistic update UI natychmiast
       if (onMoveToFolder && folder && chat.id && folderId) {
         try {
           startTransition(() => {
@@ -250,6 +251,7 @@ export const ChatItem = memo(
 
       try {
         await addChatToFolderAction({ chatId: chat.id, folderId });
+        // TODO: add translation
         toast.success('Chat added to folder');
       } catch (error) {
         // Cofnij optimistic update w przypadku błędu
@@ -266,6 +268,7 @@ export const ChatItem = memo(
           }
         }
         console.error('Failed to add chat to folder:', error);
+        // TODO: add translation
         toast.error('Failed to add chat to folder');
       }
     };
@@ -290,9 +293,10 @@ export const ChatItem = memo(
       try {
         await removeChatFromFolderAction(chat.id);
 
+        // TODO: add translation
         toast.success('Chat removed from folder');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
+        // TODO: add translation
         if (onMoveToFolder && currentFolder && currentFolderId && chat.id) {
           try {
             startTransition(() => {
@@ -311,6 +315,7 @@ export const ChatItem = memo(
           }
         }
         console.error('Failed to remove chat from folder:', error);
+        // TODO: add translation
         toast.error('Failed to remove chat from folder');
       }
     };
@@ -337,18 +342,19 @@ export const ChatItem = memo(
 
       try {
         await addTagToChatAction({ chatId: chat.id, tagId });
-        // Pobierz zaktualizowane tagi z serwera dla pewności
+        // TODO: add translation
         const updatedTags = await getTagsByChatIdAction(chat.id);
         setChatTags(updatedTags as Tag[]);
+        // TODO: add translation
         toast.success('Tag added to chat');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
         if (tag) {
           startTransition(() => {
             setChatTags((prev) => prev.filter((t) => t.id !== tag.id));
           });
         }
         console.error('Failed to add tag to chat:', error);
+        // TODO: add translation
         toast.error('Failed to add tag to chat');
       }
     };
@@ -370,21 +376,23 @@ export const ChatItem = memo(
 
       try {
         await removeTagFromChatAction({ chatId: chat.id, tagId });
-        // Pobierz zaktualizowane tagi z serwera dla pewności
         const updatedTags = await getTagsByChatIdAction(chat.id);
         setChatTags(updatedTags as Tag[]);
+        // TODO: add translation
         toast.success('Tag removed from chat');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
         if (tag) {
           startTransition(() => {
             setChatTags((prev) => [...prev, tag]);
           });
         }
         console.error('Failed to remove tag from chat:', error);
+        // TODO: add translation
         toast.error('Failed to remove tag from chat');
       }
     };
+
+    const { t } = useLanguage();
 
     return (
       <>
@@ -452,12 +460,12 @@ export const ChatItem = memo(
           >
             <DropdownMenuTrigger asChild>
               <SidebarMenuAction
-                // FIXME: visible when clicked and unclicked
                 showOnHover={!isActive}
+                // FIXME: remove outline and move to top
                 className="size-7 p-0 text-pink-500 hover:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30"
               >
                 <MoreHorizontalIcon size={16} />
-                <span className="sr-only">More</span>
+                <span className="sr-only">{t('navigation.dropdown.more')}</span>
               </SidebarMenuAction>
             </DropdownMenuTrigger>
 
@@ -465,20 +473,22 @@ export const ChatItem = memo(
               {/* Organization Section */}
               <div className="mb-3">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
-                  Organization
+                  {t('navigation.dropdown.organization')}
                 </div>
 
                 {/* Current Status Display */}
                 <div className="px-2 mb-2 space-y-1">
                   {chat.folderId && (
                     <div className="text-xs text-muted-foreground">
-                      📁 Currently in a folder
+                      📁 {t('navigation.dropdown.currentlyInFolder')}
                     </div>
                   )}
                   {chatTags.length > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      🏷️ {chatTags.length} tag{chatTags.length > 1 ? 's' : ''}{' '}
-                      assigned
+                      {/* FIXME: 's in english only */}
+                      🏷️ {chatTags.length} {t('navigation.dropdown.tags')}{' '}
+                      {chatTags.length > 1 ? 's' : ''}{' '}
+                      {t('navigation.dropdown.assigned')}
                     </div>
                   )}
                 </div>
@@ -495,7 +505,7 @@ export const ChatItem = memo(
                         className="mr-2 text-amber-600 dark:text-amber-400"
                       />
                       <span className="text-amber-800 dark:text-amber-200">
-                        Remove from folder
+                        {t('navigation.dropdown.removeFromFolder')}
                       </span>
                     </DropdownMenuItem>
                   ) : (
@@ -505,17 +515,17 @@ export const ChatItem = memo(
                           size={16}
                           className="mr-2 text-blue-600 dark:text-blue-400"
                         />
-                        <span>Move to folder</span>
+                        <span>{t('navigation.dropdown.moveToFolder')}</span>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent className="w-56">
                           {loadingFolders ? (
                             <div className="px-3 py-2 text-sm text-muted-foreground">
-                              Loading folders...
+                              {t('navigation.dropdown.loadingFolders')}
                             </div>
                           ) : availableFolders.length === 0 ? (
                             <div className="px-3 py-2 text-sm text-muted-foreground">
-                              No folders available
+                              {t('navigation.dropdown.noFoldersAvailable')}
                             </div>
                           ) : (
                             availableFolders.map((folder) => (
@@ -551,17 +561,17 @@ export const ChatItem = memo(
                         size={16}
                         className="mr-2 text-purple-600 dark:text-purple-400"
                       />
-                      <span>Manage tags</span>
+                      <span>{t('navigation.dropdown.manageTags')}</span>
                     </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
                         {loadingFolders ? (
                           <div className="px-3 py-2 text-sm text-muted-foreground">
-                            Loading tags...
+                            {t('navigation.dropdown.loadingTags')}
                           </div>
                         ) : availableTags.length === 0 ? (
                           <div className="px-3 py-2 text-sm text-muted-foreground">
-                            No tags available
+                            {t('navigation.dropdown.noTagsAvailable')}
                           </div>
                         ) : (
                           availableTags.map((tag) => {
@@ -616,7 +626,7 @@ export const ChatItem = memo(
               {/* Sharing Section */}
               <div className="border-t pt-3 mb-3">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
-                  Sharing
+                  {t('navigation.dropdown.sharing')}
                 </div>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer">
@@ -624,9 +634,11 @@ export const ChatItem = memo(
                       size={16}
                       className="mr-2 text-green-600 dark:text-green-400"
                     />
-                    <span>Visibility</span>
+                    <span>{t('navigation.dropdown.visibility')}</span>
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {visibilityType === 'private' ? 'Private' : 'Public'}
+                      {visibilityType === 'private'
+                        ? t('navigation.dropdown.private')
+                        : t('navigation.dropdown.public')}
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -636,7 +648,7 @@ export const ChatItem = memo(
                         onClick={() => setVisibilityType('private')}
                       >
                         <LockIcon size={16} className="mr-2 text-inherit" />
-                        <span>Private</span>
+                        <span>{t('navigation.dropdown.private')}</span>
                         {visibilityType === 'private' && (
                           <CheckCircleIcon
                             size={16}
@@ -649,7 +661,7 @@ export const ChatItem = memo(
                         onClick={() => setVisibilityType('public')}
                       >
                         <GlobeIcon size={16} className="mr-2 text-inherit" />
-                        <span>Public</span>
+                        <span>{t('navigation.dropdown.public')}</span>
                         {visibilityType === 'public' && (
                           <CheckCircleIcon
                             size={16}
@@ -665,7 +677,7 @@ export const ChatItem = memo(
               {/* Danger Zone */}
               <div className="border-t pt-2">
                 <div className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide mb-2 px-2">
-                  Danger Zone
+                  {t('navigation.dropdown.dangerZone')}
                 </div>
                 <DropdownMenuItem
                   className="cursor-pointer focus:bg-red-50 dark:focus:bg-red-900/20"
@@ -673,7 +685,7 @@ export const ChatItem = memo(
                 >
                   <TrashIcon size={16} className="mr-2 text-red-500" />
                   <span className="text-red-600 dark:text-red-400">
-                    Delete chat
+                    {t('navigation.dropdown.deleteChat')}
                   </span>
                 </DropdownMenuItem>
               </div>

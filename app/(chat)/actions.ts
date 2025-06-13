@@ -11,6 +11,7 @@ import {
   getFoldersByUserId,
   getMessageById,
   getMessageCountByUserId,
+  getLastUserMessageTimestamp,
   getTagsByChatId,
   getTagsByUserId,
   updateChatVisiblityById,
@@ -34,9 +35,12 @@ import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import type { UserType } from '@/app/(auth)/auth';
 import type { Chat, Folder, Tag } from '@/lib/db/schema';
 
-export async function saveChatModelAsCookie(model: string) {
+export async function saveChatModelAsCookie(modelId: string) {
   const cookieStore = await cookies();
-  cookieStore.set('chat-model', model);
+  cookieStore.set('chat-model', modelId, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
 }
 
 export async function getModel(
@@ -107,18 +111,43 @@ export async function getUserMessageCount(userId: string, userType: UserType) {
       differenceInHours: 24,
     });
 
+    const lastMessageTimestamp = await getLastUserMessageTimestamp({
+      id: userId,
+    });
+
     const maxMessages =
       entitlementsByUserType[userType]?.maxMessagesPerDay || 0;
 
     const messagesLeft = Math.max(0, maxMessages - messageCount);
-    // console.log('Messages left:', messagesLeft);
+
+    // Calculate reset time: 24 hours after the last message, or tomorrow at 2 AM if no messages
+    let resetTime: Date;
+    if (lastMessageTimestamp) {
+      resetTime = new Date(
+        lastMessageTimestamp.getTime() + 24 * 60 * 60 * 1000,
+      );
+    } else {
+      // If no messages, reset at 2 AM tomorrow
+      resetTime = new Date();
+      resetTime.setDate(resetTime.getDate() + 1);
+      resetTime.setHours(2, 0, 0, 0);
+    }
     return {
       messagesLeft,
+      messagesUsed: messageCount,
+      maxMessages,
+      resetTime,
       success: true,
     };
   } catch (error) {
     console.error('Failed to fetch message count', error);
-    return { messagesLeft: null, success: false };
+    return {
+      messagesLeft: null,
+      messagesUsed: null,
+      maxMessages: null,
+      resetTime: null,
+      success: false,
+    };
   }
 }
 

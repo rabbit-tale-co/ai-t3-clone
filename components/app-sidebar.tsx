@@ -57,6 +57,7 @@ import {
 import type { Session } from 'next-auth';
 import type { Folder, Tag } from '@/lib/db/schema';
 import Link from 'next/link';
+import { useLanguage } from '@/hooks/use-language';
 
 interface InitialData {
   threads: any[];
@@ -109,17 +110,14 @@ export function AppSidebar({
   const [deleteTagLabel, setDeleteTagLabel] = React.useState('');
   const [showDeleteTagDialog, setShowDeleteTagDialog] = React.useState(false);
 
-  // Loading states for create operations
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false);
   const [isCreatingTag, setIsCreatingTag] = React.useState(false);
 
-  // Local state for folders and tags
   const [folders, setFolders] = React.useState<Folder[]>(
     initialData?.folders || [],
   );
   const [tags, setTags] = React.useState<Tag[]>(initialData?.tags || []);
 
-  // Folder and Tag Management Handlers
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
       toast.error('Folder name cannot be empty');
@@ -130,13 +128,13 @@ export function AppSidebar({
       return;
     }
     if (isCreatingFolder) {
-      return; // Prevent multiple calls
+      return;
     }
 
-    // Check folder limit based on user type
     const userType = userSession.user.type || 'guest';
     if (!canCreateFolder(userType, folders.length)) {
       const entitlements = getUserEntitlements(userType);
+      // TODO: add translation
       toast.error(
         `You've reached your folder limit (${entitlements.maxFolders}). ${
           userType === 'guest'
@@ -149,7 +147,6 @@ export function AppSidebar({
 
     setIsCreatingFolder(true);
 
-    // Optimistic update - tworzymy tymczasowy folder
     const tempFolder = {
       id: `temp-folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: newFolderName,
@@ -158,10 +155,7 @@ export function AppSidebar({
       createdAt: new Date(),
     } as Folder;
 
-    // Natychmiast aktualizujemy UI
     setFolders((prev) => [...prev, tempFolder]);
-
-    // NIE ZAMYKAMY DIALOGU - pozwalamy użytkownikowi dodać więcej folderów
 
     try {
       const createdFolder = await createFolderAction({
@@ -171,19 +165,16 @@ export function AppSidebar({
       });
 
       if (createdFolder) {
-        // Zastąp tymczasowy folder prawdziwym
         setFolders((prev) =>
           prev.map((f) => (f.id === tempFolder.id ? createdFolder : f)),
         );
 
-        // Resetuj formularz dopiero po udanym server action
         setNewFolderName('');
         setNewFolderColor('blue');
 
         toast.success('Folder created successfully!');
       }
     } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
       setFolders((prev) => prev.filter((f) => f.id !== tempFolder.id));
       console.error('Failed to create folder:', error);
       toast.error('Failed to create folder');
@@ -202,13 +193,13 @@ export function AppSidebar({
       return;
     }
     if (isCreatingTag) {
-      return; // Prevent multiple calls
+      return;
     }
 
-    // Check tag limit based on user type
     const userType = userSession.user.type || 'guest';
     if (!canCreateTag(userType, tags.length)) {
       const entitlements = getUserEntitlements(userType);
+      // TODO: add translation
       toast.error(
         `You've reached your tag limit (${entitlements.maxTags}). ${
           userType === 'guest'
@@ -221,7 +212,6 @@ export function AppSidebar({
 
     setIsCreatingTag(true);
 
-    // Optimistic update - tworzymy tymczasowy tag
     const tempTag = {
       id: `temp-tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       label: newTagName,
@@ -229,10 +219,7 @@ export function AppSidebar({
       userId: userSession.user.id,
     } as Tag;
 
-    // Natychmiast aktualizujemy UI
     setTags((prev) => [...prev, tempTag]);
-
-    // NIE ZAMYKAMY DIALOGU - pozwalamy użytkownikowi dodać więcej tagów
 
     try {
       const createdTag = await createTagAction({
@@ -242,21 +229,20 @@ export function AppSidebar({
       });
 
       if (createdTag) {
-        // Zastąp tymczasowy tag prawdziwym
         setTags((prev) =>
           prev.map((t) => (t.id === tempTag.id ? createdTag : t)),
         );
 
-        // Resetuj formularz dopiero po udanym server action
         setNewTagName('');
         setNewTagColor('gray');
 
+        // TODO: add translation
         toast.success('Tag created successfully!');
       }
     } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
       setTags((prev) => prev.filter((t) => t.id !== tempTag.id));
       console.error('Failed to create tag:', error);
+      // TODO: add translation
       toast.error('Failed to create tag');
     } finally {
       setIsCreatingTag(false);
@@ -264,7 +250,6 @@ export function AppSidebar({
   };
 
   const handleDeleteFolder = (folderId: string, folderName: string) => {
-    // Close manage dialog and open delete confirmation dialog
     setShowCreateFolderDialog(false);
     setDeleteFolderId(folderId);
     setDeleteFolderName(folderName);
@@ -277,7 +262,6 @@ export function AppSidebar({
     const folderToDelete = folders.find((f) => f.id === deleteFolderId);
     if (!folderToDelete) return;
 
-    // Optimistic update - usuń folder natychmiast
     setFolders((prev) => prev.filter((f) => f.id !== deleteFolderId));
 
     setShowDeleteFolderDialog(false);
@@ -286,17 +270,17 @@ export function AppSidebar({
 
     try {
       await deleteFolderAction(deleteFolderId);
+      // TODO: add translation
       toast.success('Folder deleted successfully!');
     } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
       setFolders((prev) => [...prev, folderToDelete]);
       console.error('Failed to delete folder:', error);
+      // TODO: add translation
       toast.error('Failed to delete folder');
     }
   };
 
   const handleDeleteTag = (tagId: string, tagLabel: string) => {
-    // Close manage dialog and open delete confirmation dialog
     setShowCreateTagDialog(false);
     setDeleteTagId(tagId);
     setDeleteTagLabel(tagLabel);
@@ -309,7 +293,6 @@ export function AppSidebar({
     const tagToDelete = tags.find((t) => t.id === deleteTagId);
     if (!tagToDelete) return;
 
-    // Optimistic update - usuń tag natychmiast
     setTags((prev) => prev.filter((t) => t.id !== deleteTagId));
 
     setShowDeleteTagDialog(false);
@@ -318,11 +301,12 @@ export function AppSidebar({
 
     try {
       await deleteTagAction(deleteTagId);
+      // TODO: add translation
       toast.success('Tag deleted successfully!');
     } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
       setTags((prev) => [...prev, tagToDelete]);
       console.error('Failed to delete tag:', error);
+      // TODO: add translation
       toast.error('Failed to delete tag');
     }
   };
@@ -334,12 +318,7 @@ export function AppSidebar({
     }
   };
 
-  const handleLoginModalToggle = (open: boolean) => {
-    setShowLoginModal(open);
-    if (onModalStateChange) {
-      onModalStateChange(open);
-    }
-  };
+  const { t } = useLanguage();
 
   return (
     <>
@@ -358,32 +337,44 @@ export function AppSidebar({
             >
               <X className="size-5" />
             </Button>
-            <h1 className="text-lg font-bold text-pink-900 dark:text-gray-100">
-              T3 AI Chat
-            </h1>
-            <ThemeToggle />
+            <Button
+              variant="ghost"
+              className="rounded-full hover:!bg-transparent"
+            >
+              <h1 className="text-lg font-bold text-pink-900 dark:text-gray-100">
+                {/* TODO: add translation */}
+                {t('navigation.header.appName')}
+              </h1>
+            </Button>
+            {/* <ThemeToggle /> */}
           </div>
 
           {/* Desktop Header */}
           <div className="hidden lg:flex items-center justify-between p-0 pl-2">
-            <h1 className="text-xl leading-none font-bold text-pink-900 dark:text-gray-100">
-              T3 AI Chat
-            </h1>
-
-            <ThemeToggle />
+            <Button
+              variant="ghost"
+              className="rounded-full hover:!bg-transparent"
+            >
+              <h1 className="text-xl leading-none font-bold text-pink-900 dark:text-gray-100">
+                {/* TODO: add translation */}
+                {t('navigation.header.appName')}
+              </h1>
+            </Button>
+            {/*
+            <ThemeToggle /> */}
           </div>
 
           {/* New Chat Button */}
           <div className="p-2 sm:px-2">
             <Button onClick={handleNewChat} className="w-full">
-              <span className="inline">New Chat</span>
+              <span className="inline">{t('navigation.header.newChat')}</span>
             </Button>
           </div>
 
           {/* Search */}
           <div className="px-2 sm:px-2 pb-2">
             <Input
-              placeholder="Search..."
+              placeholder={t('chat.input.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -401,11 +392,13 @@ export function AppSidebar({
                         onClick={() => setShowCreateFolderDialog(true)}
                       >
                         <FolderIcon className="size-3 mr-1.5" />
-                        <span className="text-xs">Folders</span>
+                        <span className="text-xs">
+                          {t('navigation.management.folders')}
+                        </span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-pink-50 dark:bg-black/90 border-pink-200 dark:border-pink-800/50 text-pink-700 dark:text-pink-300">
-                      Manage your folders
+                      {t('navigation.management.manageFolders')}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -418,11 +411,13 @@ export function AppSidebar({
                         onClick={() => setShowCreateTagDialog(true)}
                       >
                         <Hash className="size-3 mr-1.5" />
-                        <span className="text-xs">Tags</span>
+                        <span className="text-xs">
+                          {t('navigation.management.tags')}
+                        </span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="bg-pink-50 dark:bg-black/90 border-pink-200 dark:border-pink-800/50 text-pink-700 dark:text-pink-300">
-                      Manage your tags
+                      {t('navigation.management.manageTags')}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -449,11 +444,13 @@ export function AppSidebar({
             />
           ) : (
             <SidebarGroup>
-              <SidebarGroupLabel>Your Chats</SidebarGroupLabel>
+              <SidebarGroupLabel>
+                {t('navigation.header.yourChats')}
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <div className="px-4 py-8 text-center">
                   <p className="text-sm text-pink-700 dark:text-pink-300">
-                    Sign in to see your chat history
+                    {t('navigation.messages.signInToSeeYourChatHistory')}
                   </p>
                 </div>
               </SidebarGroupContent>
@@ -468,7 +465,7 @@ export function AppSidebar({
             <Button variant="ghost" className="w-full justify-start" asChild>
               <Link href="/login">
                 <LogIn size={16} />
-                Login
+                {t('auth.actions.login')}
               </Link>
             </Button>
           )}
@@ -641,19 +638,20 @@ export function AppSidebar({
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+                <AlertDialogTitle>{t('common.deleteFolder')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete &quot;{deleteFolderName}
-                  &quot;? All chats in this folder will be moved to unfiled.
+                  {t('common.areYouSureYouWantToDeleteFolder', {
+                    folderName: deleteFolderName,
+                  })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={confirmDeleteFolder}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Delete Folder
+                  {t('common.deleteFolder')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -666,19 +664,20 @@ export function AppSidebar({
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+                <AlertDialogTitle>{t('common.deleteTag')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete &quot;{deleteTagLabel}&quot;?
-                  This tag will be removed from all chats.
+                  {t('common.areYouSureYouWantToDeleteTag', {
+                    tagName: deleteTagLabel,
+                  })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={confirmDeleteTag}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Delete Tag
+                  {t('common.deleteTag')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
