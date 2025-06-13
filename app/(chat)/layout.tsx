@@ -39,8 +39,7 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  const [session, cookieStore] = await Promise.all([auth(), cookies()]);
-  const isCollapsed = cookieStore.get('sidebar:state')?.value !== 'true';
+  const session = await auth();
 
   // Pobierz początkowe dane tylko dla zalogowanych użytkowników
   const initialData = session?.user?.id
@@ -53,7 +52,7 @@ export default async function Layout({
         src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"
         strategy="beforeInteractive"
       />
-      <SidebarProvider defaultOpen={!isCollapsed}>
+      <SidebarProvider defaultOpen={true}>
         <AppSidebar session={session} initialData={initialData} />
         <SidebarInset>{children}</SidebarInset>
       </SidebarProvider>

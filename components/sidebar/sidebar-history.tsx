@@ -34,21 +34,13 @@ import useSWRInfinite from 'swr/infinite';
 import { useSWRConfig } from 'swr';
 import { useSession } from 'next-auth/react'; // For NextAuth session data
 
-// Import new dialog components
-import { ManageFoldersDialog } from './manage-folders-dialog';
-import { ManageTagsDialog } from './manage-tags-dialog';
+// Dialog components przeniesione do app-sidebar.tsx
 
 // Import Drizzle schema types
 import type { Chat, Folder, Tag as TagType } from '@/lib/db/schema';
 
-// Import NEW Server Actions
-import {
-  createFolderAction,
-  createTagAction,
-  deleteChatAction,
-  deleteFolderAction,
-  deleteTagAction,
-} from '@/app/(chat)/actions';
+// Import Server Actions
+import { deleteChatAction } from '@/app/(chat)/actions';
 
 // Import the new sub-components
 import { FolderItem } from './folder-item';
@@ -177,114 +169,28 @@ export function SidebarHistory({
   const userId = session?.user?.id;
 
   // Najpierw sprawdzamy cache, potem initialData
-  const getCachedOrInitialData = () => {
-    if (!userId) return { folders: [], tags: [], threads: [] };
+  // Cache functions przeniesione do app-sidebar.tsx
 
-    try {
-      const cached = getSidebarCache(userId);
-
-      // Priorytet: 1. Cache, 2. InitialData, 3. Puste array
-      return {
-        folders: Array.isArray((cached as any)?.folders)
-          ? (cached as any).folders
-          : initialData?.folders || [],
-        tags: Array.isArray((cached as any)?.tags)
-          ? (cached as any).tags
-          : initialData?.tags || [],
-        threads: Array.isArray((cached as any)?.threads)
-          ? (cached as any).threads
-          : initialData?.threads || [],
-      };
-    } catch (error) {
-      console.error('Error getting cached data:', error);
-      return {
-        folders: initialData?.folders || [],
-        tags: initialData?.tags || [],
-        threads: initialData?.threads || [],
-      };
-    }
-  };
-
-  const initialCachedData = getCachedOrInitialData();
-
-  // Używamy useOptimistic dla folders i tags
-  const [folders, optimisticFolders] = useOptimistic(
-    initialCachedData.folders,
-    (
-      state: Folder[],
-      action: { type: 'add' | 'delete' | 'update'; folder: Folder },
-    ) => {
-      switch (action.type) {
-        case 'add':
-          return [...state, action.folder];
-        case 'delete':
-          return state.filter((f) => f.id !== action.folder.id);
-        case 'update':
-          return state.map((f) =>
-            f.id === action.folder.id ? action.folder : f,
-          );
-        default:
-          return state;
-      }
-    },
-  );
-
-  const [tags, optimisticTags] = useOptimistic(
-    initialCachedData.tags,
-    (
-      state: TagType[],
-      action: { type: 'add' | 'delete' | 'update'; tag: TagType },
-    ) => {
-      switch (action.type) {
-        case 'add':
-          return [...state, action.tag];
-        case 'delete':
-          return state.filter((t) => t.id !== action.tag.id);
-        case 'update':
-          return state.map((t) => (t.id === action.tag.id ? action.tag : t));
-        default:
-          return state;
-      }
-    },
-  );
+  // Używamy dane z props - już zarządzane w app-sidebar.tsx
+  const folders = initialData?.folders || [];
+  const tags = initialData?.tags || [];
 
   // UI States
   const [expandedFolders, setExpandedFolders] = useState<
     Record<string, boolean>
   >({});
-  const [internalShowCreateFolderDialog, setInternalShowCreateFolderDialog] =
-    useState(false);
-  const [internalShowCreateTagDialog, setInternalShowCreateTagDialog] =
-    useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderColor, setNewFolderColor] = useState('blue');
-  const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('gray');
   const [deleteId, setDeleteId] = useState<string | null>(null); // State to hold chat ID to delete
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); // State to control delete dialog visibility
 
-  // Add states for folder and tag deletion
-  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
-  const [deleteFolderName, setDeleteFolderName] = useState('');
-  const [showDeleteFolderDialog, setShowDeleteFolderDialog] = useState(false);
-
-  const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
-  const [deleteTagLabel, setDeleteTagLabel] = useState('');
-  const [showDeleteTagDialog, setShowDeleteTagDialog] = useState(false);
-
-  // Use either external state or internal state for dialogs
-  const actualShowCreateFolderDialog =
-    showCreateFolderDialog ?? internalShowCreateFolderDialog;
+  // Use external state from props (zarządzane w app-sidebar.tsx)
+  const actualShowCreateFolderDialog = showCreateFolderDialog ?? false;
   const actualSetShowCreateFolderDialog =
-    setShowCreateFolderDialog ?? setInternalShowCreateFolderDialog;
-  const actualShowCreateTagDialog =
-    showCreateTagDialog ?? internalShowCreateTagDialog;
-  const actualSetShowCreateTagDialog =
-    setShowCreateTagDialog ?? setInternalShowCreateTagDialog;
+    setShowCreateFolderDialog ?? (() => {});
+  const actualShowCreateTagDialog = showCreateTagDialog ?? false;
+  const actualSetShowCreateTagDialog = setShowCreateTagDialog ?? (() => {});
 
-  // Sprawdź czy mamy dane w cache żeby zdecydować czy pobierać z API
-  const hasDataInCache =
-    initialCachedData.threads.length > 0 || initialData?.threads;
+  // Sprawdź czy mamy dane z initialData
+  const hasDataInCache = initialData?.threads && initialData.threads.length > 0;
 
   // SWR for all threads (includes chats with tags and folder data)
   const {
@@ -310,13 +216,13 @@ export function SidebarHistory({
       return await res.json();
     },
     {
-      // Użyj dane z cache/initialData jako fallbackData
+      // Użyj dane z initialData jako fallbackData
       fallbackData: hasDataInCache
         ? [
             {
-              threads: initialCachedData.threads || initialData?.threads || [],
-              folders: initialCachedData.folders || initialData?.folders || [],
-              tags: initialCachedData.tags || initialData?.tags || [],
+              threads: initialData?.threads || [],
+              folders: initialData?.folders || [],
+              tags: initialData?.tags || [],
               hasMore: initialData?.hasMore || false,
             },
           ]
@@ -555,200 +461,45 @@ export function SidebarHistory({
   };
 
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) {
-      toast.error('Folder name cannot be empty');
-      return;
-    }
-    if (!userId) {
-      toast.error('User not logged in');
-      return;
-    }
-
-    // Optimistic update - tworzymy tymczasowy folder
-    const tempFolder = {
-      id: `temp-${Date.now()}`,
-      name: newFolderName,
-      userId: userId,
-      color: newFolderColor || 'blue',
-      createdAt: new Date(),
-    } as Folder;
-
-    // Natychmiast aktualizujemy UI
-    startTransition(() => {
-      optimisticFolders({ type: 'add', folder: tempFolder });
-    });
-
-    setNewFolderName('');
-    setNewFolderColor('blue');
-    actualSetShowCreateFolderDialog(false);
-    setExpandedFolders((prev) => ({
-      ...prev,
-      [tempFolder.id]: true,
-    }));
-
-    try {
-      const createdFolder = await createFolderAction({
-        name: tempFolder.name,
-        userId: userId,
-        color: tempFolder.color || 'blue',
-      });
-
-      if (createdFolder) {
-        // Zastąp tymczasowy folder prawdziwym
-        startTransition(() => {
-          optimisticFolders({ type: 'delete', folder: tempFolder });
-          optimisticFolders({ type: 'add', folder: createdFolder });
-        });
-
-        // Zaktualizuj expanded folders z prawdziwym ID
-        setExpandedFolders((prev) => {
-          const newState = { ...prev };
-          delete newState[tempFolder.id];
-          newState[createdFolder.id] = true;
-          return newState;
-        });
-
-        toast.success('Folder created successfully!');
-      }
-    } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
-      startTransition(() => {
-        optimisticFolders({ type: 'delete', folder: tempFolder });
-      });
-      console.error('Failed to create folder:', error);
-      toast.error('Failed to create folder');
-    }
+    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
+    console.log(
+      'handleCreateFolder called - should be handled by app-sidebar.tsx',
+    );
   };
 
   const handleCreateTag = async () => {
-    if (!newTagName.trim()) {
-      toast.error('Tag name cannot be empty');
-      return;
-    }
-    if (!userId) {
-      toast.error('User not logged in');
-      return;
-    }
-
-    // Optimistic update - tworzymy tymczasowy tag
-    const tempTag = {
-      id: `temp-${Date.now()}`,
-      label: newTagName,
-      color: newTagColor,
-      userId: userId,
-    } as TagType;
-
-    // Natychmiast aktualizujemy UI
-    startTransition(() => {
-      optimisticTags({ type: 'add', tag: tempTag });
-    });
-
-    setNewTagName('');
-    setNewTagColor('gray');
-    actualSetShowCreateTagDialog(false);
-
-    try {
-      const createdTag = await createTagAction({
-        label: tempTag.label,
-        color: tempTag.color,
-        userId: userId,
-      });
-
-      if (createdTag) {
-        // Zastąp tymczasowy tag prawdziwym
-        startTransition(() => {
-          optimisticTags({ type: 'delete', tag: tempTag });
-          optimisticTags({ type: 'add', tag: createdTag });
-        });
-
-        toast.success('Tag created successfully!');
-      }
-    } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
-      startTransition(() => {
-        optimisticTags({ type: 'delete', tag: tempTag });
-      });
-      console.error('Failed to create tag:', error);
-      toast.error('Failed to create tag');
-    }
+    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
+    console.log(
+      'handleCreateTag called - should be handled by app-sidebar.tsx',
+    );
   };
 
   const handleDeleteFolder = (folderId: string, folderName: string) => {
-    // Close manage dialog and open delete confirmation dialog
-    actualSetShowCreateFolderDialog(false);
-    setDeleteFolderId(folderId);
-    setDeleteFolderName(folderName);
-    setShowDeleteFolderDialog(true);
+    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
+    console.log(
+      'handleDeleteFolder called - should be handled by app-sidebar.tsx',
+    );
   };
 
   const confirmDeleteFolder = async () => {
-    if (!deleteFolderId) return;
-
-    const folderToDelete = folders.find((f) => f.id === deleteFolderId);
-    if (!folderToDelete) return;
-
-    // Optimistic update - usuń folder natychmiast
-    startTransition(() => {
-      optimisticFolders({ type: 'delete', folder: folderToDelete });
-    });
-
-    setShowDeleteFolderDialog(false);
-    setDeleteFolderId(null);
-    setDeleteFolderName('');
-
-    try {
-      await deleteFolderAction(deleteFolderId);
-      toast.success('Folder deleted successfully!');
-
-      // Refresh threads data to update moved chats
-      mutateThreads();
-    } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
-      startTransition(() => {
-        optimisticFolders({ type: 'add', folder: folderToDelete });
-      });
-      console.error('Failed to delete folder:', error);
-      toast.error('Failed to delete folder');
-    }
+    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
+    console.log(
+      'confirmDeleteFolder called - should be handled by app-sidebar.tsx',
+    );
   };
 
   const handleDeleteTag = (tagId: string, tagLabel: string) => {
-    // Close manage dialog and open delete confirmation dialog
-    actualSetShowCreateTagDialog(false);
-    setDeleteTagId(tagId);
-    setDeleteTagLabel(tagLabel);
-    setShowDeleteTagDialog(true);
+    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
+    console.log(
+      'handleDeleteTag called - should be handled by app-sidebar.tsx',
+    );
   };
 
   const confirmDeleteTag = async () => {
-    if (!deleteTagId) return;
-
-    const tagToDelete = tags.find((t) => t.id === deleteTagId);
-    if (!tagToDelete) return;
-
-    // Optimistic update - usuń tag natychmiast
-    startTransition(() => {
-      optimisticTags({ type: 'delete', tag: tagToDelete });
-    });
-
-    setShowDeleteTagDialog(false);
-    setDeleteTagId(null);
-    setDeleteTagLabel('');
-
-    try {
-      await deleteTagAction(deleteTagId);
-      toast.success('Tag deleted successfully!');
-
-      // Refresh threads data to update chats that had this tag
-      mutateThreads();
-    } catch (error) {
-      // Cofnij optimistic update w przypadku błędu
-      startTransition(() => {
-        optimisticTags({ type: 'add', tag: tagToDelete });
-      });
-      console.error('Failed to delete tag:', error);
-      toast.error('Failed to delete tag');
-    }
+    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
+    console.log(
+      'confirmDeleteTag called - should be handled by app-sidebar.tsx',
+    );
   };
 
   // This handler is passed down to ChatItem to trigger the delete dialog
@@ -934,9 +685,10 @@ export function SidebarHistory({
     return (
       <SidebarGroup>
         <SidebarGroupContent>
-          <div className="px-2 text-zinc-500 w-full flex flex-row justify-center items-center text-sm gap-2">
-            Create folders, tags, and start chatting to organize your
-            conversations!
+          <div className="px-4 py-8 text-center">
+            <p className="text-sm text-pink-700 dark:text-pink-300">
+              No chats yet. Start a new conversation!
+            </p>
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -948,15 +700,15 @@ export function SidebarHistory({
       className="flex flex-col gap-2 overflow-y-auto pr-1"
       onScroll={handleScroll}
     >
-      {/* Folders Section */}
-      <SidebarGroup className="px-2">
-        <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-          Folders ({folders.length})
-        </SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {folders.length > 0 ? (
-              folders.map((folder) => (
+      {/* Folders Section - only render if there are folders */}
+      {folders.length > 0 && (
+        <SidebarGroup className="px-2">
+          <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
+            Folders ({folders.length})
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {folders.map((folder) => (
                 <FolderItem
                   key={folder.id}
                   folder={folder}
@@ -972,17 +724,11 @@ export function SidebarHistory({
                   onAddTagToChat={handleAddTagToChat}
                   onRemoveTagFromChat={handleRemoveTagFromChat}
                 />
-              ))
-            ) : (
-              <div className="p-2">
-                <p className="text-xs text-pink-600/70 dark:text-pink-400/70 italic">
-                  No folders yet. Create one to organize your chats!
-                </p>
-              </div>
-            )}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
 
       {/* Unfiled Chats Section */}
       {unfiledChats.length > 0 && !searchTerm && (
@@ -1056,35 +802,7 @@ export function SidebarHistory({
         </div>
       )}
 
-      {/* Manage Folders Dialog */}
-      <ManageFoldersDialog
-        open={actualShowCreateFolderDialog}
-        onOpenChange={actualSetShowCreateFolderDialog}
-        folders={folders}
-        allThreads={allThreadsOptimistic}
-        newFolderName={newFolderName}
-        setNewFolderName={setNewFolderName}
-        newFolderColor={newFolderColor}
-        setNewFolderColor={setNewFolderColor}
-        onCreateFolder={handleCreateFolder}
-        onDeleteFolder={handleDeleteFolder}
-        colorAccents={colorAccents}
-      />
-
-      {/* Manage Tags Dialog */}
-      <ManageTagsDialog
-        open={actualShowCreateTagDialog}
-        onOpenChange={actualSetShowCreateTagDialog}
-        tags={tags}
-        allThreads={allThreadsOptimistic}
-        newTagName={newTagName}
-        setNewTagName={setNewTagName}
-        newTagColor={newTagColor}
-        setNewTagColor={setNewTagColor}
-        onCreateTag={handleCreateTag}
-        onDeleteTag={handleDeleteTag}
-        colorAccents={colorAccents}
-      />
+      {/* Dialogs przeniesione do app-sidebar.tsx */}
 
       {/* Delete Chat Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1108,55 +826,7 @@ export function SidebarHistory({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Folder Confirmation Dialog */}
-      <AlertDialog
-        open={showDeleteFolderDialog}
-        onOpenChange={setShowDeleteFolderDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteFolderName}&quot;?
-              All chats in this folder will be moved to unfiled.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteFolder}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Folder
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Tag Confirmation Dialog */}
-      <AlertDialog
-        open={showDeleteTagDialog}
-        onOpenChange={setShowDeleteTagDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteTagLabel}&quot;? This
-              tag will be removed from all chats.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteTag}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Tag
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete dialogs przeniesione do app-sidebar.tsx */}
     </div>
   );
 }
