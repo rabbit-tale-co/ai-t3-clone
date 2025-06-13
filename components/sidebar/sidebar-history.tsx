@@ -3,7 +3,14 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useOptimistic,
+  startTransition,
+} from 'react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -27,8 +34,21 @@ import useSWRInfinite from 'swr/infinite';
 import { useSWRConfig } from 'swr';
 import { useSession } from 'next-auth/react'; // For NextAuth session data
 
+// Import new dialog components
+import { ManageFoldersDialog } from './manage-folders-dialog';
+import { ManageTagsDialog } from './manage-tags-dialog';
+
 // Import Drizzle schema types
 import type { Chat, Folder, Tag as TagType } from '@/lib/db/schema';
+
+// Import NEW Server Actions
+import {
+  createFolderAction,
+  createTagAction,
+  deleteChatAction,
+  deleteFolderAction,
+  deleteTagAction,
+} from '@/app/(chat)/actions';
 
 // Import the new sub-components
 import { FolderItem } from './folder-item';
@@ -38,6 +58,7 @@ import {
   clearLocalStorageByPrefix,
   setSidebarCache,
   getSidebarCache,
+  cn,
 } from '@/lib/utils';
 
 // --- CONSTANTS ---
@@ -155,34 +176,115 @@ export function SidebarHistory({
   // The `user` prop should ideally be `session.user` for consistency if coming from NextAuth.
   const userId = session?.user?.id;
 
-  // Use folders and tags from initialData (passed from AppSidebar)
-  const folders = initialData?.folders || [];
-  const tags = initialData?.tags || [];
+  // Najpierw sprawdzamy cache, potem initialData
+  const getCachedOrInitialData = () => {
+    if (!userId) return { folders: [], tags: [], threads: [] };
 
-  // Get cached threads data for fallback
-  const getCachedThreadsData = () => {
-    if (!userId) return [];
     try {
       const cached = getSidebarCache(userId);
-      return Array.isArray((cached as any)?.threads)
-        ? (cached as any).threads
-        : initialData?.threads || [];
+
+      // Priorytet: 1. Cache, 2. InitialData, 3. Puste array
+      return {
+        folders: Array.isArray((cached as any)?.folders)
+          ? (cached as any).folders
+          : initialData?.folders || [],
+        tags: Array.isArray((cached as any)?.tags)
+          ? (cached as any).tags
+          : initialData?.tags || [],
+        threads: Array.isArray((cached as any)?.threads)
+          ? (cached as any).threads
+          : initialData?.threads || [],
+      };
     } catch (error) {
-      console.error('Error getting cached threads data:', error);
-      return initialData?.threads || [];
+      console.error('Error getting cached data:', error);
+      return {
+        folders: initialData?.folders || [],
+        tags: initialData?.tags || [],
+        threads: initialData?.threads || [],
+      };
     }
   };
+
+  const initialCachedData = getCachedOrInitialData();
+
+  // Używamy useOptimistic dla folders i tags
+  const [folders, optimisticFolders] = useOptimistic(
+    initialCachedData.folders,
+    (
+      state: Folder[],
+      action: { type: 'add' | 'delete' | 'update'; folder: Folder },
+    ) => {
+      switch (action.type) {
+        case 'add':
+          return [...state, action.folder];
+        case 'delete':
+          return state.filter((f) => f.id !== action.folder.id);
+        case 'update':
+          return state.map((f) =>
+            f.id === action.folder.id ? action.folder : f,
+          );
+        default:
+          return state;
+      }
+    },
+  );
+
+  const [tags, optimisticTags] = useOptimistic(
+    initialCachedData.tags,
+    (
+      state: TagType[],
+      action: { type: 'add' | 'delete' | 'update'; tag: TagType },
+    ) => {
+      switch (action.type) {
+        case 'add':
+          return [...state, action.tag];
+        case 'delete':
+          return state.filter((t) => t.id !== action.tag.id);
+        case 'update':
+          return state.map((t) => (t.id === action.tag.id ? action.tag : t));
+        default:
+          return state;
+      }
+    },
+  );
 
   // UI States
   const [expandedFolders, setExpandedFolders] = useState<
     Record<string, boolean>
   >({});
+  const [internalShowCreateFolderDialog, setInternalShowCreateFolderDialog] =
+    useState(false);
+  const [internalShowCreateTagDialog, setInternalShowCreateTagDialog] =
+    useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderColor, setNewFolderColor] = useState('blue');
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('gray');
   const [deleteId, setDeleteId] = useState<string | null>(null); // State to hold chat ID to delete
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); // State to control delete dialog visibility
 
+  // Add states for folder and tag deletion
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
+  const [deleteFolderName, setDeleteFolderName] = useState('');
+  const [showDeleteFolderDialog, setShowDeleteFolderDialog] = useState(false);
+
+  const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
+  const [deleteTagLabel, setDeleteTagLabel] = useState('');
+  const [showDeleteTagDialog, setShowDeleteTagDialog] = useState(false);
+
+  // Use either external state or internal state for dialogs
+  const actualShowCreateFolderDialog =
+    showCreateFolderDialog ?? internalShowCreateFolderDialog;
+  const actualSetShowCreateFolderDialog =
+    setShowCreateFolderDialog ?? setInternalShowCreateFolderDialog;
+  const actualShowCreateTagDialog =
+    showCreateTagDialog ?? internalShowCreateTagDialog;
+  const actualSetShowCreateTagDialog =
+    setShowCreateTagDialog ?? setInternalShowCreateTagDialog;
+
   // Sprawdź czy mamy dane w cache żeby zdecydować czy pobierać z API
-  const cachedThreadsData = getCachedThreadsData();
-  const hasDataInCache = cachedThreadsData.length > 0 || initialData?.threads;
+  const hasDataInCache =
+    initialCachedData.threads.length > 0 || initialData?.threads;
 
   // SWR for all threads (includes chats with tags and folder data)
   const {
@@ -212,9 +314,9 @@ export function SidebarHistory({
       fallbackData: hasDataInCache
         ? [
             {
-              threads: cachedThreadsData,
-              folders: folders,
-              tags: tags,
+              threads: initialCachedData.threads || initialData?.threads || [],
+              folders: initialCachedData.folders || initialData?.folders || [],
+              tags: initialCachedData.tags || initialData?.tags || [],
               hasMore: initialData?.hasMore || false,
             },
           ]
@@ -241,8 +343,79 @@ export function SidebarHistory({
     }
   }, [allThreadsPages]);
 
-  // Use threads directly without optimistic updates (managed in AppSidebar now)
-  const allThreadsOptimistic = allThreads || [];
+  // Optimistic updates dla threads (chats)
+  const [allThreadsOptimistic, optimisticThreads] = useOptimistic(
+    allThreads || [],
+    (
+      state: SidebarThread[],
+      action: {
+        type:
+          | 'moveToFolder'
+          | 'removeFromFolder'
+          | 'delete'
+          | 'addTag'
+          | 'removeTag';
+        chatId: string;
+        folderId?: string | null;
+        folder?: { name: string; color: string } | null;
+        tagId?: string;
+        tag?: { id: string; label: string; color: string; userId: string };
+      },
+    ) => {
+      if (!Array.isArray(state)) {
+        console.warn('OptimisticThreads: state is not an array', state);
+        return [];
+      }
+
+      try {
+        switch (action.type) {
+          case 'moveToFolder':
+            return state.map((thread) =>
+              thread.id === action.chatId
+                ? {
+                    ...thread,
+                    folderId: action.folderId,
+                    folder: action.folder,
+                  }
+                : thread,
+            );
+          case 'removeFromFolder':
+            return state.map((thread) =>
+              thread.id === action.chatId
+                ? { ...thread, folderId: null, folder: null }
+                : thread,
+            );
+          case 'delete':
+            return state.filter((thread) => thread.id !== action.chatId);
+          case 'addTag':
+            return state.map((thread) =>
+              thread.id === action.chatId && action.tag
+                ? { ...thread, tags: [...(thread.tags || []), action.tag] }
+                : thread,
+            );
+          case 'removeTag':
+            return state.map((thread) =>
+              thread.id === action.chatId
+                ? {
+                    ...thread,
+                    tags: (thread.tags || []).filter(
+                      (tag) => tag.id !== action.tagId,
+                    ),
+                  }
+                : thread,
+            );
+          default:
+            return state;
+        }
+      } catch (error) {
+        console.error('OptimisticThreads reducer error:', error, {
+          state,
+          action,
+        });
+        return state;
+      }
+    },
+  );
 
   // Convert threads to simple chats for backward compatibility
   const allChats = useMemo(() => {
@@ -381,7 +554,202 @@ export function SidebarHistory({
     }));
   };
 
-  // Folder and tag management functions moved to AppSidebar
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      toast.error('Folder name cannot be empty');
+      return;
+    }
+    if (!userId) {
+      toast.error('User not logged in');
+      return;
+    }
+
+    // Optimistic update - tworzymy tymczasowy folder
+    const tempFolder = {
+      id: `temp-${Date.now()}`,
+      name: newFolderName,
+      userId: userId,
+      color: newFolderColor || 'blue',
+      createdAt: new Date(),
+    } as Folder;
+
+    // Natychmiast aktualizujemy UI
+    startTransition(() => {
+      optimisticFolders({ type: 'add', folder: tempFolder });
+    });
+
+    setNewFolderName('');
+    setNewFolderColor('blue');
+    actualSetShowCreateFolderDialog(false);
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [tempFolder.id]: true,
+    }));
+
+    try {
+      const createdFolder = await createFolderAction({
+        name: tempFolder.name,
+        userId: userId,
+        color: tempFolder.color || 'blue',
+      });
+
+      if (createdFolder) {
+        // Zastąp tymczasowy folder prawdziwym
+        startTransition(() => {
+          optimisticFolders({ type: 'delete', folder: tempFolder });
+          optimisticFolders({ type: 'add', folder: createdFolder });
+        });
+
+        // Zaktualizuj expanded folders z prawdziwym ID
+        setExpandedFolders((prev) => {
+          const newState = { ...prev };
+          delete newState[tempFolder.id];
+          newState[createdFolder.id] = true;
+          return newState;
+        });
+
+        toast.success('Folder created successfully!');
+      }
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticFolders({ type: 'delete', folder: tempFolder });
+      });
+      console.error('Failed to create folder:', error);
+      toast.error('Failed to create folder');
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) {
+      toast.error('Tag name cannot be empty');
+      return;
+    }
+    if (!userId) {
+      toast.error('User not logged in');
+      return;
+    }
+
+    // Optimistic update - tworzymy tymczasowy tag
+    const tempTag = {
+      id: `temp-${Date.now()}`,
+      label: newTagName,
+      color: newTagColor,
+      userId: userId,
+    } as TagType;
+
+    // Natychmiast aktualizujemy UI
+    startTransition(() => {
+      optimisticTags({ type: 'add', tag: tempTag });
+    });
+
+    setNewTagName('');
+    setNewTagColor('gray');
+    actualSetShowCreateTagDialog(false);
+
+    try {
+      const createdTag = await createTagAction({
+        label: tempTag.label,
+        color: tempTag.color,
+        userId: userId,
+      });
+
+      if (createdTag) {
+        // Zastąp tymczasowy tag prawdziwym
+        startTransition(() => {
+          optimisticTags({ type: 'delete', tag: tempTag });
+          optimisticTags({ type: 'add', tag: createdTag });
+        });
+
+        toast.success('Tag created successfully!');
+      }
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticTags({ type: 'delete', tag: tempTag });
+      });
+      console.error('Failed to create tag:', error);
+      toast.error('Failed to create tag');
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    // Close manage dialog and open delete confirmation dialog
+    actualSetShowCreateFolderDialog(false);
+    setDeleteFolderId(folderId);
+    setDeleteFolderName(folderName);
+    setShowDeleteFolderDialog(true);
+  };
+
+  const confirmDeleteFolder = async () => {
+    if (!deleteFolderId) return;
+
+    const folderToDelete = folders.find((f) => f.id === deleteFolderId);
+    if (!folderToDelete) return;
+
+    // Optimistic update - usuń folder natychmiast
+    startTransition(() => {
+      optimisticFolders({ type: 'delete', folder: folderToDelete });
+    });
+
+    setShowDeleteFolderDialog(false);
+    setDeleteFolderId(null);
+    setDeleteFolderName('');
+
+    try {
+      await deleteFolderAction(deleteFolderId);
+      toast.success('Folder deleted successfully!');
+
+      // Refresh threads data to update moved chats
+      mutateThreads();
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticFolders({ type: 'add', folder: folderToDelete });
+      });
+      console.error('Failed to delete folder:', error);
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  const handleDeleteTag = (tagId: string, tagLabel: string) => {
+    // Close manage dialog and open delete confirmation dialog
+    actualSetShowCreateTagDialog(false);
+    setDeleteTagId(tagId);
+    setDeleteTagLabel(tagLabel);
+    setShowDeleteTagDialog(true);
+  };
+
+  const confirmDeleteTag = async () => {
+    if (!deleteTagId) return;
+
+    const tagToDelete = tags.find((t) => t.id === deleteTagId);
+    if (!tagToDelete) return;
+
+    // Optimistic update - usuń tag natychmiast
+    startTransition(() => {
+      optimisticTags({ type: 'delete', tag: tagToDelete });
+    });
+
+    setShowDeleteTagDialog(false);
+    setDeleteTagId(null);
+    setDeleteTagLabel('');
+
+    try {
+      await deleteTagAction(deleteTagId);
+      toast.success('Tag deleted successfully!');
+
+      // Refresh threads data to update chats that had this tag
+      mutateThreads();
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      startTransition(() => {
+        optimisticTags({ type: 'add', tag: tagToDelete });
+      });
+      console.error('Failed to delete tag:', error);
+      toast.error('Failed to delete tag');
+    }
+  };
 
   // This handler is passed down to ChatItem to trigger the delete dialog
   const onDeleteChatClick = (chatId: string) => {
@@ -393,32 +761,34 @@ export function SidebarHistory({
     // This function executes the actual deletion after confirmation
     if (!deleteId) return;
 
-    toast.promise(
-      // Placeholder for chat deletion - implement server action call here
-      Promise.resolve(),
-      {
-        loading: 'Deleting chat...',
-        success: () => {
-          // Optimistically update SWR cache for all threads (used by search and unfiled)
-          mutateThreads(
-            (threadHistories: any) => {
-              if (!threadHistories) return threadHistories;
+    // Call Server Action:
+    const deletePromise = deleteChatAction(deleteId); // --- CHANGED TO SERVER ACTION
 
-              return threadHistories.map((threadHistoryPage: any) => ({
-                ...threadHistoryPage,
-                threads: threadHistoryPage.threads.filter(
-                  (thread: SidebarThread) => thread.id !== deleteId,
-                ),
-              }));
-            },
-            { revalidate: false },
-          );
+    toast.promise(deletePromise, {
+      loading: 'Deleting chat...',
+      success: () => {
+        // Optimistically update SWR cache for all threads (used by search and unfiled)
+        mutateThreads(
+          (threadHistories: any) => {
+            if (!threadHistories) return threadHistories;
 
-          return 'Chat deleted successfully';
-        },
-        error: 'Failed to delete chat',
+            return threadHistories.map((threadHistoryPage: any) => ({
+              ...threadHistoryPage,
+              threads: threadHistoryPage.threads.filter(
+                (thread: SidebarThread) => thread.id !== deleteId,
+              ),
+            }));
+          },
+          { revalidate: false },
+        );
+
+        // Nie pobieraj ponownie - dane folderów i tagów pozostają bez zmian
+        // Usuwanie czatu nie wpływa na foldery ani tagi, więc cache pozostaje aktualny
+
+        return 'Chat deleted successfully';
       },
-    );
+      error: 'Failed to delete chat',
+    });
 
     setShowDeleteDialog(false);
     if (deleteId === params?.id) {
@@ -427,7 +797,7 @@ export function SidebarHistory({
     setDeleteId(null);
   };
 
-  // Placeholder functions for ChatItem (actual functionality moved to AppSidebar)
+  // Optimistic update functions for passing to ChatItem
   const handleMoveToFolder = useCallback(
     (
       chatId: string,
@@ -441,33 +811,85 @@ export function SidebarHistory({
         folderName,
         folderColor,
       });
-      // Implementation moved to AppSidebar
+      console.log('allThreads length:', allThreads?.length || 0);
+      console.log('optimisticThreads type:', typeof optimisticThreads);
+
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'moveToFolder',
+            chatId,
+            folderId,
+            folder: { name: folderName, color: folderColor },
+          });
+        });
+        console.log('optimisticThreads call succeeded');
+      } catch (error) {
+        console.error('handleMoveToFolder error:', error);
+        console.error(
+          'Error stack:',
+          error instanceof Error ? error.stack : 'Unknown error',
+        );
+      }
     },
-    [],
+    [optimisticThreads, allThreads],
   );
 
-  const handleRemoveFromFolder = useCallback((chatId: string) => {
-    console.log('handleRemoveFromFolder called:', { chatId });
-    // Implementation moved to AppSidebar
-  }, []);
+  const handleRemoveFromFolder = useCallback(
+    (chatId: string) => {
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'removeFromFolder',
+            chatId,
+          });
+        });
+      } catch (error) {
+        console.error('handleRemoveFromFolder error:', error);
+      }
+    },
+    [optimisticThreads],
+  );
 
   const handleAddTagToChat = useCallback(
     (
       chatId: string,
       tag: { id: string; label: string; color: string; userId: string },
     ) => {
-      console.log('handleAddTagToChat called:', { chatId, tag });
-      // Implementation moved to AppSidebar
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'addTag',
+            chatId,
+            tag,
+          });
+        });
+      } catch (error) {
+        console.error('handleAddTagToChat error:', error);
+      }
     },
-    [],
+    [optimisticThreads],
   );
 
   const handleRemoveTagFromChat = useCallback(
     (chatId: string, tagId: string) => {
-      console.log('handleRemoveTagFromChat called:', { chatId, tagId });
-      // Implementation moved to AppSidebar
+      try {
+        // Optimistic update UI natychmiast
+        startTransition(() => {
+          optimisticThreads({
+            type: 'removeTag',
+            chatId,
+            tagId,
+          });
+        });
+      } catch (error) {
+        console.error('handleRemoveTagFromChat error:', error);
+      }
     },
-    [],
+    [optimisticThreads],
   );
 
   // Sprawdź czy ładujemy dodatkowe dane (infinite scroll)
@@ -634,7 +1056,35 @@ export function SidebarHistory({
         </div>
       )}
 
-      {/* Dialogs are now rendered in AppSidebar to avoid z-index issues */}
+      {/* Manage Folders Dialog */}
+      <ManageFoldersDialog
+        open={actualShowCreateFolderDialog}
+        onOpenChange={actualSetShowCreateFolderDialog}
+        folders={folders}
+        allThreads={allThreadsOptimistic}
+        newFolderName={newFolderName}
+        setNewFolderName={setNewFolderName}
+        newFolderColor={newFolderColor}
+        setNewFolderColor={setNewFolderColor}
+        onCreateFolder={handleCreateFolder}
+        onDeleteFolder={handleDeleteFolder}
+        colorAccents={colorAccents}
+      />
+
+      {/* Manage Tags Dialog */}
+      <ManageTagsDialog
+        open={actualShowCreateTagDialog}
+        onOpenChange={actualSetShowCreateTagDialog}
+        tags={tags}
+        allThreads={allThreadsOptimistic}
+        newTagName={newTagName}
+        setNewTagName={setNewTagName}
+        newTagColor={newTagColor}
+        setNewTagColor={setNewTagColor}
+        onCreateTag={handleCreateTag}
+        onDeleteTag={handleDeleteTag}
+        colorAccents={colorAccents}
+      />
 
       {/* Delete Chat Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -658,7 +1108,55 @@ export function SidebarHistory({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Folder and Tag delete dialogs moved to AppSidebar */}
+      {/* Delete Folder Confirmation Dialog */}
+      <AlertDialog
+        open={showDeleteFolderDialog}
+        onOpenChange={setShowDeleteFolderDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteFolderName}&quot;?
+              All chats in this folder will be moved to unfiled.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteFolder}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Folder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Tag Confirmation Dialog */}
+      <AlertDialog
+        open={showDeleteTagDialog}
+        onOpenChange={setShowDeleteTagDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteTagLabel}&quot;? This
+              tag will be removed from all chats.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteTag}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Tag
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { Document } from '@/lib/db/schema';
 import { ChatSDKError, type ErrorCode } from './errors';
-import type { NextRequest } from 'next/server';
+import Color from 'colorjs.io';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -274,9 +274,4 @@ export function getReadableBorderColor(
   const dl = Math.max(5, L * borderWeight);
   const col = oklchToRgb(dl, C * borderWeight, H);
   return `#${col.r.toString(16).padStart(2, '0')}${col.g.toString(16).padStart(2, '0')}${col.b.toString(16).padStart(2, '0')}`;
-}
-
-export function isLocalRequest(req: NextRequest | Request) {
-  const host = (req.headers.get('host') || '').toLowerCase();
-  return host.startsWith('localhost') || host.startsWith('127.0.0.1');
 }

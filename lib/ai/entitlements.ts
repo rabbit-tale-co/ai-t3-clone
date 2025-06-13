@@ -4,8 +4,6 @@ import type { ChatModel } from './models';
 interface Entitlements {
   maxMessagesPerDay: number;
   availableChatModelIds: Array<ChatModel['id']>;
-  maxFolders: number;
-  maxTags: number;
 }
 
 export const entitlementsByUserType: Record<UserType, Entitlements> = {
@@ -14,8 +12,6 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    */
   guest: {
     maxMessagesPerDay: 5,
-    maxFolders: 2,
-    maxTags: 3,
     availableChatModelIds: [
       'gemini-2.0-flash',
       'gemini-2.0-flash-lite',
@@ -31,8 +27,6 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    */
   regular: {
     maxMessagesPerDay: 20,
-    maxFolders: 5,
-    maxTags: 10,
     availableChatModelIds: [
       // 'chat-model',
       // 'title-model',
@@ -47,15 +41,11 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
 
   pro: {
     maxMessagesPerDay: 50,
-    maxFolders: 15,
-    maxTags: 25,
     availableChatModelIds: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
   },
 
   admin: {
     maxMessagesPerDay: 100,
-    maxFolders: -1, // Unlimited
-    maxTags: -1, // Unlimited
     availableChatModelIds: ['gemini-2.0-flash', 'gemini-2.0-flash-lite'],
   },
 
@@ -63,26 +53,3 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    * TODO: For users with an account and a paid membership
    */
 };
-
-export function getUserEntitlements(userType: UserType): Entitlements {
-  return entitlementsByUserType[userType] || entitlementsByUserType.guest;
-}
-
-export function canCreateFolder(
-  userType: UserType,
-  currentFolderCount: number,
-): boolean {
-  const entitlements = getUserEntitlements(userType);
-  return (
-    entitlements.maxFolders === -1 ||
-    currentFolderCount < entitlements.maxFolders
-  );
-}
-
-export function canCreateTag(
-  userType: UserType,
-  currentTagCount: number,
-): boolean {
-  const entitlements = getUserEntitlements(userType);
-  return entitlements.maxTags === -1 || currentTagCount < entitlements.maxTags;
-}

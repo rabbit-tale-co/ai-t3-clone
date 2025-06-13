@@ -264,13 +264,13 @@ function PureArtifact({
   }, [artifact.documentId, artifactDefinition, setMetadata]);
 
   useEffect(() => {
-    if (!metadata.modelId) {
-      setMetadata((prev: { modelId?: string }) => ({
+    if (!metadata?.modelId) {
+      setMetadata((prev: { modelId?: string } | null) => ({
         ...prev,
         modelId: 'gemini-2.0-flash',
       }));
     }
-  }, [metadata.modelId, setMetadata]);
+  }, [metadata?.modelId, setMetadata]);
 
   return (
     <AnimatePresence>
@@ -356,7 +356,7 @@ function PureArtifact({
                     append={append}
                     handleSubmit={handleSubmit}
                     selectedVisibilityType={selectedVisibilityType}
-                    selectedModelId={metadata.modelId || 'gemini-2.0-flash'}
+                    selectedModelId={metadata?.modelId || 'gemini-2.0-flash'}
                   />
                 </form>
               </div>

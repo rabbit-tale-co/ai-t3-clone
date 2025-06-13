@@ -1,39 +1,38 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { guestRegex, isDevelopmentEnvironment } from './lib/constants';
-import { isLocalRequest } from './lib/utils';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. puść ping i next-auth tak jak było
-  if (pathname.startsWith('/ping') || pathname.startsWith('/api/auth')) {
+  /*
+   * Playwright starts the dev server and requires a 200 status to
+   * begin the tests, so this ensures that the tests can start
+   */
+  if (pathname.startsWith('/ping')) {
+    return new Response('pong', { status: 200 });
+  }
+
+  if (pathname.startsWith('/api/auth')) {
     return NextResponse.next();
   }
 
-  // 2. jeśli to NIE jest żądanie dokumentu HTML – nie rób auth-redirectu
-  const acceptsHtml = request.headers.get('accept')?.includes('text/html');
-  if (!acceptsHtml) {
-    return NextResponse.next();
-  }
-
-  const secureFlag = !isLocalRequest(request);
-
-  // 3. standardowa logika auth
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
-    secureCookie: secureFlag,
+    secureCookie: !isDevelopmentEnvironment,
   });
 
   if (!token) {
     const redirectUrl = encodeURIComponent(request.url);
+
     return NextResponse.redirect(
       new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
     );
   }
 
-  const isGuest = guestRegex.test(token.email ?? '');
+  const isGuest = guestRegex.test(token?.email ?? '');
+
   if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
   }

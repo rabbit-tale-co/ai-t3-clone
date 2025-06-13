@@ -14,8 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn, getReadableBorderColor } from '@/lib/utils';
 import type { Tag } from '@/lib/db/schema';
-import type { UserType } from '@/app/(auth)/auth';
-import { getUserEntitlements } from '@/lib/ai/entitlements';
 import Color from 'colorjs.io';
 
 interface SidebarThread {
@@ -42,8 +40,6 @@ interface ManageTagsDialogProps {
   setNewTagColor: (color: string) => void;
   onCreateTag: () => void;
   onDeleteTag: (tagId: string, tagLabel: string) => void;
-  isCreating?: boolean;
-  userType: UserType;
   colorAccents: Record<
     string,
     {
@@ -98,8 +94,6 @@ export function ManageTagsDialog({
   setNewTagColor,
   onCreateTag,
   onDeleteTag,
-  isCreating = false,
-  userType,
   colorAccents,
 }: ManageTagsDialogProps) {
   return (
@@ -154,7 +148,7 @@ export function ManageTagsDialog({
 
                       return (
                         <div
-                          key={`tag-${tag.id}-${tag.label}`}
+                          key={tag.id}
                           className="group relative p-3 rounded-lg bg-white/80 dark:bg-black/50 hover:bg-pink-50 dark:hover:bg-pink-950/30 transition-colors min-w-[160px] border border-pink-200/30 dark:border-pink-800/30"
                         >
                           <div className="flex items-center justify-between mb-2">
@@ -291,32 +285,11 @@ export function ManageTagsDialog({
 
                   <Button
                     onClick={onCreateTag}
-                    disabled={
-                      !newTagName.trim() ||
-                      isCreating ||
-                      (() => {
-                        const entitlements = getUserEntitlements(userType);
-                        return (
-                          entitlements.maxTags !== -1 &&
-                          tags.length >= entitlements.maxTags
-                        );
-                      })()
-                    }
-                    className="w-full bg-pink-500 hover:bg-pink-600 dark:bg-pink-600 dark:hover:bg-pink-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newTagName.trim()}
+                    className="w-full bg-pink-500 hover:bg-pink-600 dark:bg-pink-600 dark:hover:bg-pink-700 text-white shadow-lg"
                   >
                     <Hash className="size-4 mr-2" />
-                    {isCreating
-                      ? 'Saving...'
-                      : (() => {
-                          const entitlements = getUserEntitlements(userType);
-                          if (
-                            entitlements.maxTags !== -1 &&
-                            tags.length >= entitlements.maxTags
-                          ) {
-                            return 'Limit Reached';
-                          }
-                          return 'Create Tag';
-                        })()}
+                    Create Tag
                   </Button>
                 </div>
               </div>
@@ -329,16 +302,10 @@ export function ManageTagsDialog({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Tags Used:
+                      Total Tags:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {tags.length}
-                      {(() => {
-                        const entitlements = getUserEntitlements(userType);
-                        return entitlements.maxTags === -1
-                          ? ''
-                          : ` / ${entitlements.maxTags}`;
-                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between">
