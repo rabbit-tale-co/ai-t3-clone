@@ -14,6 +14,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 import {
   Sidebar,
@@ -29,6 +39,25 @@ import {
 
 import { SidebarHistory } from '@/components/sidebar/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar/sidebar-user-nav';
+import { ManageFoldersDialog } from '@/components/sidebar/manage-folders-dialog';
+import { ManageTagsDialog } from '@/components/sidebar/manage-tags-dialog';
+import {
+  createFolderAction,
+  createTagAction,
+  deleteFolderAction,
+  deleteTagAction,
+} from '@/app/(chat)/actions';
+import { toast } from 'sonner';
+import {
+  getUserEntitlements,
+  canCreateFolder,
+  canCreateTag,
+} from '@/lib/ai/entitlements';
+import {
+  clearLocalStorageByPrefix,
+  setSidebarCache,
+  getSidebarCache,
+} from '@/lib/utils';
 
 import type { Session } from 'next-auth';
 import type { Folder, Tag } from '@/lib/db/schema';
@@ -68,6 +97,90 @@ export function AppSidebar({
     React.useState(false);
   const [showCreateTagDialog, setShowCreateTagDialog] = React.useState(false);
 
+  // States for dialog content
+  const [newFolderName, setNewFolderName] = React.useState('');
+  const [newFolderColor, setNewFolderColor] = React.useState('blue');
+  const [newTagName, setNewTagName] = React.useState('');
+  const [newTagColor, setNewTagColor] = React.useState('gray');
+
+  // States for folder and tag deletion
+  const [deleteFolderId, setDeleteFolderId] = React.useState<string | null>(
+    null,
+  );
+  const [deleteFolderName, setDeleteFolderName] = React.useState('');
+  const [showDeleteFolderDialog, setShowDeleteFolderDialog] =
+    React.useState(false);
+  const [deleteTagId, setDeleteTagId] = React.useState<string | null>(null);
+  const [deleteTagLabel, setDeleteTagLabel] = React.useState('');
+  const [showDeleteTagDialog, setShowDeleteTagDialog] = React.useState(false);
+
+  // Get cached or initial data for folders and tags
+  const getCachedOrInitialData = React.useCallback(() => {
+    if (!userSession?.user?.id) return { folders: [], tags: [] };
+
+    try {
+      const cached = getSidebarCache(userSession.user.id);
+
+      // Priority: 1. Cache, 2. InitialData, 3. Empty array
+      return {
+        folders: Array.isArray((cached as any)?.folders)
+          ? (cached as any).folders
+          : initialData?.folders || [],
+        tags: Array.isArray((cached as any)?.tags)
+          ? (cached as any).tags
+          : initialData?.tags || [],
+      };
+    } catch (error) {
+      console.error('Error getting cached data:', error);
+      return {
+        folders: initialData?.folders || [],
+        tags: initialData?.tags || [],
+      };
+    }
+  }, [userSession?.user?.id, initialData]);
+
+  const [cachedData, setCachedData] = React.useState(() =>
+    getCachedOrInitialData(),
+  );
+
+  // Effect to clear cache when user changes and refresh data
+  React.useEffect(() => {
+    if (!userSession?.user?.id) {
+      // Clear cache of previous user
+      clearLocalStorageByPrefix('sidebar_data_');
+      clearLocalStorageByPrefix('cache_timestamp_');
+      setCachedData({ folders: [], tags: [] });
+      return;
+    }
+
+    // Refresh cached data when user changes
+    const newCachedData = getCachedOrInitialData();
+    setCachedData(newCachedData);
+  }, [userSession?.user?.id, getCachedOrInitialData]);
+
+  // Local state for folders and tags (only updated by user actions and localStorage)
+  const [folders, setFolders] = React.useState<Folder[]>(cachedData.folders);
+  const [tags, setTags] = React.useState<Tag[]>(cachedData.tags);
+
+  // Function to refresh from localStorage (called when opening dialogs)
+  const refreshFromLocalStorage = React.useCallback(() => {
+    if (!userSession?.user?.id) return;
+
+    try {
+      const cached = getSidebarCache(userSession.user.id);
+      if (cached) {
+        if (Array.isArray((cached as any)?.folders)) {
+          setFolders((cached as any).folders);
+        }
+        if (Array.isArray((cached as any)?.tags)) {
+          setTags((cached as any).tags);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing from localStorage:', error);
+    }
+  }, [userSession?.user?.id]);
+
   const handleNewChat = async () => {
     router.push('/');
     if (onNewChat) {
@@ -79,6 +192,280 @@ export function AppSidebar({
     setShowLoginModal(open);
     if (onModalStateChange) {
       onModalStateChange(open);
+    }
+  };
+
+  // Loading states for create operations
+  const [isCreatingFolder, setIsCreatingFolder] = React.useState(false);
+  const [isCreatingTag, setIsCreatingTag] = React.useState(false);
+
+  // Folder and Tag Management Handlers
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      toast.error('Folder name cannot be empty');
+      return;
+    }
+    if (!userSession?.user?.id) {
+      toast.error('User not logged in');
+      return;
+    }
+    if (isCreatingFolder) {
+      return; // Prevent multiple calls
+    }
+
+    // Check folder limit based on user type
+    const userType = userSession.user.type || 'guest';
+    if (!canCreateFolder(userType, folders.length)) {
+      const entitlements = getUserEntitlements(userType);
+      toast.error(
+        `You've reached your folder limit (${entitlements.maxFolders}). ${
+          userType === 'guest'
+            ? 'Sign up for more folders!'
+            : 'Upgrade for more folders!'
+        }`,
+      );
+      return;
+    }
+
+    setIsCreatingFolder(true);
+
+    // Optimistic update - tworzymy tymczasowy folder
+    const tempFolder = {
+      id: `temp-folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: newFolderName,
+      userId: userSession.user.id,
+      color: newFolderColor || 'blue',
+      createdAt: new Date(),
+    } as Folder;
+
+    // Natychmiast aktualizujemy UI
+    setFolders((prev) => [...prev, tempFolder]);
+
+    // Nie resetujemy formularza ani nie zamykamy dialogu od razu
+    // Użytkownik widzi natychmiast dodany folder i może dodać kolejny
+
+    try {
+      const createdFolder = await createFolderAction({
+        name: tempFolder.name,
+        userId: userSession.user.id,
+        color: tempFolder.color || 'blue',
+      });
+
+      if (createdFolder) {
+        // Zastąp tymczasowy folder prawdziwym
+        setFolders((prev) =>
+          prev.map((f) => (f.id === tempFolder.id ? createdFolder : f)),
+        );
+
+        // Zapisz do localStorage po aktualizacji state
+        if (userSession?.user?.id) {
+          // Aktualizuj localStorage z nowym folderem
+          setTimeout(() => {
+            const currentFolders = folders.map((f) =>
+              f.id === tempFolder.id ? createdFolder : f,
+            );
+            setSidebarCache(userSession.user.id, {
+              threads: [],
+              folders: currentFolders,
+              tags: tags,
+              hasMore: false,
+            });
+          }, 0);
+        }
+
+        // Resetuj formularz dopiero po udanym server action
+        setNewFolderName('');
+        setNewFolderColor('blue');
+
+        toast.success('Folder created successfully!');
+      }
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      setFolders((prev) => prev.filter((f) => f.id !== tempFolder.id));
+      console.error('Failed to create folder:', error);
+      toast.error('Failed to create folder');
+    } finally {
+      setIsCreatingFolder(false);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) {
+      toast.error('Tag name cannot be empty');
+      return;
+    }
+    if (!userSession?.user?.id) {
+      toast.error('User not logged in');
+      return;
+    }
+    if (isCreatingTag) {
+      return; // Prevent multiple calls
+    }
+
+    // Check tag limit based on user type
+    const userType = userSession.user.type || 'guest';
+    if (!canCreateTag(userType, tags.length)) {
+      const entitlements = getUserEntitlements(userType);
+      toast.error(
+        `You've reached your tag limit (${entitlements.maxTags}). ${
+          userType === 'guest'
+            ? 'Sign up for more tags!'
+            : 'Upgrade for more tags!'
+        }`,
+      );
+      return;
+    }
+
+    setIsCreatingTag(true);
+
+    // Optimistic update - tworzymy tymczasowy tag
+    const tempTag = {
+      id: `temp-tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      label: newTagName,
+      color: newTagColor,
+      userId: userSession.user.id,
+    } as Tag;
+
+    // Natychmiast aktualizujemy UI
+    setTags((prev) => [...prev, tempTag]);
+
+    // Nie resetujemy formularza ani nie zamykamy dialogu od razu
+    // Użytkownik widzi natychmiast dodany tag i może dodać kolejny
+
+    try {
+      const createdTag = await createTagAction({
+        label: tempTag.label,
+        color: tempTag.color,
+        userId: userSession.user.id,
+      });
+
+      if (createdTag) {
+        // Zastąp tymczasowy tag prawdziwym
+        setTags((prev) =>
+          prev.map((t) => (t.id === tempTag.id ? createdTag : t)),
+        );
+
+        // Zapisz do localStorage po aktualizacji state
+        if (userSession?.user?.id) {
+          // Aktualizuj localStorage z nowym tagiem
+          setTimeout(() => {
+            const currentTags = tags.map((t) =>
+              t.id === tempTag.id ? createdTag : t,
+            );
+            setSidebarCache(userSession.user.id, {
+              threads: [],
+              folders: folders,
+              tags: currentTags,
+              hasMore: false,
+            });
+          }, 0);
+        }
+
+        // Resetuj formularz dopiero po udanym server action
+        setNewTagName('');
+        setNewTagColor('gray');
+
+        toast.success('Tag created successfully!');
+      }
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      setTags((prev) => prev.filter((t) => t.id !== tempTag.id));
+      console.error('Failed to create tag:', error);
+      toast.error('Failed to create tag');
+    } finally {
+      setIsCreatingTag(false);
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    // Close manage dialog and open delete confirmation dialog
+    setShowCreateFolderDialog(false);
+    setDeleteFolderId(folderId);
+    setDeleteFolderName(folderName);
+    setShowDeleteFolderDialog(true);
+  };
+
+  const confirmDeleteFolder = async () => {
+    if (!deleteFolderId) return;
+
+    const folderToDelete = folders.find((f) => f.id === deleteFolderId);
+    if (!folderToDelete) return;
+
+    // Optimistic update - usuń folder natychmiast
+    setFolders((prev) => prev.filter((f) => f.id !== deleteFolderId));
+
+    setShowDeleteFolderDialog(false);
+    setDeleteFolderId(null);
+    setDeleteFolderName('');
+
+    try {
+      await deleteFolderAction(deleteFolderId);
+
+      // Zapisz do localStorage po usunięciu
+      if (userSession?.user?.id) {
+        setTimeout(() => {
+          const currentFolders = folders.filter((f) => f.id !== deleteFolderId);
+          setSidebarCache(userSession.user.id, {
+            threads: [],
+            folders: currentFolders,
+            tags: tags,
+            hasMore: false,
+          });
+        }, 0);
+      }
+
+      toast.success('Folder deleted successfully!');
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      setFolders((prev) => [...prev, folderToDelete]);
+      console.error('Failed to delete folder:', error);
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  const handleDeleteTag = (tagId: string, tagLabel: string) => {
+    // Close manage dialog and open delete confirmation dialog
+    setShowCreateTagDialog(false);
+    setDeleteTagId(tagId);
+    setDeleteTagLabel(tagLabel);
+    setShowDeleteTagDialog(true);
+  };
+
+  const confirmDeleteTag = async () => {
+    if (!deleteTagId) return;
+
+    const tagToDelete = tags.find((t) => t.id === deleteTagId);
+    if (!tagToDelete) return;
+
+    // Optimistic update - usuń tag natychmiast
+    setTags((prev) => prev.filter((t) => t.id !== deleteTagId));
+
+    setShowDeleteTagDialog(false);
+    setDeleteTagId(null);
+    setDeleteTagLabel('');
+
+    try {
+      await deleteTagAction(deleteTagId);
+
+      // Zapisz do localStorage po usunięciu
+      if (userSession?.user?.id) {
+        setTimeout(() => {
+          const currentTags = tags.filter((t) => t.id !== deleteTagId);
+          setSidebarCache(userSession.user.id, {
+            threads: [],
+            folders: folders,
+            tags: currentTags,
+            hasMore: false,
+          });
+        }, 0);
+      }
+
+      toast.success('Tag deleted successfully!');
+    } catch (error) {
+      // Cofnij optimistic update w przypadku błędu
+      setTags((prev) => [...prev, tagToDelete]);
+      console.error('Failed to delete tag:', error);
+      toast.error('Failed to delete tag');
     }
   };
 
@@ -139,7 +526,11 @@ export function AppSidebar({
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        onClick={() => setShowCreateFolderDialog(true)}
+                        onClick={() => {
+                          console.log('Folder button clicked');
+                          refreshFromLocalStorage(); // Sprawdź localStorage przed otwarciem
+                          setShowCreateFolderDialog(true);
+                        }}
                       >
                         <FolderIcon className="size-3 mr-1.5" />
                         <span className="text-xs">Folders</span>
@@ -156,7 +547,11 @@ export function AppSidebar({
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        onClick={() => setShowCreateTagDialog(true)}
+                        onClick={() => {
+                          console.log('Tag button clicked');
+                          refreshFromLocalStorage(); // Sprawdź localStorage przed otwarciem
+                          setShowCreateTagDialog(true);
+                        }}
                       >
                         <Hash className="size-3 mr-1.5" />
                         <span className="text-xs">Tags</span>
@@ -181,7 +576,12 @@ export function AppSidebar({
               setShowCreateTagDialog={setShowCreateTagDialog}
               showCreateFolderDialog={showCreateFolderDialog}
               showCreateTagDialog={showCreateTagDialog}
-              initialData={initialData}
+              initialData={{
+                threads: initialData?.threads || [],
+                hasMore: initialData?.hasMore || false,
+                folders: folders,
+                tags: tags,
+              }}
             />
           ) : (
             <SidebarGroup>
@@ -212,6 +612,215 @@ export function AppSidebar({
 
         <SidebarRail />
       </Sidebar>
+
+      {/* Dialogs rendered outside sidebar to avoid z-index issues */}
+      {userSession?.user && (
+        <>
+          <ManageFoldersDialog
+            open={showCreateFolderDialog}
+            onOpenChange={setShowCreateFolderDialog}
+            folders={folders}
+            allThreads={[]} // Will be populated from SidebarHistory via props if needed
+            newFolderName={newFolderName}
+            setNewFolderName={setNewFolderName}
+            newFolderColor={newFolderColor}
+            setNewFolderColor={setNewFolderColor}
+            onCreateFolder={handleCreateFolder}
+            onDeleteFolder={handleDeleteFolder}
+            isCreating={isCreatingFolder}
+            userType={userSession?.user?.type || 'guest'}
+            colorAccents={{
+              pink: {
+                light: '#FDF2F8',
+                dark: '#831843',
+                border: '#FBCFE8',
+                accent: '#EC4899',
+              },
+              purple: {
+                light: '#F5F3FF',
+                dark: '#5B21B6',
+                border: '#DDD6FE',
+                accent: '#8B5CF6',
+              },
+              blue: {
+                light: '#EFF6FF',
+                dark: '#1E40AF',
+                border: '#BFDBFE',
+                accent: '#3B82F6',
+              },
+              green: {
+                light: '#ECFDF5',
+                dark: '#065F46',
+                border: '#A7F3D0',
+                accent: '#10B981',
+              },
+              orange: {
+                light: '#FFF7ED',
+                dark: '#9A3412',
+                border: '#FFEDD5',
+                accent: '#F97316',
+              },
+              red: {
+                light: '#FEF2F2',
+                dark: '#991B1B',
+                border: '#FECACA',
+                accent: '#EF4444',
+              },
+              indigo: {
+                light: '#EEF2FF',
+                dark: '#3730A3',
+                border: '#C7D2FE',
+                accent: '#6366F1',
+              },
+              teal: {
+                light: '#F0FDFA',
+                dark: '#115E59',
+                border: '#99F6E4',
+                accent: '#14B8A6',
+              },
+              amber: {
+                light: '#FFFBEB',
+                dark: '#92400E',
+                border: '#FDE68A',
+                accent: '#F59E0B',
+              },
+              gray: {
+                light: '#F9FAFB',
+                dark: '#1F2937',
+                border: '#E5E7EB',
+                accent: '#6B7280',
+              },
+            }}
+          />
+
+          <ManageTagsDialog
+            open={showCreateTagDialog}
+            onOpenChange={setShowCreateTagDialog}
+            tags={tags}
+            allThreads={[]} // Will be populated from SidebarHistory via props if needed
+            newTagName={newTagName}
+            setNewTagName={setNewTagName}
+            newTagColor={newTagColor}
+            setNewTagColor={setNewTagColor}
+            onCreateTag={handleCreateTag}
+            onDeleteTag={handleDeleteTag}
+            isCreating={isCreatingTag}
+            userType={userSession?.user?.type || 'guest'}
+            colorAccents={{
+              pink: {
+                light: '#FDF2F8',
+                dark: '#831843',
+                border: '#FBCFE8',
+                accent: '#EC4899',
+              },
+              purple: {
+                light: '#F5F3FF',
+                dark: '#5B21B6',
+                border: '#DDD6FE',
+                accent: '#8B5CF6',
+              },
+              blue: {
+                light: '#EFF6FF',
+                dark: '#1E40AF',
+                border: '#BFDBFE',
+                accent: '#3B82F6',
+              },
+              green: {
+                light: '#ECFDF5',
+                dark: '#065F46',
+                border: '#A7F3D0',
+                accent: '#10B981',
+              },
+              orange: {
+                light: '#FFF7ED',
+                dark: '#9A3412',
+                border: '#FFEDD5',
+                accent: '#F97316',
+              },
+              red: {
+                light: '#FEF2F2',
+                dark: '#991B1B',
+                border: '#FECACA',
+                accent: '#EF4444',
+              },
+              indigo: {
+                light: '#EEF2FF',
+                dark: '#3730A3',
+                border: '#C7D2FE',
+                accent: '#6366F1',
+              },
+              teal: {
+                light: '#F0FDFA',
+                dark: '#115E59',
+                border: '#99F6E4',
+                accent: '#14B8A6',
+              },
+              amber: {
+                light: '#FFFBEB',
+                dark: '#92400E',
+                border: '#FDE68A',
+                accent: '#F59E0B',
+              },
+              gray: {
+                light: '#F9FAFB',
+                dark: '#1F2937',
+                border: '#E5E7EB',
+                accent: '#6B7280',
+              },
+            }}
+          />
+
+          {/* Delete Folder Confirmation Dialog */}
+          <AlertDialog
+            open={showDeleteFolderDialog}
+            onOpenChange={setShowDeleteFolderDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete &quot;{deleteFolderName}
+                  &quot;? All chats in this folder will be moved to unfiled.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteFolder}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Folder
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Delete Tag Confirmation Dialog */}
+          <AlertDialog
+            open={showDeleteTagDialog}
+            onOpenChange={setShowDeleteTagDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete &quot;{deleteTagLabel}&quot;?
+                  This tag will be removed from all chats.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteTag}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Tag
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </>
   );
 }

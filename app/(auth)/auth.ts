@@ -1,10 +1,11 @@
 import { compare } from 'bcrypt-ts';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { createGuestUser, getUser } from '@/lib/db/queries';
+import { createGuestUser, getUser, getUserById } from '@/lib/db/queries';
 import { authConfig } from './auth.config';
-import { DUMMY_PASSWORD } from '@/lib/constants';
+import { DUMMY_PASSWORD, isDevelopmentEnvironment } from '@/lib/constants';
 import type { DefaultJWT } from 'next-auth/jwt';
+import { cookies } from 'next/headers';
 
 export type UserType = 'guest' | 'regular' | 'pro' | 'admin';
 
@@ -65,8 +66,24 @@ export const {
     Credentials({
       id: 'guest',
       credentials: {},
-      async authorize() {
+      async authorize(_, req) {
+        const cookieStore = await cookies();
+        const existingGuestId = cookieStore.get('guest')?.value;
+
+        if (existingGuestId) {
+          const existingUser = await getUserById(existingGuestId);
+          if (existingUser) {
+            return { ...existingUser, type: 'guest' };
+          }
+        }
+
         const [guestUser] = await createGuestUser();
+        cookieStore.set('guest', guestUser.id, {
+          httpOnly: true,
+          secure: !isDevelopmentEnvironment,
+          maxAge: 60 * 60 * 24 * 30,
+        });
+
         return { ...guestUser, type: 'guest' };
       },
     }),
@@ -88,5 +105,13 @@ export const {
 
       return session;
     },
+<<<<<<< Updated upstream
+=======
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
+>>>>>>> Stashed changes
   },
 });
