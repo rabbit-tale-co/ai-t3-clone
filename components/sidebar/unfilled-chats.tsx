@@ -67,7 +67,7 @@ export function UnfiledChatsList({
   const { t } = useLanguage();
 
   return (
-    <SidebarGroup className="px-2">
+    <SidebarGroup>
       <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
         {t('navigation.history.chats')} ({chats.length})
       </SidebarGroupLabel>

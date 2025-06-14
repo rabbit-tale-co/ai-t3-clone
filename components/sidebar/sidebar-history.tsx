@@ -592,15 +592,7 @@ export function SidebarHistory({
               <LoaderIcon className="size-4 animate-spin text-pink-500" />
               Loading more chats...
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setSize(size + 1)}
-              className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 px-2 py-1"
-            >
-              Load more chats
-            </button>
-          )}
+          ) : null}
         </div>
       )}
 

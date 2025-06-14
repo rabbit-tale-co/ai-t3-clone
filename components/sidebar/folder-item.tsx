@@ -112,7 +112,7 @@ export function FolderItem({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <SidebarMenuSub className="space-y-1 mt-1 mr-0">
+          <SidebarMenuSub className="space-y-1 mt-1 mr-0 pr-0">
             {folderChats.length > 0 ? (
               <div className="space-y-1">
                 {folderChats.map((thread) => (

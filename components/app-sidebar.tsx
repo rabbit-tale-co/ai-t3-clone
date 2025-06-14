@@ -431,10 +431,6 @@ export function AppSidebar({
             <SidebarHistory
               user={userSession.user}
               searchTerm={searchTerm}
-              setShowCreateFolderDialog={setShowCreateFolderDialog}
-              setShowCreateTagDialog={setShowCreateTagDialog}
-              showCreateFolderDialog={showCreateFolderDialog}
-              showCreateTagDialog={showCreateTagDialog}
               initialData={{
                 threads: initialData?.threads || [],
                 hasMore: initialData?.hasMore || false,
