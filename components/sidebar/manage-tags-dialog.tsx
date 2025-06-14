@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn, getReadableBorderColor } from '@/lib/utils';
+import { useLanguage } from '@/hooks/use-language';
 import type { Tag } from '@/lib/db/schema';
 import type { UserType } from '@/app/(auth)/auth';
 import { getUserEntitlements } from '@/lib/ai/entitlements';
@@ -102,6 +103,7 @@ export function ManageTagsDialog({
   userType,
   colorAccents,
 }: ManageTagsDialogProps) {
+  const { t } = useLanguage();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:min-w-5xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl rounded-2xl">
@@ -111,10 +113,10 @@ export function ManageTagsDialog({
               <div>
                 <h2 className="text-lg sm:text-xl font-semibold text-pink-900 dark:text-gray-100 flex items-center gap-3">
                   <Hash className="size-5" />
-                  Manage Tags
+                  {t('tags.manageTags')}
                 </h2>
                 <p className="text-xs sm:text-sm text-pink-600 dark:text-pink-400 mt-0.5">
-                  Categorize and label your conversations for easy discovery
+                  {t('tags.categorizeConversations')}
                 </p>
               </div>
             </div>
@@ -127,10 +129,10 @@ export function ManageTagsDialog({
             <div className="lg:col-span-3 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
-                  Your Tags
+                  {t('tags.yourTags')}
                 </h3>
                 <span className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100 dark:bg-pink-900/30 px-2 py-1 rounded-full">
-                  {tags.length} tag{tags.length !== 1 ? 's' : ''}
+                  {t('tags.tagCount', { count: tags.length })}
                 </span>
               </div>
 
@@ -188,8 +190,7 @@ export function ManageTagsDialog({
                           </div>
 
                           <div className="text-xs text-pink-600 dark:text-pink-400">
-                            {taggedChats.length} chat
-                            {taggedChats.length !== 1 ? 's' : ''}
+                            {t('tags.chatCount', { count: taggedChats.length })}
                             {recentTaggedChat && (
                               <span className="ml-2">
                                 •{' '}
@@ -210,11 +211,10 @@ export function ManageTagsDialog({
                     <Hash className="size-8 text-pink-500 dark:text-pink-400" />
                   </div>
                   <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
-                    No tags yet
+                    {t('tags.noTagsYet')}
                   </h3>
                   <p className="text-sm text-pink-600 dark:text-pink-400">
-                    Create your first tag to start categorizing your
-                    conversations
+                    {t('tags.createFirstTag')}
                   </p>
                 </div>
               )}
@@ -224,7 +224,7 @@ export function ManageTagsDialog({
             <div className="space-y-6">
               <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
                 <h3 className="font-medium mb-4 text-pink-900 dark:text-pink-100">
-                  Create New Tag
+                  {t('tags.createNewTag')}
                 </h3>
 
                 <div className="space-y-4">
@@ -233,20 +233,20 @@ export function ManageTagsDialog({
                       htmlFor="tagName"
                       className="text-pink-800 dark:text-pink-200"
                     >
-                      Tag Name
+                      {t('tags.tagName')}
                     </Label>
                     <Input
                       id="tagName"
                       value={newTagName}
                       onChange={(e) => setNewTagName(e.target.value)}
-                      placeholder="e.g., Important, Work, Research..."
+                      placeholder={t('tags.tagNamePlaceholder')}
                       className="border-pink-200 dark:border-pink-800/50 bg-white/80 dark:bg-black/50 text-pink-900 dark:text-pink-100 placeholder:text-pink-500 dark:placeholder:text-pink-400 focus:border-pink-400 dark:focus:border-pink-600"
                     />
                   </div>
 
                   <div className="space-y-3">
                     <Label className="text-pink-800 dark:text-pink-200">
-                      Color Theme
+                      {t('tags.colorTheme')}
                     </Label>
                     <div className="grid grid-cols-3 gap-2">
                       {Object.entries(colorAccents).map(([color, values]) => {
@@ -306,16 +306,16 @@ export function ManageTagsDialog({
                   >
                     <Hash className="size-4 mr-2" />
                     {isCreating
-                      ? 'Saving...'
+                      ? t('tags.saving')
                       : (() => {
                           const entitlements = getUserEntitlements(userType);
                           if (
                             entitlements.maxTags !== -1 &&
                             tags.length >= entitlements.maxTags
                           ) {
-                            return 'Limit Reached';
+                            return t('tags.limitReached');
                           }
-                          return 'Create Tag';
+                          return t('tags.createTag');
                         })()}
                   </Button>
                 </div>
@@ -324,12 +324,12 @@ export function ManageTagsDialog({
               {/* Tag Stats */}
               <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
                 <h4 className="text-sm font-medium text-pink-900 dark:text-pink-100 mb-3">
-                  Tag Statistics
+                  {t('tags.tagStatistics')}
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Tags Used:
+                      {t('tags.tagsUsed')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {tags.length}
@@ -343,7 +343,7 @@ export function ManageTagsDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Tagged Chats:
+                      {t('tags.taggedChats')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {
@@ -354,7 +354,7 @@ export function ManageTagsDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Untagged Chats:
+                      {t('tags.untaggedChats')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {
@@ -365,7 +365,7 @@ export function ManageTagsDialog({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-pink-600 dark:text-pink-400">
-                      Avg Tags/Chat:
+                      {t('tags.avgTagsPerChat')}:
                     </span>
                     <span className="font-medium text-pink-900 dark:text-pink-100">
                       {allThreads.length > 0
@@ -394,7 +394,7 @@ export function ManageTagsDialog({
             }}
             className="border-pink-200 dark:border-pink-800/50 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20"
           >
-            Close
+            {t('common.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

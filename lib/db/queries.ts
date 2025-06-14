@@ -545,6 +545,28 @@ export async function getMessageCountByUserId({
   }
 }
 
+export async function getLastUserMessageTimestamp({
+  id,
+}: { id: string }): Promise<Date | null> {
+  try {
+    const [lastMessage] = await db
+      .select({ createdAt: message.createdAt })
+      .from(message)
+      .innerJoin(chat, eq(message.chatId, chat.id))
+      .where(and(eq(chat.userId, id), eq(message.role, 'user')))
+      .orderBy(desc(message.createdAt))
+      .limit(1)
+      .execute();
+
+    return lastMessage?.createdAt ?? null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get last user message timestamp',
+    );
+  }
+}
+
 export async function createStreamId({
   streamId,
   chatId,

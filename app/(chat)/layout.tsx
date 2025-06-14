@@ -40,6 +40,11 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const cookieStore = await cookies();
+
+  // Pobierz stan sidebara z cookies, domyślnie true
+  const sidebarState = cookieStore.get('sidebar_state');
+  const defaultOpen = sidebarState ? sidebarState.value === 'true' : true;
 
   // Pobierz początkowe dane tylko dla zalogowanych użytkowników
   const initialData = session?.user?.id
@@ -52,7 +57,7 @@ export default async function Layout({
         src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"
         strategy="beforeInteractive"
       />
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar session={session} initialData={initialData} />
         <SidebarInset>{children}</SidebarInset>
       </SidebarProvider>

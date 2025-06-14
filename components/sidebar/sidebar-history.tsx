@@ -3,14 +3,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
-import React, {
-  useState,
-  useMemo,
-  useEffect,
-  useCallback,
-  useOptimistic,
-  startTransition,
-} from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -25,55 +18,43 @@ import {
 import {
   SidebarGroup,
   SidebarGroupContent,
-  useSidebar,
   SidebarGroupLabel,
   SidebarMenu,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { LoaderIcon } from 'lucide-react';
 import useSWRInfinite from 'swr/infinite';
 import { useSWRConfig } from 'swr';
-import { useSession } from 'next-auth/react'; // For NextAuth session data
+import { useSession } from 'next-auth/react';
 
-// Dialog components przeniesione do app-sidebar.tsx
-
-// Import Drizzle schema types
 import type { Chat, Folder, Tag as TagType } from '@/lib/db/schema';
-
-// Import Server Actions
-import { deleteChatAction } from '@/app/(chat)/actions';
-
-// Import the new sub-components
+import {
+  deleteChatAction,
+  addChatToFolderAction,
+  removeChatFromFolderAction,
+  addTagToChatAction,
+  removeTagFromChatAction,
+} from '@/app/(chat)/actions';
 import { FolderItem } from './folder-item';
 import { UnfiledChatsList } from './unfilled-chats';
 import { ChatItem } from './chat-item';
-import {
-  clearLocalStorageByPrefix,
-  setSidebarCache,
-  getSidebarCache,
-  cn,
-} from '@/lib/utils';
+import { useLanguage } from '@/hooks/use-language';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// --- CONSTANTS ---
+/* ───────────────────────── CONSTANTS ───────────────────────── */
+
 const PAGE_SIZE = 20;
+
+interface SidebarThread extends Chat {
+  folder: { name: string; color: string } | null;
+  tags: Array<{ id: string; label: string; color: string; userId: string }>;
+}
 
 interface InitialData {
   threads: SidebarThread[];
   folders: Folder[];
   tags: TagType[];
   hasMore: boolean;
-}
-
-interface SidebarThread extends Chat {
-  folder: {
-    name: string;
-    color: string;
-  } | null;
-  tags: Array<{
-    id: string;
-    label: string;
-    color: string;
-    userId: string;
-  }>;
 }
 
 const colorAccents = {
@@ -139,85 +120,29 @@ const colorAccents = {
   },
 };
 
-export function SidebarHistory({
-  user, // User from NextAuth session (passed as prop, assumed from layout.tsx)
-  searchTerm = '',
-  renderActions,
-  showCreateFolderDialog,
-  setShowCreateFolderDialog,
-  showCreateTagDialog,
-  setShowCreateTagDialog,
-  initialData,
-}: {
-  user: User | undefined;
-  searchTerm?: string;
-  renderActions?: (chatId: string) => React.ReactNode;
-  showCreateFolderDialog?: boolean;
-  setShowCreateFolderDialog?: (show: boolean) => void;
-  showCreateTagDialog?: boolean;
-  setShowCreateTagDialog?: (show: boolean) => void;
-  initialData?: InitialData;
-}) {
-  const router = useRouter();
-  const params = useParams();
-  const { setOpenMobile } = useSidebar();
-  const { mutate } = useSWRConfig();
-  const { data: session, status: sessionStatus } = useSession(); // Access NextAuth session
+/* ───── SWR-based simple state management ───── */
 
-  // IMPORTANT: Use session.user.id directly as `userFromDatabase` hook is removed.
-  // The `user` prop should ideally be `session.user` for consistency if coming from NextAuth.
-  const userId = session?.user?.id;
+function useSidebarThreads(userId?: string, initialData?: InitialData) {
+  const hasCached = initialData?.threads?.length;
 
-  // Najpierw sprawdzamy cache, potem initialData
-  // Cache functions przeniesione do app-sidebar.tsx
-
-  // Używamy dane z props - już zarządzane w app-sidebar.tsx
-  const folders = initialData?.folders || [];
-  const tags = initialData?.tags || [];
-
-  // UI States
-  const [expandedFolders, setExpandedFolders] = useState<
-    Record<string, boolean>
-  >({});
-  const [deleteId, setDeleteId] = useState<string | null>(null); // State to hold chat ID to delete
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // State to control delete dialog visibility
-
-  // Use external state from props (zarządzane w app-sidebar.tsx)
-  const actualShowCreateFolderDialog = showCreateFolderDialog ?? false;
-  const actualSetShowCreateFolderDialog =
-    setShowCreateFolderDialog ?? (() => {});
-  const actualShowCreateTagDialog = showCreateTagDialog ?? false;
-  const actualSetShowCreateTagDialog = setShowCreateTagDialog ?? (() => {});
-
-  // Sprawdź czy mamy dane z initialData
-  const hasDataInCache = initialData?.threads && initialData.threads.length > 0;
-
-  // SWR for all threads (includes chats with tags and folder data)
   const {
-    data: allThreadsPages,
+    data: pages,
     size,
     setSize,
-    isLoading: isLoadingThreads,
-    mutate: mutateThreads,
+    isLoading,
+    mutate,
   } = useSWRInfinite(
-    (pageIndex, previousData) => {
-      // Only fetch if user is logged in
+    (index, prev) => {
       if (!userId) return null;
-      if (previousData && !previousData.hasMore) return null;
-
-      const lastId = previousData?.threads.slice(-1)[0]?.id || '';
-      return pageIndex === 0 && !lastId
+      if (prev && !prev.hasMore) return null;
+      const last = prev?.threads.at(-1)?.id || '';
+      return index === 0 && !last
         ? `/api/threads?limit=${PAGE_SIZE}`
-        : `/api/threads?limit=${PAGE_SIZE}&ending_before=${lastId}`;
+        : `/api/threads?limit=${PAGE_SIZE}&ending_before=${last}`;
     },
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch threads');
-      return await res.json();
-    },
+    (url) => fetch(url).then((r) => r.json()),
     {
-      // Użyj dane z initialData jako fallbackData
-      fallbackData: hasDataInCache
+      fallbackData: hasCached
         ? [
             {
               threads: initialData?.threads || [],
@@ -227,436 +152,300 @@ export function SidebarHistory({
             },
           ]
         : undefined,
-      revalidateOnMount: !hasDataInCache, // Nie rewaliduj jeśli mamy dane w cache
+      revalidateOnMount: !hasCached,
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 60000,
       revalidateIfStale: false,
-      refreshInterval: 0,
     },
   );
 
-  // Flatten all threads from SWR pages into a single array
-  const allThreads = useMemo(() => {
-    try {
-      const threads = allThreadsPages
-        ? allThreadsPages.flatMap((page) => page.threads || [])
-        : [];
-      return threads.filter((thread) => thread?.id); // Filter out invalid threads
-    } catch (error) {
-      console.error('Error flattening threads:', error);
-      return [];
-    }
-  }, [allThreadsPages]);
+  const threads: SidebarThread[] = useMemo(
+    () => (pages ? pages.flatMap((p) => p.threads) : []),
+    [pages],
+  );
 
-  // Optimistic updates dla threads (chats)
-  const [allThreadsOptimistic, optimisticThreads] = useOptimistic(
-    allThreads || [],
-    (
-      state: SidebarThread[],
-      action: {
-        type:
-          | 'moveToFolder'
-          | 'removeFromFolder'
-          | 'delete'
-          | 'addTag'
-          | 'removeTag';
-        chatId: string;
-        folderId?: string | null;
-        folder?: { name: string; color: string } | null;
-        tagId?: string;
-        tag?: { id: string; label: string; color: string; userId: string };
-      },
-    ) => {
-      if (!Array.isArray(state)) {
-        console.warn('OptimisticThreads: state is not an array', state);
-        return [];
-      }
+  return { threads, isLoading, mutate, setSize, size };
+}
+
+/* ====================================================================== */
+/*                                COMPONENT                               */
+/* ====================================================================== */
+
+export function SidebarHistory({
+  user,
+  searchTerm = '',
+  initialData,
+}: {
+  user: User | undefined;
+  searchTerm?: string;
+  initialData?: InitialData;
+}) {
+  const router = useRouter();
+  const params = useParams();
+  const { setOpenMobile } = useSidebar();
+  const { mutate: mutateGlobal } = useSWRConfig();
+  const { data: session, status: sessionStatus } = useSession();
+  const userId = session?.user?.id;
+
+  /* ---------- SWR: paginated threads ---------- */
+  const { threads, isLoading, mutate, setSize, size } = useSidebarThreads(
+    userId,
+    initialData,
+  );
+
+  /* ---------- simple helper functions ---------- */
+  const addNewChatOptimistic = useCallback(
+    (chatId: string, title: string) => {
+      // Just revalidate, no optimistic updates
+      mutate();
+    },
+    [mutate],
+  );
+
+  const addChatToCache = useCallback(
+    async (chat: Chat) => {
+      // Just revalidate to get fresh data from server
+      await mutate();
+    },
+    [mutate],
+  );
+
+  // Folder management functions
+  const moveChatToFolder = useCallback(
+    async (chatId: string, folderId: string | null) => {
+      console.log('Moving chat to folder:', { chatId, folderId });
 
       try {
-        switch (action.type) {
-          case 'moveToFolder':
-            return state.map((thread) =>
-              thread.id === action.chatId
-                ? {
-                    ...thread,
-                    folderId: action.folderId,
-                    folder: action.folder,
-                  }
-                : thread,
-            );
-          case 'removeFromFolder':
-            return state.map((thread) =>
-              thread.id === action.chatId
-                ? { ...thread, folderId: null, folder: null }
-                : thread,
-            );
-          case 'delete':
-            return state.filter((thread) => thread.id !== action.chatId);
-          case 'addTag':
-            return state.map((thread) =>
-              thread.id === action.chatId && action.tag
-                ? { ...thread, tags: [...(thread.tags || []), action.tag] }
-                : thread,
-            );
-          case 'removeTag':
-            return state.map((thread) =>
-              thread.id === action.chatId
-                ? {
-                    ...thread,
-                    tags: (thread.tags || []).filter(
-                      (tag) => tag.id !== action.tagId,
-                    ),
-                  }
-                : thread,
-            );
-          default:
-            return state;
-        }
-      } catch (error) {
-        console.error('OptimisticThreads reducer error:', error, {
-          state,
-          action,
-        });
-        return state;
-      }
-    },
-  );
-
-  // Convert threads to simple chats for backward compatibility
-  const allChats = useMemo(() => {
-    return allThreadsOptimistic.map((thread) => ({
-      id: thread.id,
-      title: thread.title,
-      createdAt: thread.createdAt,
-      userId: thread.userId,
-      visibility: thread.visibility,
-      folderId: thread.folderId,
-    }));
-  }, [allThreadsOptimistic]);
-
-  // Unfiled chats: derived from allChats for the dedicated "Unfiled Chats" section
-  const unfiledChats = useMemo(() => {
-    if (searchTerm.trim()) return [];
-    return allChats.filter((chat) => chat.folderId === null);
-  }, [allChats, searchTerm]);
-
-  // Filtered chats by search term (applies globally across all chats)
-  const filteredSearchChats = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    return allChats.filter((chat) =>
-      chat.title.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-  }, [allChats, searchTerm]);
-
-  // Effect to clear cache when user changes
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined') {
-        Reflect.deleteProperty(window as any, 'addChatToSidebarCache');
-      }
-    };
-  }, [userId]);
-
-  // Effect to save data to cache when they change
-  useEffect(() => {
-    if (!userId) {
-      // Wyczyść cache poprzedniego użytkownika
-      clearLocalStorageByPrefix('sidebar_data_');
-      clearLocalStorageByPrefix('cache_timestamp_');
-      return;
-    }
-
-    // Zapisz dane do cache gdy się zmienią
-    if (folders.length > 0 || tags.length > 0) {
-      const cacheData = {
-        threads: allThreadsOptimistic,
-        folders: folders,
-        tags: tags,
-        hasMore: false,
-      };
-      setSidebarCache(userId, cacheData);
-    }
-  }, [userId, folders, tags, allThreadsOptimistic]);
-
-  // Funkcja do dodawania nowego czatu do cache
-  const addChatToCache = useCallback(
-    (newChat: Chat) => {
-      // Convert Chat to SidebarThread format
-      const newThread: SidebarThread = {
-        ...newChat,
-        folder: null,
-        tags: [],
-      };
-
-      mutateThreads((pages) => {
-        if (!pages || pages.length === 0) {
-          return [
-            {
-              threads: [newThread],
-              folders: folders,
-              tags: tags,
-              hasMore: false,
-            },
-          ];
+        if (folderId) {
+          // Add to folder
+          await addChatToFolderAction({ chatId, folderId });
+        } else {
+          // Remove from folder
+          await removeChatFromFolderAction(chatId);
         }
 
-        // Dodaj nowy thread na początek pierwszej strony
-        const newPages = [...pages];
-        newPages[0] = {
-          ...newPages[0],
-          threads: [newThread, ...newPages[0].threads],
-        };
+        console.log('Chat moved successfully, revalidating...');
 
-        return newPages;
-      }, false); // false = nie rewaliduj
+        // Force revalidate all SWR data - multiple approaches to ensure it works
+        await mutate();
 
-      // Zaktualizuj unified cache
-      if (userId) {
-        const updatedThreads = [newThread, ...allThreadsOptimistic];
-        const cacheData = {
-          threads: updatedThreads,
-          folders: folders,
-          tags: tags,
-          hasMore: false,
-        };
-        setSidebarCache(userId, cacheData);
-      }
-    },
-    [mutateThreads, folders, tags, allThreadsOptimistic, userId],
-  );
-
-  // Wyeksportuj funkcję poprzez ref callback (możemy to użyć później)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).addChatToSidebarCache = addChatToCache;
-    }
-  }, [addChatToCache]);
-
-  // Handle infinite scroll for global chat history/search
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const isAtBottom =
-      e.currentTarget.scrollHeight - e.currentTarget.scrollTop ===
-      e.currentTarget.clientHeight;
-
-    if (
-      isAtBottom &&
-      allThreadsPages &&
-      allThreadsPages[allThreadsPages.length - 1]?.hasMore &&
-      !searchTerm
-    ) {
-      setSize(size + 1);
-    }
-  };
-
-  const isActiveChatId = (id: string) => {
-    return params?.id === id;
-  };
-
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders((prev) => ({
-      ...prev,
-      [folderId]: !prev[folderId],
-    }));
-  };
-
-  const handleCreateFolder = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleCreateFolder called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const handleCreateTag = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleCreateTag called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const handleDeleteFolder = (folderId: string, folderName: string) => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleDeleteFolder called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const confirmDeleteFolder = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'confirmDeleteFolder called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const handleDeleteTag = (tagId: string, tagLabel: string) => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'handleDeleteTag called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  const confirmDeleteTag = async () => {
-    // Placeholder - funkcjonalność przeniesiona do app-sidebar.tsx
-    console.log(
-      'confirmDeleteTag called - should be handled by app-sidebar.tsx',
-    );
-  };
-
-  // This handler is passed down to ChatItem to trigger the delete dialog
-  const onDeleteChatClick = (chatId: string) => {
-    setDeleteId(chatId);
-    setShowDeleteDialog(true);
-  };
-
-  const handleDelete = async () => {
-    // This function executes the actual deletion after confirmation
-    if (!deleteId) return;
-
-    // Call Server Action:
-    const deletePromise = deleteChatAction(deleteId); // --- CHANGED TO SERVER ACTION
-
-    toast.promise(deletePromise, {
-      loading: 'Deleting chat...',
-      success: () => {
-        // Optimistically update SWR cache for all threads (used by search and unfiled)
-        mutateThreads(
-          (threadHistories: any) => {
-            if (!threadHistories) return threadHistories;
-
-            return threadHistories.map((threadHistoryPage: any) => ({
-              ...threadHistoryPage,
-              threads: threadHistoryPage.threads.filter(
-                (thread: SidebarThread) => thread.id !== deleteId,
-              ),
-            }));
-          },
-          { revalidate: false },
+        // Invalidate all thread-related cache keys
+        await mutateGlobal(
+          (key) => typeof key === 'string' && key.includes('/api/threads'),
+          undefined,
+          { revalidate: true },
         );
 
-        // Nie pobieraj ponownie - dane folderów i tagów pozostają bez zmian
-        // Usuwanie czatu nie wpływa na foldery ani tagi, więc cache pozostaje aktualny
+        // Also try direct cache invalidation
+        await mutateGlobal('/api/threads');
 
-        return 'Chat deleted successfully';
-      },
-      error: 'Failed to delete chat',
-    });
+        // Small delay to ensure server state is updated
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Force one more revalidation after delay
+        await mutate();
+
+        console.log('Revalidation complete');
+
+        toast.success(
+          folderId ? 'Chat moved to folder' : 'Chat removed from folder',
+        );
+      } catch (error) {
+        console.error('Failed to move chat:', error);
+        toast.error('Failed to move chat');
+      }
+    },
+    [mutate, mutateGlobal],
+  );
+
+  const removeChatFromFolder = useCallback(
+    async (chatId: string) => {
+      return moveChatToFolder(chatId, null);
+    },
+    [moveChatToFolder],
+  );
+
+  // Tag management functions
+  const addTagToChat = useCallback(
+    async (chatId: string, tagId: string) => {
+      console.log('Adding tag to chat:', { chatId, tagId });
+
+      try {
+        await addTagToChatAction({ chatId, tagId });
+
+        // Aggressive revalidation
+        await mutate();
+        await mutateGlobal(
+          (key) => typeof key === 'string' && key.includes('/api/threads'),
+          undefined,
+          { revalidate: true },
+        );
+
+        toast.success('Tag added to chat');
+      } catch (error) {
+        console.error('Failed to add tag:', error);
+        toast.error('Failed to add tag');
+      }
+    },
+    [mutate, mutateGlobal],
+  );
+
+  const removeTagFromChat = useCallback(
+    async (chatId: string, tagId: string) => {
+      console.log('Removing tag from chat:', { chatId, tagId });
+
+      try {
+        await removeTagFromChatAction({ chatId, tagId });
+
+        // Aggressive revalidation
+        await mutate();
+        await mutateGlobal(
+          (key) => typeof key === 'string' && key.includes('/api/threads'),
+          undefined,
+          { revalidate: true },
+        );
+
+        toast.success('Tag removed from chat');
+      } catch (error) {
+        console.error('Failed to remove tag:', error);
+        toast.error('Failed to remove tag');
+      }
+    },
+    [mutate, mutateGlobal],
+  );
+
+  // Generic refresh function for any sidebar updates
+  const refreshSidebar = useCallback(async () => {
+    console.log('Refreshing sidebar...');
+
+    try {
+      // Multiple revalidation strategies
+      await mutate();
+
+      // Invalidate all thread-related cache
+      await mutateGlobal(
+        (key) => typeof key === 'string' && key.includes('/api/threads'),
+        undefined,
+        { revalidate: true },
+      );
+
+      // Force refresh specific endpoints
+      await mutateGlobal('/api/threads');
+      await mutateGlobal('/api/folders');
+      await mutateGlobal('/api/tags');
+
+      console.log('Sidebar refresh complete');
+    } catch (error) {
+      console.error('Failed to refresh sidebar:', error);
+    }
+  }, [mutate, mutateGlobal]);
+
+  /* ---------- expose helpers to window for Chat component ---------- */
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Chat management
+      (window as any).addNewChatOptimistic = addNewChatOptimistic;
+      (window as any).addChatToSidebarCache = addChatToCache;
+
+      // Folder management
+      (window as any).moveChatToFolder = moveChatToFolder;
+      (window as any).removeChatFromFolder = removeChatFromFolder;
+
+      // Tag management
+      (window as any).addTagToChat = addTagToChat;
+      (window as any).removeTagFromChat = removeTagFromChat;
+
+      // Generic refresh
+      (window as any).refreshSidebar = refreshSidebar;
+    }
+
+    // Cleanup on unmount to prevent memory leaks
+    return () => {
+      if (typeof window !== 'undefined') {
+        (window as any).addNewChatOptimistic = undefined;
+        (window as any).addChatToSidebarCache = undefined;
+        (window as any).moveChatToFolder = undefined;
+        (window as any).removeChatFromFolder = undefined;
+        (window as any).addTagToChat = undefined;
+        (window as any).removeTagFromChat = undefined;
+        (window as any).refreshSidebar = undefined;
+      }
+    };
+  }, [
+    addNewChatOptimistic,
+    addChatToCache,
+    moveChatToFolder,
+    removeChatFromFolder,
+    addTagToChat,
+    removeTagFromChat,
+    refreshSidebar,
+  ]);
+
+  /* ---------- derived lists ---------- */
+  const allChats: Chat[] = useMemo(
+    () => threads.map(({ folder, tags, ...rest }) => rest),
+    [threads],
+  );
+
+  const unfiledChats = useMemo(
+    () =>
+      !searchTerm.trim()
+        ? allChats.filter((c) => c.folderId === null)
+        : ([] as Chat[]),
+    [allChats, searchTerm],
+  );
+
+  const filteredSearchChats = useMemo(
+    () =>
+      searchTerm.trim()
+        ? allChats.filter((c) =>
+            c.title.toLowerCase().includes(searchTerm.toLowerCase()),
+          )
+        : ([] as Chat[]),
+    [allChats, searchTerm],
+  );
+
+  /* ---------- UI state ---------- */
+  const [expandedFolders, setExpandedFolders] = useState<
+    Record<string, boolean>
+  >({});
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  /* ---------- delete chat ---------- */
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    const chatIdToDelete = deleteId;
+
+    try {
+      // Server action
+      await deleteChatAction(chatIdToDelete);
+
+      // Revalidate to get fresh data
+      await mutate();
+
+      toast.success('Chat deleted');
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+      toast.error('Failed to delete chat');
+    }
 
     setShowDeleteDialog(false);
-    if (deleteId === params?.id) {
-      router.push('/');
-    }
+    if (chatIdToDelete === params?.id) router.push('/');
     setDeleteId(null);
   };
 
-  // Optimistic update functions for passing to ChatItem
-  const handleMoveToFolder = useCallback(
-    (
-      chatId: string,
-      folderId: string,
-      folderName: string,
-      folderColor: string,
-    ) => {
-      console.log('handleMoveToFolder called:', {
-        chatId,
-        folderId,
-        folderName,
-        folderColor,
-      });
-      console.log('allThreads length:', allThreads?.length || 0);
-      console.log('optimisticThreads type:', typeof optimisticThreads);
-
-      try {
-        // Optimistic update UI natychmiast
-        startTransition(() => {
-          optimisticThreads({
-            type: 'moveToFolder',
-            chatId,
-            folderId,
-            folder: { name: folderName, color: folderColor },
-          });
-        });
-        console.log('optimisticThreads call succeeded');
-      } catch (error) {
-        console.error('handleMoveToFolder error:', error);
-        console.error(
-          'Error stack:',
-          error instanceof Error ? error.stack : 'Unknown error',
-        );
-      }
-    },
-    [optimisticThreads, allThreads],
-  );
-
-  const handleRemoveFromFolder = useCallback(
-    (chatId: string) => {
-      try {
-        // Optimistic update UI natychmiast
-        startTransition(() => {
-          optimisticThreads({
-            type: 'removeFromFolder',
-            chatId,
-          });
-        });
-      } catch (error) {
-        console.error('handleRemoveFromFolder error:', error);
-      }
-    },
-    [optimisticThreads],
-  );
-
-  const handleAddTagToChat = useCallback(
-    (
-      chatId: string,
-      tag: { id: string; label: string; color: string; userId: string },
-    ) => {
-      try {
-        // Optimistic update UI natychmiast
-        startTransition(() => {
-          optimisticThreads({
-            type: 'addTag',
-            chatId,
-            tag,
-          });
-        });
-      } catch (error) {
-        console.error('handleAddTagToChat error:', error);
-      }
-    },
-    [optimisticThreads],
-  );
-
-  const handleRemoveTagFromChat = useCallback(
-    (chatId: string, tagId: string) => {
-      try {
-        // Optimistic update UI natychmiast
-        startTransition(() => {
-          optimisticThreads({
-            type: 'removeTag',
-            chatId,
-            tagId,
-          });
-        });
-      } catch (error) {
-        console.error('handleRemoveTagFromChat error:', error);
-      }
-    },
-    [optimisticThreads],
-  );
-
-  // Sprawdź czy ładujemy dodatkowe dane (infinite scroll)
-  const isLoadingMore = allChats.length > 0 && isLoadingThreads && !searchTerm;
-
-  // Sprawdź czy mamy jeszcze stan ładowania (bez danych z SSR lub cache)
-  const isInitialLoading =
+  /* ---------- render guards ---------- */
+  const { t } = useLanguage();
+  const isInitial =
     sessionStatus === 'loading' ||
-    (!initialData && isLoadingThreads && allThreads.length === 0);
+    (!initialData && isLoading && threads.length === 0);
 
   if (!user && sessionStatus !== 'loading') {
-    // Use the `user` prop from NextAuth session - tylko gdy session nie ładuje się
     return (
       <SidebarGroup>
         <SidebarGroupContent>
-          <div className="px-2 text-zinc-500 w-full flex flex-row justify-center items-center text-sm gap-2">
+          <div className="px-2 py-4 text-center text-sm text-zinc-500">
             Login to save and revisit previous chats!
           </div>
         </SidebarGroupContent>
@@ -664,147 +453,158 @@ export function SidebarHistory({
     );
   }
 
-  // Pokaż loading podczas ładowania sesji lub początkowych danych
-  if (isInitialLoading) {
+  if (isInitial) {
     return (
       <SidebarGroup>
         <SidebarGroupContent>
-          <div className="px-2 py-4 flex justify-center">
-            <LoaderIcon className="size-4 animate-spin text-pink-500" />
+          <div className="px-2 py-4 flex flex-col gap-2">
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
     );
   }
 
-  // If no content, show prompt to create - tylko gdy na pewno załadowane
-  const hasEmptyContent =
-    !isLoadingThreads && allChats.length === 0 && folders.length === 0;
-
-  if (hasEmptyContent) {
-    return (
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <div className="px-4 py-8 text-center">
-            <p className="text-sm text-pink-700 dark:text-pink-300">
-              No chats yet. Start a new conversation!
-            </p>
-          </div>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    );
-  }
-
+  /* ---------- RENDER ---------- */
   return (
-    <div
-      className="flex flex-col gap-2 overflow-y-auto pr-1"
-      onScroll={handleScroll}
-    >
-      {/* Folders Section - only render if there are folders */}
-      {folders.length > 0 && (
+    <div className="flex flex-col gap-2 overflow-y-auto pr-1">
+      {/* Folders */}
+      {initialData?.folders.length ? (
         <SidebarGroup className="px-2">
-          <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-            Folders ({folders.length})
+          <SidebarGroupLabel className="py-1 text-xs font-medium text-pink-700 dark:text-pink-300/80">
+            {t('navigation.history.folders')} ({initialData.folders.length})
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {folders.map((folder) => (
+              {initialData.folders.map((folder) => (
                 <FolderItem
                   key={folder.id}
                   folder={folder}
                   isExpanded={!!expandedFolders[folder.id]}
-                  onToggle={() => toggleFolder(folder.id)}
-                  onDelete={() => {
-                    /* Handle folder delete */
+                  onToggle={() =>
+                    setExpandedFolders((p) => ({
+                      ...p,
+                      [folder.id]: !p[folder.id],
+                    }))
+                  }
+                  onDelete={(chatId) => {
+                    setDeleteId(chatId);
+                    setShowDeleteDialog(true);
                   }}
                   colorAccents={colorAccents}
-                  allThreads={allThreadsOptimistic}
-                  onMoveToFolder={handleMoveToFolder}
-                  onRemoveFromFolder={handleRemoveFromFolder}
-                  onAddTagToChat={handleAddTagToChat}
-                  onRemoveTagFromChat={handleRemoveTagFromChat}
+                  allThreads={threads}
+                  onMoveToFolder={async (
+                    chatId,
+                    folderId,
+                    folderName,
+                    folderColor,
+                  ) => {
+                    try {
+                      await moveChatToFolder(chatId, folderId);
+                    } catch (error) {
+                      console.error(
+                        'Error in FolderItem onMoveToFolder:',
+                        error,
+                      );
+                    }
+                  }}
+                  onRemoveFromFolder={removeChatFromFolder}
+                  onAddTagToChat={async (chatId, tag) => {
+                    try {
+                      await addTagToChat(chatId, tag.id);
+                    } catch (error) {
+                      console.error(
+                        'Error in FolderItem onAddTagToChat:',
+                        error,
+                      );
+                    }
+                  }}
+                  onRemoveTagFromChat={removeTagFromChat}
                 />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      )}
+      ) : null}
 
-      {/* Unfiled Chats Section */}
-      {unfiledChats.length > 0 && !searchTerm && (
+      {/* Unfiled */}
+      {unfiledChats.length && !searchTerm ? (
         <UnfiledChatsList
           allChats={unfiledChats}
-          allThreads={allThreadsOptimistic}
-          onDeleteChat={onDeleteChatClick}
+          allThreads={threads}
           colorAccents={colorAccents}
-          onMoveToFolder={handleMoveToFolder}
-          onRemoveFromFolder={handleRemoveFromFolder}
-          onAddTagToChat={handleAddTagToChat}
-          onRemoveTagFromChat={handleRemoveTagFromChat}
+          onDeleteChat={(chatId) => {
+            setDeleteId(chatId);
+            setShowDeleteDialog(true);
+          }}
+          onMoveToFolder={async (chatId, folderId, folderName, folderColor) => {
+            try {
+              await moveChatToFolder(chatId, folderId);
+            } catch (error) {
+              console.error('Error in UnfiledChatsList onMoveToFolder:', error);
+            }
+          }}
+          onRemoveFromFolder={removeChatFromFolder}
+          onAddTagToChat={async (chatId, tag) => {
+            try {
+              await addTagToChat(chatId, tag.id);
+            } catch (error) {
+              console.error('Error in UnfiledChatsList onAddTagToChat:', error);
+            }
+          }}
+          onRemoveTagFromChat={removeTagFromChat}
         />
-      )}
+      ) : null}
 
-      {/* Search Results Section */}
-      {searchTerm && filteredSearchChats.length > 0 && (
+      {/* Search results */}
+      {searchTerm && filteredSearchChats.length ? (
         <SidebarGroup className="px-2">
-          <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-            Search Results ({filteredSearchChats.length})
+          <SidebarGroupLabel className="py-1 text-xs font-medium text-pink-700 dark:text-pink-300/80">
+            {t('navigation.history.searchResults')} (
+            {filteredSearchChats.length})
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {filteredSearchChats.map((chat) => {
-                // Find the corresponding thread to get tags
-                const thread = allThreadsOptimistic.find(
-                  (t) => t.id === chat.id,
-                );
-                return (
-                  <ChatItem
-                    key={chat.id}
-                    chat={chat}
-                    isActive={isActiveChatId(chat.id)}
-                    onDelete={onDeleteChatClick}
-                    setOpenMobile={setOpenMobile}
-                    tags={thread?.tags || []}
-                    colorAccents={colorAccents}
-                    onMoveToFolder={handleMoveToFolder}
-                    onRemoveFromFolder={handleRemoveFromFolder}
-                    onAddTagToChat={handleAddTagToChat}
-                    onRemoveTagFromChat={handleRemoveTagFromChat}
-                  />
-                );
-              })}
+              {filteredSearchChats.map((chat) => (
+                <ChatItem
+                  key={chat.id}
+                  chat={chat}
+                  isActive={params?.id === chat.id}
+                  setOpenMobile={setOpenMobile}
+                  colorAccents={colorAccents}
+                  onDelete={(chatId) => {
+                    setDeleteId(chatId);
+                    setShowDeleteDialog(true);
+                  }}
+                />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      )}
+      ) : null}
 
-      {/* Loading więcej danych (infinite scroll) */}
-      {isLoadingMore && (
+      {/* Load more button / infinite scroll */}
+      {allChats.length > 0 && !searchTerm && (
         <div className="flex justify-center py-2">
-          <LoaderIcon className="size-4 animate-spin text-pink-500" />
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <LoaderIcon className="size-4 animate-spin text-pink-500" />
+              Loading more chats...
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSize(size + 1)}
+              className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 px-2 py-1"
+            >
+              Load more chats
+            </button>
+          )}
         </div>
       )}
 
-      {/* Empty States - tylko gdy nie mamy danych */}
-      {!isLoadingThreads && allChats.length === 0 && !searchTerm && (
-        <div className="px-4 py-8 text-center">
-          <p className="text-sm text-pink-700 dark:text-pink-300">
-            No chats yet. Start a new conversation!
-          </p>
-        </div>
-      )}
-
-      {searchTerm && filteredSearchChats.length === 0 && (
-        <div className="px-4 py-8 text-center">
-          <p className="text-sm text-pink-700 dark:text-pink-300">
-            No chats matching &quot;{searchTerm}&quot;
-          </p>
-        </div>
-      )}
-
-      {/* Dialogs przeniesione do app-sidebar.tsx */}
-
-      {/* Delete Chat Confirmation Dialog */}
+      {/* Delete dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -825,8 +625,6 @@ export function SidebarHistory({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Delete dialogs przeniesione do app-sidebar.tsx */}
     </div>
   );
 }

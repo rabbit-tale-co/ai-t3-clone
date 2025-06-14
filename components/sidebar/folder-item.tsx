@@ -14,6 +14,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import type { Chat, Folder as FolderType } from '@/lib/db/schema';
+import { useLanguage } from '@/hooks/use-language';
 
 interface SidebarThread extends Chat {
   folder: {
@@ -43,7 +44,7 @@ export function FolderItem({
   folder: FolderType;
   isExpanded: boolean;
   onToggle: () => void;
-  onDelete: () => void;
+  onDelete: (chatId: string) => void;
   colorAccents: Record<
     string,
     {
@@ -59,12 +60,12 @@ export function FolderItem({
     folderId: string,
     folderName: string,
     folderColor: string,
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveFromFolder?: (chatId: string) => void;
   onAddTagToChat?: (
     chatId: string,
     tag: { id: string; label: string; color: string; userId: string },
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
 }) {
   const params = useParams();
@@ -76,10 +77,11 @@ export function FolderItem({
   const accentColor =
     colorAccents[folderColor as keyof typeof colorAccents] || colorAccents.blue;
 
-  // Filtruj chaty lokalnie z allThreads zamiast robić API call
   const folderChats = useMemo(() => {
     return allThreads.filter((thread) => thread.folderId === folder.id);
   }, [allThreads, folder.id]);
+
+  const { t } = useLanguage();
 
   return (
     <SidebarMenuItem>
@@ -132,7 +134,7 @@ export function FolderItem({
             ) : (
               <div className="p-2">
                 <p className="text-xs text-pink-600/70 dark:text-pink-400/70 italic">
-                  No chats in this folder
+                  {t('navigation.folderItem.noChatsInFolder')}
                 </p>
               </div>
             )}

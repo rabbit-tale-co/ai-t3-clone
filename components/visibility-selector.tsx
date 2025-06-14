@@ -16,28 +16,9 @@ import {
   LockIcon,
 } from 'lucide-react';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
+import { useLanguage } from '@/hooks/use-language';
 
 export type VisibilityType = 'private' | 'public';
-
-const visibilities: Array<{
-  id: VisibilityType;
-  label: string;
-  description: string;
-  icon: ReactNode;
-}> = [
-  {
-    id: 'private',
-    label: 'Private',
-    description: 'Only you can access this chat',
-    icon: <LockIcon />,
-  },
-  {
-    id: 'public',
-    label: 'Public',
-    description: 'Anyone with the link can access this chat',
-    icon: <GlobeIcon />,
-  },
-];
 
 export function VisibilitySelector({
   chatId,
@@ -48,6 +29,28 @@ export function VisibilitySelector({
   selectedVisibilityType: VisibilityType;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
+
+  const { t } = useLanguage();
+
+  const visibilities: Array<{
+    id: VisibilityType;
+    label: string;
+    description: string;
+    icon: ReactNode;
+  }> = [
+    {
+      id: 'private',
+      label: t('chat.buttons.private'),
+      description: t('chat.buttons.privateDescription'),
+      icon: <LockIcon />,
+    },
+    {
+      id: 'public',
+      label: t('chat.buttons.public'),
+      description: t('chat.buttons.publicDescription'),
+      icon: <GlobeIcon />,
+    },
+  ];
 
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId,

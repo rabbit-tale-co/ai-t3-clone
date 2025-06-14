@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/sidebar';
 import { ChatItem } from './chat-item';
 import type { Chat } from '@/lib/db/schema';
+import { useLanguage } from '@/hooks/use-language';
 
 interface SidebarThread extends Chat {
   folder: {
@@ -40,12 +41,12 @@ export function UnfiledChatsList({
     folderId: string,
     folderName: string,
     folderColor: string,
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveFromFolder?: (chatId: string) => void;
   onAddTagToChat?: (
     chatId: string,
     tag: { id: string; label: string; color: string; userId: string },
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
   colorAccents?: Record<
     string,
@@ -63,10 +64,12 @@ export function UnfiledChatsList({
 
   const currentChatId = params?.id as string | undefined;
 
+  const { t } = useLanguage();
+
   return (
     <SidebarGroup className="px-2">
       <SidebarGroupLabel className="py-1 text-pink-700 dark:text-pink-300/80 font-medium text-xs sm:text-sm">
-        Chats ({chats.length})
+        {t('navigation.history.chats')} ({chats.length})
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="gap-0.5">

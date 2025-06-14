@@ -5,6 +5,9 @@ import { getUserMessageCount } from '@/app/(chat)/actions';
 // user swr infinite to fetch message count
 export function useMessageCount(session: Session | null) {
   const [messagesLeft, setMessagesLeft] = useState<number | null>(null);
+  const [messagesUsed, setMessagesUsed] = useState<number | null>(null);
+  const [maxMessages, setMaxMessages] = useState<number | null>(null);
+  const [resetTime, setResetTime] = useState<Date | null>(null);
   const [status, setStatus] = useState<
     'idle' | 'loading' | 'success' | 'error'
   >('idle');
@@ -27,6 +30,9 @@ export function useMessageCount(session: Session | null) {
 
         if (result.success) {
           setMessagesLeft(result.messagesLeft);
+          setMessagesUsed(result.messagesUsed);
+          setMaxMessages(result.maxMessages);
+          setResetTime(result.resetTime);
           setStatus('success');
         } else {
           setStatus('error');
@@ -42,5 +48,5 @@ export function useMessageCount(session: Session | null) {
     fetchMessageCount();
   }, [session]);
 
-  return { messagesLeft, status, error };
+  return { messagesLeft, messagesUsed, maxMessages, resetTime, status, error };
 }

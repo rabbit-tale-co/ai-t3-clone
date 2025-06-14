@@ -26,16 +26,23 @@ export async function middleware(request: NextRequest) {
     secureCookie: secureFlag,
   });
 
+  // Allow access to login and register pages without token
+  if (['/login', '/register'].includes(pathname)) {
+    // If user is already logged in and not a guest, redirect to home
+    if (token) {
+      const isGuest = guestRegex.test(token.email ?? '');
+      if (!isGuest) {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
+    return NextResponse.next();
+  }
+
   if (!token) {
     const redirectUrl = encodeURIComponent(request.url);
     return NextResponse.redirect(
       new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url),
     );
-  }
-
-  const isGuest = guestRegex.test(token.email ?? '');
-  if (token && !isGuest && ['/login', '/register'].includes(pathname)) {
-    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();

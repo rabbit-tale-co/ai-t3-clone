@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/hooks/use-language';
 
 // Default color accents if not provided
 const defaultColorAccents = {
@@ -129,12 +130,12 @@ interface ChatItemProps {
     folderId: string,
     folderName: string,
     folderColor: string,
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveFromFolder?: (chatId: string) => void;
   onAddTagToChat?: (
     chatId: string,
     tag: { id: string; label: string; color: string; userId: string },
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
 }
 
@@ -155,6 +156,7 @@ export const ChatItem = memo(
     const [availableFolders, setAvailableFolders] = useState<Folder[]>([]);
     const [availableTags, setAvailableTags] = useState<Tag[]>([]);
     const [loadingFolders, setLoadingFolders] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const { visibilityType, setVisibilityType } = useChatVisibility({
       chatId: chat.id,
       initialVisibilityType: chat.visibility,
@@ -171,6 +173,7 @@ export const ChatItem = memo(
         activeColorAccents[tagColor as keyof typeof activeColorAccents] ||
         activeColorAccents.gray;
 
+      // FIXME: use colorjs
       // Convert hex to rgba with opacity
       const hexToRgba = (hex: string, opacity: number) => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -230,161 +233,111 @@ export const ChatItem = memo(
     };
 
     const handleAddToFolder = async (folderId: string) => {
-      const folder = availableFolders.find((f) => f.id === folderId);
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onMoveToFolder && folder && chat.id && folderId) {
-        try {
-          startTransition(() => {
-            onMoveToFolder(
-              chat.id,
-              folderId,
-              folder.name,
-              folder.color || 'blue',
-            );
-          });
-        } catch (error) {
-          console.error('Optimistic update failed:', error);
-        }
-      }
+      setIsProcessing(true);
 
       try {
         await addChatToFolderAction({ chatId: chat.id, folderId });
+
+        // Revalidate sidebar after successful operation
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          await (window as any).refreshSidebar();
+        }
+
         toast.success('Chat added to folder');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
-        if (onRemoveFromFolder && chat.id) {
-          try {
-            startTransition(() => {
-              onRemoveFromFolder(chat.id);
-            });
-          } catch (rollbackError) {
-            console.error(
-              'Failed to rollback optimistic update:',
-              rollbackError,
-            );
-          }
-        }
         console.error('Failed to add chat to folder:', error);
         toast.error('Failed to add chat to folder');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     const handleRemoveFromFolder = async () => {
-      const currentFolderId = chat.folderId;
-      const currentFolder = availableFolders.find(
-        (f) => f.id === currentFolderId,
-      );
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onRemoveFromFolder && chat.id) {
-        try {
-          startTransition(() => {
-            onRemoveFromFolder(chat.id);
-          });
-        } catch (error) {
-          console.error('Optimistic remove from folder failed:', error);
-        }
-      }
+      console.log('Starting handleRemoveFromFolder for chat:', chat.id);
+      setIsProcessing(true);
 
       try {
+        console.log('Calling removeChatFromFolderAction...');
         await removeChatFromFolderAction(chat.id);
+        console.log('removeChatFromFolderAction completed successfully');
+
+        // Revalidate sidebar after successful operation
+        console.log('Revalidating sidebar after removing from folder...');
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          console.log('Calling window.refreshSidebar...');
+          await (window as any).refreshSidebar();
+          console.log('window.refreshSidebar completed');
+        } else {
+          console.warn('refreshSidebar function not found on window');
+        }
 
         toast.success('Chat removed from folder');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
-        if (onMoveToFolder && currentFolder && currentFolderId && chat.id) {
-          try {
-            startTransition(() => {
-              onMoveToFolder(
-                chat.id,
-                currentFolderId,
-                currentFolder.name,
-                currentFolder.color || 'blue',
-              );
-            });
-          } catch (rollbackError) {
-            console.error(
-              'Failed to rollback remove from folder:',
-              rollbackError,
-            );
-          }
-        }
         console.error('Failed to remove chat from folder:', error);
         toast.error('Failed to remove chat from folder');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     const handleAddTag = async (tagId: string) => {
-      const tag = availableTags.find((t) => t.id === tagId);
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onAddTagToChat && tag && chat.id) {
-        try {
-          startTransition(() => {
-            onAddTagToChat(chat.id, {
-              id: tag.id,
-              label: tag.label,
-              color: tag.color,
-              userId: tag.userId,
-            });
-            setChatTags((prev) => [...prev, tag]);
-          });
-        } catch (error) {
-          console.error('Optimistic add tag failed:', error);
-        }
-      }
+      setIsProcessing(true);
+      const tag = availableTags.find((t) => t.id === tagId);
 
       try {
         await addTagToChatAction({ chatId: chat.id, tagId });
-        // Pobierz zaktualizowane tagi z serwera dla pewności
+
+        // Revalidate sidebar after successful operation
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          await (window as any).refreshSidebar();
+        }
+
+        // Update local state with fresh data from server
         const updatedTags = await getTagsByChatIdAction(chat.id);
         setChatTags(updatedTags as Tag[]);
+
         toast.success('Tag added to chat');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
-        if (tag) {
-          startTransition(() => {
-            setChatTags((prev) => prev.filter((t) => t.id !== tag.id));
-          });
-        }
         console.error('Failed to add tag to chat:', error);
         toast.error('Failed to add tag to chat');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     const handleRemoveTag = async (tagId: string) => {
-      const tag = availableTags.find((t) => t.id === tagId);
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onRemoveTagFromChat && chat.id) {
-        try {
-          startTransition(() => {
-            onRemoveTagFromChat(chat.id, tagId);
-            setChatTags((prev) => prev.filter((t) => t.id !== tagId));
-          });
-        } catch (error) {
-          console.error('Optimistic remove tag failed:', error);
-        }
-      }
+      setIsProcessing(true);
 
       try {
         await removeTagFromChatAction({ chatId: chat.id, tagId });
-        // Pobierz zaktualizowane tagi z serwera dla pewności
+
+        // Revalidate sidebar after successful operation
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          await (window as any).refreshSidebar();
+        }
+
+        // Update local state with fresh data from server
         const updatedTags = await getTagsByChatIdAction(chat.id);
         setChatTags(updatedTags as Tag[]);
+
         toast.success('Tag removed from chat');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
-        if (tag) {
-          startTransition(() => {
-            setChatTags((prev) => [...prev, tag]);
-          });
-        }
         console.error('Failed to remove tag from chat:', error);
         toast.error('Failed to remove tag from chat');
+      } finally {
+        setIsProcessing(false);
       }
     };
+
+    const { t } = useLanguage();
 
     return (
       <>
@@ -423,7 +376,7 @@ export const ChatItem = memo(
                   <div className="flex flex-wrap gap-1 mt-1">
                     {chatTags.map((tag) => (
                       <Badge
-                        key={tag.id}
+                        key={`chat-${chat.id}-tag-${tag.id}`}
                         variant="outline"
                         className="text-xs rounded-md border-transparent"
                         style={getTagStyles(tag.color)}
@@ -452,12 +405,12 @@ export const ChatItem = memo(
           >
             <DropdownMenuTrigger asChild>
               <SidebarMenuAction
-                // FIXME: visible when clicked and unclicked
                 showOnHover={!isActive}
+                // FIXME: remove outline and move to top
                 className="size-7 p-0 text-pink-500 hover:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30"
               >
                 <MoreHorizontalIcon size={16} />
-                <span className="sr-only">More</span>
+                <span className="sr-only">{t('navigation.dropdown.more')}</span>
               </SidebarMenuAction>
             </DropdownMenuTrigger>
 
@@ -465,20 +418,22 @@ export const ChatItem = memo(
               {/* Organization Section */}
               <div className="mb-3">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
-                  Organization
+                  {t('navigation.dropdown.organization')}
                 </div>
 
                 {/* Current Status Display */}
                 <div className="px-2 mb-2 space-y-1">
                   {chat.folderId && (
                     <div className="text-xs text-muted-foreground">
-                      📁 Currently in a folder
+                      📁 {t('navigation.dropdown.currentlyInFolder')}
                     </div>
                   )}
                   {chatTags.length > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      🏷️ {chatTags.length} tag{chatTags.length > 1 ? 's' : ''}{' '}
-                      assigned
+                      {/* FIXME: 's in english only */}
+                      🏷️ {chatTags.length} {t('navigation.dropdown.tags')}{' '}
+                      {chatTags.length > 1 ? 's' : ''}{' '}
+                      {t('navigation.dropdown.assigned')}
                     </div>
                   )}
                 </div>
@@ -495,7 +450,7 @@ export const ChatItem = memo(
                         className="mr-2 text-amber-600 dark:text-amber-400"
                       />
                       <span className="text-amber-800 dark:text-amber-200">
-                        Remove from folder
+                        {t('navigation.dropdown.removeFromFolder')}
                       </span>
                     </DropdownMenuItem>
                   ) : (
@@ -505,17 +460,17 @@ export const ChatItem = memo(
                           size={16}
                           className="mr-2 text-blue-600 dark:text-blue-400"
                         />
-                        <span>Move to folder</span>
+                        <span>{t('navigation.dropdown.moveToFolder')}</span>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent className="w-56">
                           {loadingFolders ? (
                             <div className="px-3 py-2 text-sm text-muted-foreground">
-                              Loading folders...
+                              {t('navigation.dropdown.loadingFolders')}
                             </div>
                           ) : availableFolders.length === 0 ? (
                             <div className="px-3 py-2 text-sm text-muted-foreground">
-                              No folders available
+                              {t('navigation.dropdown.noFoldersAvailable')}
                             </div>
                           ) : (
                             availableFolders.map((folder) => (
@@ -551,17 +506,17 @@ export const ChatItem = memo(
                         size={16}
                         className="mr-2 text-purple-600 dark:text-purple-400"
                       />
-                      <span>Manage tags</span>
+                      <span>{t('navigation.dropdown.manageTags')}</span>
                     </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
                         {loadingFolders ? (
                           <div className="px-3 py-2 text-sm text-muted-foreground">
-                            Loading tags...
+                            {t('navigation.dropdown.loadingTags')}
                           </div>
                         ) : availableTags.length === 0 ? (
                           <div className="px-3 py-2 text-sm text-muted-foreground">
-                            No tags available
+                            {t('navigation.dropdown.noTagsAvailable')}
                           </div>
                         ) : (
                           availableTags.map((tag) => {
@@ -616,7 +571,7 @@ export const ChatItem = memo(
               {/* Sharing Section */}
               <div className="border-t pt-3 mb-3">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
-                  Sharing
+                  {t('navigation.dropdown.sharing')}
                 </div>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer">
@@ -624,9 +579,11 @@ export const ChatItem = memo(
                       size={16}
                       className="mr-2 text-green-600 dark:text-green-400"
                     />
-                    <span>Visibility</span>
+                    <span>{t('navigation.dropdown.visibility')}</span>
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {visibilityType === 'private' ? 'Private' : 'Public'}
+                      {visibilityType === 'private'
+                        ? t('navigation.dropdown.private')
+                        : t('navigation.dropdown.public')}
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -636,7 +593,7 @@ export const ChatItem = memo(
                         onClick={() => setVisibilityType('private')}
                       >
                         <LockIcon size={16} className="mr-2 text-inherit" />
-                        <span>Private</span>
+                        <span>{t('navigation.dropdown.private')}</span>
                         {visibilityType === 'private' && (
                           <CheckCircleIcon
                             size={16}
@@ -649,7 +606,7 @@ export const ChatItem = memo(
                         onClick={() => setVisibilityType('public')}
                       >
                         <GlobeIcon size={16} className="mr-2 text-inherit" />
-                        <span>Public</span>
+                        <span>{t('navigation.dropdown.public')}</span>
                         {visibilityType === 'public' && (
                           <CheckCircleIcon
                             size={16}
@@ -665,7 +622,7 @@ export const ChatItem = memo(
               {/* Danger Zone */}
               <div className="border-t pt-2">
                 <div className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide mb-2 px-2">
-                  Danger Zone
+                  {t('navigation.dropdown.dangerZone')}
                 </div>
                 <DropdownMenuItem
                   className="cursor-pointer focus:bg-red-50 dark:focus:bg-red-900/20"
@@ -673,7 +630,7 @@ export const ChatItem = memo(
                 >
                   <TrashIcon size={16} className="mr-2 text-red-500" />
                   <span className="text-red-600 dark:text-red-400">
-                    Delete chat
+                    {t('navigation.dropdown.deleteChat')}
                   </span>
                 </DropdownMenuItem>
               </div>

@@ -83,7 +83,12 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <Toaster position="top-right" richColors />
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider
+            refetchInterval={5 * 60} // Refetch every 5 minutes instead of default
+            refetchOnWindowFocus={false} // Don't refetch on window focus
+          >
+            {children}
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>
