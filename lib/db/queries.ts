@@ -66,6 +66,83 @@ export async function getUserById(id: string): Promise<User | null> {
   }
 }
 
+export async function getFullUserData(id: string) {
+  try {
+    const userData = await getUserById(id);
+
+    if (!userData) {
+      return null;
+    }
+
+    // Determine user type based on subscription status
+    const isGuest = userData.email?.includes('guest-');
+    const hasPremium =
+      userData.subscriptionStatus === 'active' &&
+      userData.subscriptionCurrentPeriodEnd &&
+      new Date(userData.subscriptionCurrentPeriodEnd) > new Date();
+
+    let userType: 'guest' | 'regular' | 'pro' | 'admin' = 'regular';
+    if (isGuest) {
+      userType = 'guest';
+    } else if (hasPremium) {
+      userType = 'pro';
+    }
+
+    return {
+      id: userData.id,
+      email: userData.email || '',
+      full_name: userData.fullName || userData.email?.split('@')[0] || 'User',
+      avatar_url:
+        userData.avatarUrl || `https://avatar.vercel.sh/${userData.email}`,
+      is_premium: hasPremium,
+      type: userType,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get full user data',
+    );
+  }
+}
+
+export async function updateUserById({
+  id,
+  fullName,
+  email,
+  avatarUrl,
+}: {
+  id: string;
+  fullName?: string;
+  email?: string;
+  avatarUrl?: string;
+}) {
+  try {
+    const updateData: Partial<User> = {
+      updatedAt: new Date(),
+    };
+
+    if (fullName !== undefined) {
+      updateData.fullName = fullName;
+    }
+    if (email !== undefined) {
+      updateData.email = email;
+    }
+    if (avatarUrl !== undefined) {
+      updateData.avatarUrl = avatarUrl;
+    }
+
+    const [updatedUser] = await db
+      .update(user)
+      .set(updateData)
+      .where(eq(user.id, id))
+      .returning();
+
+    return updatedUser;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to update user');
+  }
+}
+
 export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 

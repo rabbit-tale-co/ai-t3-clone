@@ -1,7 +1,12 @@
 import { compare } from 'bcrypt-ts';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { createGuestUser, getUser, getUserById } from '@/lib/db/queries';
+import {
+  createGuestUser,
+  getUser,
+  getUserById,
+  getFullUserData,
+} from '@/lib/db/queries';
 import { authConfig } from './auth.config';
 import { DUMMY_PASSWORD, isDevelopmentEnvironment } from '@/lib/constants';
 import type { DefaultJWT } from 'next-auth/jwt';
@@ -60,7 +65,15 @@ export const {
 
         if (!passwordsMatch) return null;
 
-        return { ...user, type: 'regular' };
+        // Determine user type based on subscription status
+        const hasPremium =
+          user.subscriptionStatus === 'active' &&
+          user.subscriptionCurrentPeriodEnd &&
+          new Date(user.subscriptionCurrentPeriodEnd) > new Date();
+
+        const userType: UserType = hasPremium ? 'pro' : 'regular';
+
+        return { ...user, type: userType };
       },
     }),
     Credentials({
@@ -98,9 +111,22 @@ export const {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session.user && token.id) {
         session.user.id = token.id;
         session.user.type = token.type;
+
+        // Get fresh user data from database
+        try {
+          const fullUserData = await getFullUserData(token.id);
+          if (fullUserData) {
+            session.user.name = fullUserData.full_name;
+            session.user.email = fullUserData.email;
+            session.user.image = fullUserData.avatar_url;
+            session.user.type = fullUserData.type;
+          }
+        } catch (error) {
+          console.error('Failed to get full user data in session:', error);
+        }
       }
 
       return session;

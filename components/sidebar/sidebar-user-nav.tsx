@@ -82,8 +82,8 @@ export function SidebarUserNav({ user }: { user: User }) {
         id: user.id || '',
         email: user.email || '',
         full_name: user.name || user.email?.split('@')[0] || 'User',
-        avatar_url: `https://avatar.vercel.sh/${user.email}`,
-        is_premium: false,
+        avatar_url: user.image || `https://avatar.vercel.sh/${user.email}`,
+        is_premium: user.type === 'pro',
         type: user.type,
       }}
     />
