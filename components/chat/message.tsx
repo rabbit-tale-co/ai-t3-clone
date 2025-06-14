@@ -318,8 +318,8 @@ export const ThinkingMessage = () => {
           <div className="bg-gradient-to-br from-pink-50/80 to-pink-100/60 dark:from-pink-950/20 dark:to-pink-900/10 border border-pink-200/50 dark:border-pink-800/30 rounded-2xl px-4 py-3 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-pink-700 dark:text-pink-300">
               <SparklesIcon className="size-4 animate-pulse" />
-              <span className="text-sm font-medium">Myślę...</span>
-              <div className="flex gap-1 ml-2">
+              <span className="text-sm font-medium">Hmm...</span>
+              {/* <div className="flex gap-1 ml-2">
                 <div
                   className="w-1 h-1 bg-pink-500 rounded-full animate-bounce"
                   style={{ animationDelay: '0ms' }}
@@ -332,7 +332,7 @@ export const ThinkingMessage = () => {
                   className="w-1 h-1 bg-pink-500 rounded-full animate-bounce"
                   style={{ animationDelay: '300ms' }}
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

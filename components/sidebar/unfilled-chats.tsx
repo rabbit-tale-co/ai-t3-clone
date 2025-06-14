@@ -41,12 +41,12 @@ export function UnfiledChatsList({
     folderId: string,
     folderName: string,
     folderColor: string,
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveFromFolder?: (chatId: string) => void;
   onAddTagToChat?: (
     chatId: string,
     tag: { id: string; label: string; color: string; userId: string },
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
   colorAccents?: Record<
     string,

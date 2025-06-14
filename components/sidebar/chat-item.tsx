@@ -130,12 +130,12 @@ interface ChatItemProps {
     folderId: string,
     folderName: string,
     folderColor: string,
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveFromFolder?: (chatId: string) => void;
   onAddTagToChat?: (
     chatId: string,
     tag: { id: string; label: string; color: string; userId: string },
-  ) => void;
+  ) => void | Promise<void>;
   onRemoveTagFromChat?: (chatId: string, tagId: string) => void;
 }
 
@@ -156,6 +156,7 @@ export const ChatItem = memo(
     const [availableFolders, setAvailableFolders] = useState<Folder[]>([]);
     const [availableTags, setAvailableTags] = useState<Tag[]>([]);
     const [loadingFolders, setLoadingFolders] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const { visibilityType, setVisibilityType } = useChatVisibility({
       chatId: chat.id,
       initialVisibilityType: chat.visibility,
@@ -232,163 +233,107 @@ export const ChatItem = memo(
     };
 
     const handleAddToFolder = async (folderId: string) => {
-      const folder = availableFolders.find((f) => f.id === folderId);
+      if (isProcessing) return;
 
-      if (onMoveToFolder && folder && chat.id && folderId) {
-        try {
-          startTransition(() => {
-            onMoveToFolder(
-              chat.id,
-              folderId,
-              folder.name,
-              folder.color || 'blue',
-            );
-          });
-        } catch (error) {
-          console.error('Optimistic update failed:', error);
-        }
-      }
+      setIsProcessing(true);
 
       try {
         await addChatToFolderAction({ chatId: chat.id, folderId });
-        // TODO: add translation
+
+        // Revalidate sidebar after successful operation
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          await (window as any).refreshSidebar();
+        }
+
         toast.success('Chat added to folder');
       } catch (error) {
-        // Cofnij optimistic update w przypadku błędu
-        if (onRemoveFromFolder && chat.id) {
-          try {
-            startTransition(() => {
-              onRemoveFromFolder(chat.id);
-            });
-          } catch (rollbackError) {
-            console.error(
-              'Failed to rollback optimistic update:',
-              rollbackError,
-            );
-          }
-        }
         console.error('Failed to add chat to folder:', error);
-        // TODO: add translation
         toast.error('Failed to add chat to folder');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     const handleRemoveFromFolder = async () => {
-      const currentFolderId = chat.folderId;
-      const currentFolder = availableFolders.find(
-        (f) => f.id === currentFolderId,
-      );
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onRemoveFromFolder && chat.id) {
-        try {
-          startTransition(() => {
-            onRemoveFromFolder(chat.id);
-          });
-        } catch (error) {
-          console.error('Optimistic remove from folder failed:', error);
-        }
-      }
+      console.log('Starting handleRemoveFromFolder for chat:', chat.id);
+      setIsProcessing(true);
 
       try {
+        console.log('Calling removeChatFromFolderAction...');
         await removeChatFromFolderAction(chat.id);
+        console.log('removeChatFromFolderAction completed successfully');
 
-        // TODO: add translation
+        // Revalidate sidebar after successful operation
+        console.log('Revalidating sidebar after removing from folder...');
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          console.log('Calling window.refreshSidebar...');
+          await (window as any).refreshSidebar();
+          console.log('window.refreshSidebar completed');
+        } else {
+          console.warn('refreshSidebar function not found on window');
+        }
+
         toast.success('Chat removed from folder');
       } catch (error) {
-        // TODO: add translation
-        if (onMoveToFolder && currentFolder && currentFolderId && chat.id) {
-          try {
-            startTransition(() => {
-              onMoveToFolder(
-                chat.id,
-                currentFolderId,
-                currentFolder.name,
-                currentFolder.color || 'blue',
-              );
-            });
-          } catch (rollbackError) {
-            console.error(
-              'Failed to rollback remove from folder:',
-              rollbackError,
-            );
-          }
-        }
         console.error('Failed to remove chat from folder:', error);
-        // TODO: add translation
         toast.error('Failed to remove chat from folder');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     const handleAddTag = async (tagId: string) => {
-      const tag = availableTags.find((t) => t.id === tagId);
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onAddTagToChat && tag && chat.id) {
-        try {
-          startTransition(() => {
-            onAddTagToChat(chat.id, {
-              id: tag.id,
-              label: tag.label,
-              color: tag.color,
-              userId: tag.userId,
-            });
-            setChatTags((prev) => [...prev, tag]);
-          });
-        } catch (error) {
-          console.error('Optimistic add tag failed:', error);
-        }
-      }
+      setIsProcessing(true);
+      const tag = availableTags.find((t) => t.id === tagId);
 
       try {
         await addTagToChatAction({ chatId: chat.id, tagId });
-        // TODO: add translation
+
+        // Revalidate sidebar after successful operation
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          await (window as any).refreshSidebar();
+        }
+
+        // Update local state with fresh data from server
         const updatedTags = await getTagsByChatIdAction(chat.id);
         setChatTags(updatedTags as Tag[]);
-        // TODO: add translation
+
         toast.success('Tag added to chat');
       } catch (error) {
-        if (tag) {
-          startTransition(() => {
-            setChatTags((prev) => prev.filter((t) => t.id !== tag.id));
-          });
-        }
         console.error('Failed to add tag to chat:', error);
-        // TODO: add translation
         toast.error('Failed to add tag to chat');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     const handleRemoveTag = async (tagId: string) => {
-      const tag = availableTags.find((t) => t.id === tagId);
+      if (isProcessing) return;
 
-      // Optimistic update UI natychmiast
-      if (onRemoveTagFromChat && chat.id) {
-        try {
-          startTransition(() => {
-            onRemoveTagFromChat(chat.id, tagId);
-            setChatTags((prev) => prev.filter((t) => t.id !== tagId));
-          });
-        } catch (error) {
-          console.error('Optimistic remove tag failed:', error);
-        }
-      }
+      setIsProcessing(true);
 
       try {
         await removeTagFromChatAction({ chatId: chat.id, tagId });
+
+        // Revalidate sidebar after successful operation
+        if (typeof window !== 'undefined' && (window as any).refreshSidebar) {
+          await (window as any).refreshSidebar();
+        }
+
+        // Update local state with fresh data from server
         const updatedTags = await getTagsByChatIdAction(chat.id);
         setChatTags(updatedTags as Tag[]);
-        // TODO: add translation
+
         toast.success('Tag removed from chat');
       } catch (error) {
-        if (tag) {
-          startTransition(() => {
-            setChatTags((prev) => [...prev, tag]);
-          });
-        }
         console.error('Failed to remove tag from chat:', error);
-        // TODO: add translation
         toast.error('Failed to remove tag from chat');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
@@ -431,7 +376,7 @@ export const ChatItem = memo(
                   <div className="flex flex-wrap gap-1 mt-1">
                     {chatTags.map((tag) => (
                       <Badge
-                        key={tag.id}
+                        key={`chat-${chat.id}-tag-${tag.id}`}
                         variant="outline"
                         className="text-xs rounded-md border-transparent"
                         style={getTagStyles(tag.color)}

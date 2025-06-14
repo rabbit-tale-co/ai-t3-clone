@@ -92,12 +92,15 @@ export function Chat({
         console.log('Adding new chat to sidebar cache after AI response');
         const addChatToSidebarCache = (window as any).addChatToSidebarCache;
         if (addChatToSidebarCache) {
+          // Get title from first user message or input
           const userMessage = messages[0]?.content || input.trim();
+          const title =
+            userMessage.slice(0, 50).trim() +
+              (userMessage.length > 50 ? '...' : '') || 'New Chat';
+
           const chatData = {
             id,
-            title:
-              userMessage.slice(0, 50).trim() +
-              (userMessage.length > 50 ? '...' : 'New Chat'),
+            title,
             createdAt: new Date(),
             userId: session?.user?.id,
             visibility: visibilityType,
@@ -268,13 +271,15 @@ export function Chat({
       // Jeśli to pierwszy submit (nowy chat)
       if (messages.length === 0) {
         console.log('First message - adding optimistic chat');
-        const userMessage = input.trim();
-        if (userMessage && typeof window !== 'undefined') {
+        if (typeof window !== 'undefined') {
           const addNewChatOptimistic = (window as any).addNewChatOptimistic;
           if (addNewChatOptimistic) {
-            const title = 'New Chat';
+            const userMessage = input.trim();
+            const title =
+              userMessage.slice(0, 50).trim() +
+                (userMessage.length > 50 ? '...' : '') || 'New Chat';
             addNewChatOptimistic(id, title);
-            setIsNewChat(false); // Oznacz że chat już nie jest nowy
+            setIsNewChat(false);
           }
         }
       }
