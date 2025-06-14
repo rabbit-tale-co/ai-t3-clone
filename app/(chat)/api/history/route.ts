@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
   const startingAfter = searchParams.get('starting_after');
   const endingBefore = searchParams.get('ending_before');
 
+  const folderId = searchParams.get('folder_id');
+
   if (startingAfter && endingBefore) {
     return new ChatSDKError(
       'bad_request:api',
@@ -28,6 +30,7 @@ export async function GET(request: NextRequest) {
     limit,
     startingAfter,
     endingBefore,
+    folderId,
   });
 
   return Response.json(chats);

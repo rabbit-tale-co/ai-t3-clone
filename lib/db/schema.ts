@@ -15,13 +15,67 @@ export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   email: varchar('email', { length: 64 }).notNull(),
   password: varchar('password', { length: 64 }),
+  fullName: varchar('fullName', { length: 100 }),
+  avatarUrl: text('avatarUrl'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  // Subscription fields
+  subscriptionId: varchar('subscriptionId', { length: 255 }), // Stripe subscription ID
+  subscriptionStatus: varchar('subscriptionStatus', {
+    enum: ['active', 'canceled', 'past_due', 'unpaid', 'incomplete'],
+  }),
+  subscriptionCurrentPeriodEnd: timestamp('subscriptionCurrentPeriodEnd'),
+  subscriptionCurrentPeriodStart: timestamp('subscriptionCurrentPeriodStart'),
+  customerId: varchar('customerId', { length: 255 }), // Stripe customer ID
 });
 
 export type User = InferSelectModel<typeof user>;
 
+// User API Keys table
+export const userApiKey = pgTable('UserApiKey', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', {
+    enum: [
+      'openai',
+      'anthropic',
+      'google',
+      'xai',
+      'openrouter',
+      'groq',
+      'perplexity',
+      'cohere',
+      'mistral',
+    ],
+  }).notNull(),
+  keyName: varchar('keyName', { length: 100 }).notNull(), // User-friendly name
+  encryptedKey: text('encryptedKey').notNull(), // Encrypted API key
+  isActive: boolean('isActive').notNull().default(true),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+  lastUsedAt: timestamp('lastUsedAt'),
+});
+
+export type UserApiKey = InferSelectModel<typeof userApiKey>;
+
+// --- ADD FOLDER TABLE ---
+export const folder = pgTable('Folder', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(), // Added defaultNow
+  name: varchar('name', { length: 256 }).notNull(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  color: varchar('color', { length: 32 }).default('blue'),
+});
+
+export type Folder = InferSelectModel<typeof folder>;
+
 export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp('createdAt').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(), // Added defaultNow
   title: text('title').notNull(),
   userId: uuid('userId')
     .notNull()
@@ -29,9 +83,41 @@ export const chat = pgTable('Chat', {
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
+  // --- ADD FOLDER ID FOREIGN KEY ---
+  folderId: uuid('folderId').references(() => folder.id), // Can be null if chat isn't in a folder
 });
 
 export type Chat = InferSelectModel<typeof chat>;
+
+// --- ADD TAG TABLE ---
+export const tag = pgTable('Tag', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  label: varchar('label', { length: 64 }).notNull(),
+  color: varchar('color', { length: 7 }).notNull(), // Assuming hex code for color
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+});
+
+export type Tag = InferSelectModel<typeof tag>;
+
+// --- ADD CHAT-TAG RELATION TABLE ---
+export const chatTag = pgTable(
+  'ChatTag',
+  {
+    chatId: uuid('chatId')
+      .notNull()
+      .references(() => chat.id),
+    tagId: uuid('tagId')
+      .notNull()
+      .references(() => tag.id),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.chatId, table.tagId] }),
+  }),
+);
+
+export type ChatTag = InferSelectModel<typeof chatTag>;
 
 // DEPRECATED: The following schema is deprecated and will be removed in the future.
 // Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts

@@ -1,233 +1,697 @@
 'use client';
 
 import * as React from 'react';
-import type { User } from 'next-auth';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { LogIn, X, Hash, Folder as FolderIcon } from 'lucide-react';
 
-import { Search, X, MoreHorizontal, Trash, LogIn } from 'lucide-react';
-import { SidebarHistory } from '@/components/sidebar-history';
-import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
+  SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { entitlementsByUserType } from '@/lib/ai/entitlements';
+
+import { SidebarHistory } from '@/components/sidebar/sidebar-history';
+import { SidebarUserNav } from '@/components/sidebar/sidebar-user-nav';
+import { ManageFoldersDialog } from '@/components/sidebar/manage-folders-dialog';
+import { ManageTagsDialog } from '@/components/sidebar/manage-tags-dialog';
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogAction,
-  AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  createFolderAction,
+  createTagAction,
+  deleteFolderAction,
+  deleteTagAction,
+} from '@/app/(chat)/actions';
 import { toast } from 'sonner';
-import { signIn, useSession } from 'next-auth/react';
-import { UserType } from '@/app/(auth)/auth';
-import { useMessageCount } from '@/hooks/use-message-count';
+import {
+  getUserEntitlements,
+  canCreateFolder,
+  canCreateTag,
+} from '@/lib/ai/entitlements';
 
-export function AppSidebar({ user }: { user: User | undefined }) {
+import type { Session } from 'next-auth';
+import type { Folder, Tag } from '@/lib/db/schema';
+import Link from 'next/link';
+import { useLanguage } from '@/hooks/use-language';
+
+interface InitialData {
+  threads: any[];
+  folders: Folder[];
+  tags: Tag[];
+  hasMore: boolean;
+}
+
+interface AppSidebarProps {
+  session?: Session | null;
+  onNewChat?: () => void;
+  onModalStateChange?: (isOpen: boolean) => void;
+  currentChatId?: string;
+  initialData?: InitialData;
+}
+
+export function AppSidebar({
+  session,
+  onNewChat,
+  onModalStateChange,
+  currentChatId,
+  initialData,
+  ...props
+}: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
+  const { data: sessionFromHook, status } = useSession();
+  const userSession = session ?? sessionFromHook;
+  const [showLoginModal, setShowLoginModal] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const { toggleSidebar, setOpenMobile } = useSidebar();
   const router = useRouter();
-  const { setOpenMobile, toggleSidebar } = useSidebar();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
-  const { data: session } = useSession();
-  const { messagesLeft } = useMessageCount(session);
 
-  const handleNewChat = () => {
-    setOpenMobile(false);
-    router.push('/');
-    router.refresh();
-  };
+  const [showCreateFolderDialog, setShowCreateFolderDialog] =
+    React.useState(false);
+  const [showCreateTagDialog, setShowCreateTagDialog] = React.useState(false);
 
-  // This function would be connected to the real delete functionality
-  const handleDeleteChat = async (chatId: string) => {
+  // States for dialog content
+  const [newFolderName, setNewFolderName] = React.useState('');
+  const [newFolderColor, setNewFolderColor] = React.useState('blue');
+  const [newTagName, setNewTagName] = React.useState('');
+  const [newTagColor, setNewTagColor] = React.useState('gray');
+
+  // States for folder and tag deletion
+  const [deleteFolderId, setDeleteFolderId] = React.useState<string | null>(
+    null,
+  );
+  const [deleteFolderName, setDeleteFolderName] = React.useState('');
+  const [showDeleteFolderDialog, setShowDeleteFolderDialog] =
+    React.useState(false);
+  const [deleteTagId, setDeleteTagId] = React.useState<string | null>(null);
+  const [deleteTagLabel, setDeleteTagLabel] = React.useState('');
+  const [showDeleteTagDialog, setShowDeleteTagDialog] = React.useState(false);
+
+  const [isCreatingFolder, setIsCreatingFolder] = React.useState(false);
+  const [isCreatingTag, setIsCreatingTag] = React.useState(false);
+
+  const [folders, setFolders] = React.useState<Folder[]>(
+    initialData?.folders || [],
+  );
+  const [tags, setTags] = React.useState<Tag[]>(initialData?.tags || []);
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      toast.error('Folder name cannot be empty');
+      return;
+    }
+    if (!userSession?.user?.id) {
+      toast.error('User not logged in');
+      return;
+    }
+    if (isCreatingFolder) {
+      return;
+    }
+
+    const userType = userSession.user.type || 'guest';
+    if (!canCreateFolder(userType, folders.length)) {
+      const entitlements = getUserEntitlements(userType);
+      // TODO: add translation
+      toast.error(
+        `You've reached your folder limit (${entitlements.maxFolders}). ${
+          userType === 'guest'
+            ? 'Sign up for more folders!'
+            : 'Upgrade for more folders!'
+        }`,
+      );
+      return;
+    }
+
+    setIsCreatingFolder(true);
+
+    const tempFolder = {
+      id: `temp-folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: newFolderName,
+      userId: userSession.user.id,
+      color: newFolderColor || 'blue',
+      createdAt: new Date(),
+    } as Folder;
+
+    setFolders((prev) => [...prev, tempFolder]);
+
     try {
-      const response = await fetch(`/api/chat?id=${chatId}`, {
-        method: 'DELETE',
+      const createdFolder = await createFolderAction({
+        name: tempFolder.name,
+        userId: userSession.user.id,
+        color: tempFolder.color || 'blue',
       });
 
-      if (response.ok) {
-        toast.success('Chat deleted successfully');
+      if (createdFolder) {
+        setFolders((prev) =>
+          prev.map((f) => (f.id === tempFolder.id ? createdFolder : f)),
+        );
 
-        // If we're on this chat's page, redirect to home
-        const params = new URLSearchParams(window.location.search);
-        const currentChatId = window.location.pathname.split('/').pop();
+        setNewFolderName('');
+        setNewFolderColor('blue');
 
-        if (currentChatId === chatId) {
-          router.push('/');
-        }
-
-        // Force refresh the chat list
-        window.location.reload();
-      } else {
-        toast.error('Failed to delete chat');
+        toast.success('Folder created successfully!');
       }
-
-      setChatToDelete(null);
-      setDeleteDialogOpen(false);
     } catch (error) {
-      console.error('Error deleting chat:', error);
-      toast.error('Failed to delete chat');
+      setFolders((prev) => prev.filter((f) => f.id !== tempFolder.id));
+      console.error('Failed to create folder:', error);
+      toast.error('Failed to create folder');
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
-  const openDeleteDialog = (chatId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setChatToDelete(chatId);
-    setDeleteDialogOpen(true);
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) {
+      toast.error('Tag name cannot be empty');
+      return;
+    }
+    if (!userSession?.user?.id) {
+      toast.error('User not logged in');
+      return;
+    }
+    if (isCreatingTag) {
+      return;
+    }
+
+    const userType = userSession.user.type || 'guest';
+    if (!canCreateTag(userType, tags.length)) {
+      const entitlements = getUserEntitlements(userType);
+      // TODO: add translation
+      toast.error(
+        `You've reached your tag limit (${entitlements.maxTags}). ${
+          userType === 'guest'
+            ? 'Sign up for more tags!'
+            : 'Upgrade for more tags!'
+        }`,
+      );
+      return;
+    }
+
+    setIsCreatingTag(true);
+
+    const tempTag = {
+      id: `temp-tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      label: newTagName,
+      color: newTagColor,
+      userId: userSession.user.id,
+    } as Tag;
+
+    setTags((prev) => [...prev, tempTag]);
+
+    try {
+      const createdTag = await createTagAction({
+        label: tempTag.label,
+        color: tempTag.color,
+        userId: userSession.user.id,
+      });
+
+      if (createdTag) {
+        setTags((prev) =>
+          prev.map((t) => (t.id === tempTag.id ? createdTag : t)),
+        );
+
+        setNewTagName('');
+        setNewTagColor('gray');
+
+        // TODO: add translation
+        toast.success('Tag created successfully!');
+      }
+    } catch (error) {
+      setTags((prev) => prev.filter((t) => t.id !== tempTag.id));
+      console.error('Failed to create tag:', error);
+      // TODO: add translation
+      toast.error('Failed to create tag');
+    } finally {
+      setIsCreatingTag(false);
+    }
   };
+
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    setShowCreateFolderDialog(false);
+    setDeleteFolderId(folderId);
+    setDeleteFolderName(folderName);
+    setShowDeleteFolderDialog(true);
+  };
+
+  const confirmDeleteFolder = async () => {
+    if (!deleteFolderId) return;
+
+    const folderToDelete = folders.find((f) => f.id === deleteFolderId);
+    if (!folderToDelete) return;
+
+    setFolders((prev) => prev.filter((f) => f.id !== deleteFolderId));
+
+    setShowDeleteFolderDialog(false);
+    setDeleteFolderId(null);
+    setDeleteFolderName('');
+
+    try {
+      await deleteFolderAction(deleteFolderId);
+      // TODO: add translation
+      toast.success('Folder deleted successfully!');
+    } catch (error) {
+      setFolders((prev) => [...prev, folderToDelete]);
+      console.error('Failed to delete folder:', error);
+      // TODO: add translation
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  const handleDeleteTag = (tagId: string, tagLabel: string) => {
+    setShowCreateTagDialog(false);
+    setDeleteTagId(tagId);
+    setDeleteTagLabel(tagLabel);
+    setShowDeleteTagDialog(true);
+  };
+
+  const confirmDeleteTag = async () => {
+    if (!deleteTagId) return;
+
+    const tagToDelete = tags.find((t) => t.id === deleteTagId);
+    if (!tagToDelete) return;
+
+    setTags((prev) => prev.filter((t) => t.id !== deleteTagId));
+
+    setShowDeleteTagDialog(false);
+    setDeleteTagId(null);
+    setDeleteTagLabel('');
+
+    try {
+      await deleteTagAction(deleteTagId);
+      // TODO: add translation
+      toast.success('Tag deleted successfully!');
+    } catch (error) {
+      setTags((prev) => [...prev, tagToDelete]);
+      console.error('Failed to delete tag:', error);
+      // TODO: add translation
+      toast.error('Failed to delete tag');
+    }
+  };
+
+  const handleNewChat = async () => {
+    router.push('/');
+    if (onNewChat) {
+      onNewChat();
+    }
+  };
+
+  const { t } = useLanguage();
 
   return (
     <>
-      <Sidebar className="bg-gradient-to-b from-pink-50 to-pink-100/60 dark:from-black/90 dark:via-pink-950/20 dark:to-black/95 border-pink-200 dark:border-pink-900/30 shadow-lg lg:backdrop-blur-0 backdrop-blur-md">
+      <Sidebar
+        {...props}
+        className="bg-gradient-to-b from-pink-50 to-pink-100/60 dark:from-black/90 dark:via-pink-950/20 dark:to-black/95 border-pink-200 dark:border-pink-900/30 shadow-lg lg:backdrop-blur-0 backdrop-blur-md"
+      >
         <SidebarHeader className="border-b border-pink-200 dark:border-pink-900/30 bg-white/80 dark:bg-black/40 backdrop-blur-sm shadow-sm">
           {/* Mobile & Tablet Header */}
-          <div className="flex items-center justify-between px-3 py-2 lg:hidden">
+          <div className="flex items-center justify-between lg:hidden p-0 pl-2">
             <Button
               onClick={toggleSidebar}
               variant="ghost"
               size="icon"
               className="text-pink-700 dark:text-pink-300 hover:text-pink-800 dark:hover:text-pink-200 hover:bg-pink-100 dark:hover:bg-black/40"
             >
-              <X className="szie-5" />
+              <X className="size-5" />
             </Button>
-            <h1 className="text-lg font-bold text-pink-900 dark:text-gray-100">
-              AI Chat
-            </h1>
+            <Button
+              variant="ghost"
+              className="rounded-full hover:!bg-transparent"
+            >
+              <h1 className="text-lg font-bold text-pink-900 dark:text-gray-100">
+                {/* TODO: add translation */}
+                {t('navigation.header.appName')}
+              </h1>
+            </Button>
+            {/* <ThemeToggle /> */}
           </div>
 
           {/* Desktop Header */}
-          <div className="hidden lg:flex items-center justify-between px-2 py-1">
-            <div className="flex items-center space-x-2">
+          <div className="hidden lg:flex items-center justify-between p-0 pl-2">
+            <Button
+              variant="ghost"
+              className="rounded-full hover:!bg-transparent"
+            >
               <h1 className="text-xl leading-none font-bold text-pink-900 dark:text-gray-100">
-                AI Chat
+                {/* TODO: add translation */}
+                {t('navigation.header.appName')}
               </h1>
-            </div>
+            </Button>
+            {/*
+            <ThemeToggle /> */}
           </div>
 
           {/* New Chat Button */}
-          <div className="p-2">
+          <div className="p-2 sm:px-2">
             <Button
               onClick={handleNewChat}
-              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 dark:from-pink-600 dark:to-pink-700 dark:hover:from-pink-700 dark:hover:to-pink-800 text-white rounded-lg font-medium shadow-sm h-10 sm:h-auto"
+              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 dark:from-pink-600 dark:to-pink-700 dark:hover:from-pink-700 dark:hover:to-pink-800 text-white rounded-xl shadow-md"
             >
-              <span className="inline">New Chat</span>
+              <span className="inline">{t('navigation.header.newChat')}</span>
             </Button>
           </div>
 
           {/* Search */}
           <div className="px-2 sm:px-2 pb-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-pink-500 dark:text-pink-400" />
-              <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-pink-50 dark:bg-black/40 border-pink-300 dark:border-pink-800/50 text-pink-900 dark:text-gray-100 placeholder:text-pink-600/70 dark:placeholder:text-pink-400/70 focus:border-pink-500 dark:focus:border-pink-600 shadow-sm h-12 sm:h-auto text-sm"
-              />
-            </div>
-            {/* Messages left counter */}
-            {messagesLeft !== null && (
-              <div className="mt-2 text-sm text-pink-700 dark:text-pink-300 px-3 text-center">
-                <span className="font-medium">{messagesLeft}</span> messages
-                left today
-              </div>
-            )}
+            <Input
+              placeholder={t('chat.input.search')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-white/80 dark:bg-black/50 border-pink-200/50 dark:border-pink-800/30 text-pink-900 dark:text-pink-100 placeholder:text-pink-600/70 dark:placeholder:text-pink-400/70 focus:border-pink-400 dark:focus:border-pink-600 rounded-xl"
+            />
           </div>
+
+          {/* Organization Manager */}
+          {userSession?.user && (
+            <div className="px-2 pb-2 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowCreateFolderDialog(true)}
+                        className="border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 rounded-lg"
+                      >
+                        <FolderIcon className="size-3 mr-1.5" />
+                        <span className="text-xs">
+                          {t('navigation.management.folders')}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-pink-50 dark:bg-black/90 border-pink-200 dark:border-pink-800/50 text-pink-700 dark:text-pink-300">
+                      {t('navigation.management.manageFolders')}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowCreateTagDialog(true)}
+                        className="border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 rounded-lg"
+                      >
+                        <Hash className="size-3 mr-1.5" />
+                        <span className="text-xs">
+                          {t('navigation.management.tags')}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-pink-50 dark:bg-black/90 border-pink-200 dark:border-pink-800/50 text-pink-700 dark:text-pink-300">
+                      {t('navigation.management.manageTags')}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
         </SidebarHeader>
 
         <SidebarContent className="bg-gradient-to-b from-transparent to-pink-50/50 dark:from-transparent dark:to-black/20 overflow-y-auto lg:backdrop-blur-0 backdrop-blur-md">
-          <SidebarHistory
-            user={user}
-            searchTerm={searchTerm}
-            renderActions={(chatId) => (
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity duration-200">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="size-6 p-0 hover:bg-pink-200 dark:hover:bg-pink-900/50"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreHorizontal className="size-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-40 bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg"
-                  >
-                    <DropdownMenuItem
-                      className="text-xs text-red-800 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-900/50 focus:bg-red-100 dark:focus:bg-red-900/50 rounded-md cursor-pointer"
-                      onClick={(e) => openDeleteDialog(chatId, e)}
-                    >
-                      <Trash className="size-3 mr-2 text-red-600 dark:text-red-400" />
-                      Remove
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
-          />
+          {userSession?.user ? (
+            <SidebarHistory
+              user={userSession.user}
+              searchTerm={searchTerm}
+              initialData={{
+                threads: initialData?.threads || [],
+                hasMore: initialData?.hasMore || false,
+                folders: folders,
+                tags: tags,
+              }}
+            />
+          ) : (
+            <SidebarGroup>
+              <SidebarGroupLabel>
+                {t('navigation.header.yourChats')}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <div className="px-4 py-8 text-center">
+                  <p className="text-sm text-pink-700 dark:text-pink-300">
+                    {t('navigation.messages.signInToSeeYourChatHistory')}
+                  </p>
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-pink-200 dark:border-pink-900/30 bg-white/80 dark:bg-black/40 backdrop-blur-md shadow-sm p-2">
-          {user && user.type !== 'guest' && <SidebarUserNav user={user} />}
-          {user && user.type === 'guest' && (
+        <SidebarFooter className="border-t border-pink-200 dark:border-pink-900/30 bg-white/80 dark:bg-black/40 backdrop-blur-md shadow-sm space-y-2 p-2 sm:p-4">
+          {userSession?.user && userSession?.user?.type !== 'guest' ? (
+            <SidebarUserNav user={userSession?.user} />
+          ) : (
             <Button
               variant="ghost"
-              size="lg"
-              className="w-full justify-start"
-              onClick={() => router.push('/login')}
+              className="w-full justify-start text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 rounded-xl"
+              asChild
             >
-              <LogIn className="size-4" />
-              Login
+              <Link href="/login">
+                <LogIn size={16} />
+                {t('auth.actions.login')}
+              </Link>
             </Button>
           )}
         </SidebarFooter>
+
+        <SidebarRail />
       </Sidebar>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="bg-gradient-to-br from-pink-50 to-pink-100/80 dark:from-pink-950/90 dark:to-pink-900/60 border border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-pink-900 dark:text-pink-100">
-              Delete Chat
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-pink-700 dark:text-pink-300">
-              Are you sure you want to delete this chat? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => chatToDelete && handleDeleteChat(chatToDelete)}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Yes, delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Dialogs rendered outside sidebar to avoid z-index issues */}
+      {userSession?.user && (
+        <>
+          <ManageFoldersDialog
+            open={showCreateFolderDialog}
+            onOpenChange={setShowCreateFolderDialog}
+            folders={folders}
+            allThreads={[]} // Will be populated from SidebarHistory via props if needed
+            newFolderName={newFolderName}
+            setNewFolderName={setNewFolderName}
+            newFolderColor={newFolderColor}
+            setNewFolderColor={setNewFolderColor}
+            onCreateFolder={handleCreateFolder}
+            onDeleteFolder={handleDeleteFolder}
+            isCreating={isCreatingFolder}
+            userType={userSession?.user?.type || 'guest'}
+            colorAccents={{
+              pink: {
+                light: '#FDF2F8',
+                dark: '#831843',
+                border: '#FBCFE8',
+                accent: '#EC4899',
+              },
+              purple: {
+                light: '#F5F3FF',
+                dark: '#5B21B6',
+                border: '#DDD6FE',
+                accent: '#8B5CF6',
+              },
+              blue: {
+                light: '#EFF6FF',
+                dark: '#1E40AF',
+                border: '#BFDBFE',
+                accent: '#3B82F6',
+              },
+              green: {
+                light: '#ECFDF5',
+                dark: '#065F46',
+                border: '#A7F3D0',
+                accent: '#10B981',
+              },
+              orange: {
+                light: '#FFF7ED',
+                dark: '#9A3412',
+                border: '#FFEDD5',
+                accent: '#F97316',
+              },
+              red: {
+                light: '#FEF2F2',
+                dark: '#991B1B',
+                border: '#FECACA',
+                accent: '#EF4444',
+              },
+              indigo: {
+                light: '#EEF2FF',
+                dark: '#3730A3',
+                border: '#C7D2FE',
+                accent: '#6366F1',
+              },
+              teal: {
+                light: '#F0FDFA',
+                dark: '#115E59',
+                border: '#99F6E4',
+                accent: '#14B8A6',
+              },
+              amber: {
+                light: '#FFFBEB',
+                dark: '#92400E',
+                border: '#FDE68A',
+                accent: '#F59E0B',
+              },
+              gray: {
+                light: '#F9FAFB',
+                dark: '#1F2937',
+                border: '#E5E7EB',
+                accent: '#6B7280',
+              },
+            }}
+          />
+
+          <ManageTagsDialog
+            open={showCreateTagDialog}
+            onOpenChange={setShowCreateTagDialog}
+            tags={tags}
+            allThreads={[]} // Will be populated from SidebarHistory via props if needed
+            newTagName={newTagName}
+            setNewTagName={setNewTagName}
+            newTagColor={newTagColor}
+            setNewTagColor={setNewTagColor}
+            onCreateTag={handleCreateTag}
+            onDeleteTag={handleDeleteTag}
+            isCreating={isCreatingTag}
+            userType={userSession?.user?.type || 'guest'}
+            colorAccents={{
+              pink: {
+                light: '#FDF2F8',
+                dark: '#831843',
+                border: '#FBCFE8',
+                accent: '#EC4899',
+              },
+              purple: {
+                light: '#F5F3FF',
+                dark: '#5B21B6',
+                border: '#DDD6FE',
+                accent: '#8B5CF6',
+              },
+              blue: {
+                light: '#EFF6FF',
+                dark: '#1E40AF',
+                border: '#BFDBFE',
+                accent: '#3B82F6',
+              },
+              green: {
+                light: '#ECFDF5',
+                dark: '#065F46',
+                border: '#A7F3D0',
+                accent: '#10B981',
+              },
+              orange: {
+                light: '#FFF7ED',
+                dark: '#9A3412',
+                border: '#FFEDD5',
+                accent: '#F97316',
+              },
+              red: {
+                light: '#FEF2F2',
+                dark: '#991B1B',
+                border: '#FECACA',
+                accent: '#EF4444',
+              },
+              indigo: {
+                light: '#EEF2FF',
+                dark: '#3730A3',
+                border: '#C7D2FE',
+                accent: '#6366F1',
+              },
+              teal: {
+                light: '#F0FDFA',
+                dark: '#115E59',
+                border: '#99F6E4',
+                accent: '#14B8A6',
+              },
+              amber: {
+                light: '#FFFBEB',
+                dark: '#92400E',
+                border: '#FDE68A',
+                accent: '#F59E0B',
+              },
+              gray: {
+                light: '#F9FAFB',
+                dark: '#1F2937',
+                border: '#E5E7EB',
+                accent: '#6B7280',
+              },
+            }}
+          />
+
+          {/* Delete Folder Confirmation Dialog */}
+          <AlertDialog
+            open={showDeleteFolderDialog}
+            onOpenChange={setShowDeleteFolderDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('common.deleteFolder')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('common.areYouSureYouWantToDeleteFolder', {
+                    folderName: deleteFolderName,
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteFolder}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {t('common.deleteFolder')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Delete Tag Confirmation Dialog */}
+          <AlertDialog
+            open={showDeleteTagDialog}
+            onOpenChange={setShowDeleteTagDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('common.deleteTag')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('common.areYouSureYouWantToDeleteTag', {
+                    tagName: deleteTagLabel,
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteTag}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {t('common.deleteTag')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </>
   );
 }
+
+// Export the sidebar component for backward compatibility
+export { AppSidebar as Sidebar };

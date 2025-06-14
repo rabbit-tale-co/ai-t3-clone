@@ -13,12 +13,14 @@ import useSWR, { useSWRConfig } from 'swr';
 import { useDebounceCallback, useWindowSize } from 'usehooks-ts';
 import type { Document, Vote } from '@/lib/db/schema';
 import { fetcher } from '@/lib/utils';
-import { MultimodalInput } from './multimodal-input';
+import { Textarea } from './ui/textarea';
+import { Button } from './ui/button';
+import { Send } from 'lucide-react';
 import { Toolbar } from './toolbar';
 import { VersionFooter } from './version-footer';
-import { ArtifactActions } from './artifact-actions';
-import { ArtifactCloseButton } from './artifact-close-button';
-import { ArtifactMessages } from './artifact-messages';
+import { ArtifactActions } from './chat/artifact-actions';
+import { ArtifactCloseButton } from './chat/artifact-close-button';
+import { ArtifactMessages } from './chat/artifact-messages';
 import { useSidebar } from './ui/sidebar';
 import { useArtifact } from '@/hooks/use-artifact';
 import { imageArtifact } from '@/artifacts/image/client';
@@ -235,6 +237,11 @@ function PureArtifact({
   const { width: windowWidth, height: windowHeight } = useWindowSize();
   const isMobile = windowWidth ? windowWidth < 768 : false;
 
+  // Dodajemy wartosci domyslne dla animacji
+  const defaultWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const defaultHeight =
+    typeof window !== 'undefined' ? window.innerHeight : 768;
+
   const artifactDefinition = artifactDefinitions.find(
     (definition) => definition.kind === artifact.kind,
   );
@@ -242,6 +249,10 @@ function PureArtifact({
   if (!artifactDefinition) {
     throw new Error('Artifact definition not found!');
   }
+
+  // Uzywamy wartosci domyslnych jesli windowWidth/windowHeight sa null
+  const safeWidth = windowWidth || defaultWidth;
+  const safeHeight = windowHeight || defaultHeight;
 
   useEffect(() => {
     if (artifact.documentId !== 'init') {
@@ -253,6 +264,15 @@ function PureArtifact({
       }
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
+
+  useEffect(() => {
+    if (!metadata?.modelId) {
+      setMetadata((prev: { modelId?: string } | null) => ({
+        ...prev,
+        modelId: 'gemini-2.0-flash',
+      }));
+    }
+  }, [metadata?.modelId, setMetadata]);
 
   return (
     <AnimatePresence>
@@ -266,14 +286,14 @@ function PureArtifact({
         >
           {!isMobile && (
             <motion.div
-              className="fixed bg-background h-dvh"
+              className="fixed bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm h-dvh"
               initial={{
-                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                width: isSidebarOpen ? safeWidth - 256 : safeWidth,
                 right: 0,
               }}
-              animate={{ width: windowWidth, right: 0 }}
+              animate={{ width: safeWidth, right: 0 }}
               exit={{
-                width: isSidebarOpen ? windowWidth - 256 : windowWidth,
+                width: isSidebarOpen ? safeWidth - 256 : safeWidth,
                 right: 0,
               }}
             />
@@ -281,7 +301,7 @@ function PureArtifact({
 
           {!isMobile && (
             <motion.div
-              className="relative w-[400px] bg-muted dark:bg-background h-dvh shrink-0"
+              className="relative w-[400px] bg-gradient-to-br from-pink-50/80 to-pink-100/60 dark:from-black/80 dark:to-pink-950/40 backdrop-blur-md border-r border-pink-200/50 dark:border-pink-800/30 h-dvh shrink-0"
               initial={{ opacity: 0, x: 10, scale: 1 }}
               animate={{
                 opacity: 1,
@@ -304,7 +324,7 @@ function PureArtifact({
               <AnimatePresence>
                 {!isCurrentVersion && (
                   <motion.div
-                    className="left-0 absolute h-dvh w-[400px] top-0 bg-zinc-900/50 z-50"
+                    className="left-0 absolute h-dvh w-[400px] top-0 bg-black/20 dark:bg-black/50 z-50 backdrop-blur-sm"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -324,29 +344,46 @@ function PureArtifact({
                   artifactStatus={artifact.status}
                 />
 
-                <form className="flex flex-row gap-2 relative items-end w-full px-4 pb-4">
-                  <MultimodalInput
-                    chatId={chatId}
-                    input={input}
-                    setInput={setInput}
-                    handleSubmit={handleSubmit}
-                    status={status}
-                    stop={stop}
-                    attachments={attachments}
-                    setAttachments={setAttachments}
-                    messages={messages}
-                    append={append}
-                    className="bg-background dark:bg-muted"
-                    setMessages={setMessages}
-                    selectedVisibilityType={selectedVisibilityType}
-                  />
+                <form
+                  className="flex flex-row gap-2 relative items-end w-full px-4 pb-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (input.trim()) {
+                      handleSubmit(e);
+                    }
+                  }}
+                >
+                  <div className="flex-1 relative">
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Ask about this artifact..."
+                      className="min-h-[44px] max-h-32 resize-none rounded-xl border-pink-200/50 dark:border-pink-800/30 focus:border-pink-400 dark:focus:border-pink-600 bg-white/80 dark:bg-black/50 backdrop-blur-sm pr-12 text-pink-900 dark:text-pink-100 placeholder:text-pink-600/70 dark:placeholder:text-pink-400/70"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          if (input.trim()) {
+                            handleSubmit(e as any);
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!input.trim() || status === 'streaming'}
+                      className="absolute right-2 bottom-2 size-8 p-0 rounded-full bg-pink-500 hover:bg-pink-600 dark:bg-pink-600 dark:hover:bg-pink-700 text-white border-0"
+                    >
+                      <Send className="size-4" />
+                    </Button>
+                  </div>
                 </form>
               </div>
             </motion.div>
           )}
 
           <motion.div
-            className="fixed dark:bg-muted bg-background h-dvh flex flex-col overflow-y-scroll md:border-l dark:border-zinc-700 border-zinc-200"
+            className="fixed bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm h-dvh flex flex-col overflow-y-scroll border-l border-pink-200/50 dark:border-pink-800/30"
             initial={
               isMobile
                 ? {
@@ -372,8 +409,8 @@ function PureArtifact({
                     opacity: 1,
                     x: 0,
                     y: 0,
-                    height: windowHeight,
-                    width: windowWidth ? windowWidth : 'calc(100dvw)',
+                    height: safeHeight,
+                    width: safeWidth,
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -387,10 +424,8 @@ function PureArtifact({
                     opacity: 1,
                     x: 400,
                     y: 0,
-                    height: windowHeight,
-                    width: windowWidth
-                      ? windowWidth - 400
-                      : 'calc(100dvw-400px)',
+                    height: safeHeight,
+                    width: safeWidth - 400,
                     borderRadius: 0,
                     transition: {
                       delay: 0,
@@ -412,19 +447,21 @@ function PureArtifact({
               },
             }}
           >
-            <div className="p-2 flex flex-row justify-between items-start">
+            <div className="p-4 flex flex-row justify-between items-start bg-white/80 dark:bg-black/40 backdrop-blur-md border-b border-pink-200/50 dark:border-pink-800/30">
               <div className="flex flex-row gap-4 items-start">
                 <ArtifactCloseButton />
 
                 <div className="flex flex-col">
-                  <div className="font-medium">{artifact.title}</div>
+                  <div className="font-medium text-pink-900 dark:text-pink-100">
+                    {artifact.title}
+                  </div>
 
                   {isContentDirty ? (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-pink-600 dark:text-pink-400">
                       Saving changes...
                     </div>
                   ) : document ? (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-pink-600 dark:text-pink-400">
                       {`Updated ${formatDistance(
                         new Date(document.createdAt),
                         new Date(),
@@ -434,7 +471,7 @@ function PureArtifact({
                       )}`}
                     </div>
                   ) : (
-                    <div className="w-32 h-3 mt-2 bg-muted-foreground/20 rounded-md animate-pulse" />
+                    <div className="w-32 h-3 mt-2 bg-pink-200/50 dark:bg-pink-800/30 rounded-md animate-pulse" />
                   )}
                 </div>
               </div>
@@ -450,7 +487,7 @@ function PureArtifact({
               />
             </div>
 
-            <div className="dark:bg-muted bg-background h-full overflow-y-scroll max-w-full! items-center">
+            <div className="bg-background h-full overflow-y-scroll max-w-full! items-center">
               <artifactDefinition.content
                 title={artifact.title}
                 content={
@@ -461,7 +498,11 @@ function PureArtifact({
                 mode={mode}
                 status={artifact.status}
                 currentVersionIndex={currentVersionIndex}
-                suggestions={[]}
+                suggestions={
+                  artifact.kind === 'text' && metadata?.suggestions
+                    ? metadata.suggestions
+                    : []
+                }
                 onSaveContent={saveContent}
                 isInline={false}
                 isCurrentVersion={isCurrentVersion}

@@ -1,0 +1,1 @@
+ALTER TABLE "Folder" ADD COLUMN "color" varchar(32) DEFAULT 'blue';

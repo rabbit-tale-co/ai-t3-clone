@@ -2,16 +2,16 @@
 
 import {
   memo,
-  MouseEvent,
+  type MouseEvent,
   useCallback,
   useEffect,
   useMemo,
   useRef,
 } from 'react';
-import { ArtifactKind, UIArtifact } from './artifact';
-import { FileIcon, FullscreenIcon, ImageIcon, LoaderIcon } from './icons';
+import type { ArtifactKind, UIArtifact } from './chat/artifact';
+import { FileIcon, FullscreenIcon, ImageIcon, LoaderIcon } from 'lucide-react';
 import { cn, fetcher } from '@/lib/utils';
-import { Document } from '@/lib/db/schema';
+import type { Document } from '@/lib/db/schema';
 import { InlineDocumentSkeleton } from './document-skeleton';
 import useSWR from 'swr';
 import { Editor } from './text-editor';
@@ -102,7 +102,7 @@ export function DocumentPreview({
   return (
     <div className="relative w-full cursor-pointer">
       <HitboxLayer
-        hitboxRef={hitboxRef}
+        hitboxRef={hitboxRef as React.RefObject<HTMLDivElement>}
         result={result}
         setArtifact={setArtifact}
       />

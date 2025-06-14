@@ -26,9 +26,21 @@ export const createDecorations = (
   suggestions: Array<UISuggestion>,
   view: EditorView,
 ) => {
+  if (!Array.isArray(suggestions) || !view?.state?.doc) {
+    return DecorationSet.empty;
+  }
+
   const decorations: Array<Decoration> = [];
 
   for (const suggestion of suggestions) {
+    if (
+      !suggestion ||
+      typeof suggestion.selectionStart !== 'number' ||
+      typeof suggestion.selectionEnd !== 'number'
+    ) {
+      continue;
+    }
+
     decorations.push(
       Decoration.inline(
         suggestion.selectionStart,

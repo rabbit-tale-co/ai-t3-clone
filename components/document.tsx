@@ -1,7 +1,12 @@
 import { memo } from 'react';
 
-import type { ArtifactKind } from './artifact';
-import { FileIcon, LoaderIcon, MessageIcon, PencilEditIcon } from './icons';
+import type { ArtifactKind } from './chat/artifact';
+import {
+  FileIcon,
+  LoaderIcon,
+  MessageSquareIcon,
+  PencilIcon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useArtifact } from '@/hooks/use-artifact';
 
@@ -72,9 +77,9 @@ function PureDocumentToolResult({
         {type === 'create' ? (
           <FileIcon />
         ) : type === 'update' ? (
-          <PencilEditIcon />
+          <PencilIcon />
         ) : type === 'request-suggestions' ? (
-          <MessageIcon />
+          <MessageSquareIcon />
         ) : null}
       </div>
       <div className="text-left">
@@ -132,9 +137,9 @@ function PureDocumentToolCall({
           {type === 'create' ? (
             <FileIcon />
           ) : type === 'update' ? (
-            <PencilEditIcon />
+            <PencilIcon />
           ) : type === 'request-suggestions' ? (
-            <MessageIcon />
+            <MessageSquareIcon />
           ) : null}
         </div>
 

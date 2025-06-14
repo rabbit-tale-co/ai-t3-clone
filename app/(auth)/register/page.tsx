@@ -9,44 +9,50 @@ import { SubmitButton } from '@/components/submit-button';
 
 import { register, type RegisterActionState } from '../actions';
 import { toast } from '@/components/toast';
-import { useSession } from 'next-auth/react';
+import { signIn, } from 'next-auth/react';
 
 export default function Page() {
   const router = useRouter();
-
   const [email, setEmail] = useState('');
+  const [plainPwd, setPlainPwd] = useState(''); // ← 2  przechowaj hasło
   const [isSuccessful, setIsSuccessful] = useState(false);
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
     register,
-    {
-      status: 'idle',
-    },
+    { status: 'idle' },
   );
 
-  const { update: updateSession } = useSession();
-
   useEffect(() => {
-    if (state.status === 'user_exists') {
-      toast({ type: 'error', description: 'Account already exists!' });
-    } else if (state.status === 'failed') {
-      toast({ type: 'error', description: 'Failed to create account!' });
-    } else if (state.status === 'invalid_data') {
-      toast({
-        type: 'error',
-        description: 'Failed validating your submission!',
-      });
-    } else if (state.status === 'success') {
-      toast({ type: 'success', description: 'Account created successfully!' });
+    switch (state.status) {
+      case 'user_exists':
+        toast({ type: 'error', description: 'Account already exists!' });
+        break;
+      case 'failed':
+        toast({ type: 'error', description: 'Failed to create account!' });
+        break;
+      case 'invalid_data':
+        toast({ type: 'error', description: 'Invalid data!' });
+        break;
+      case 'success':
+        toast({
+          type: 'success',
+          description: 'Account created successfully!',
+        });
+        setIsSuccessful(true);
 
-      setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+        // 3️⃣  logujemy i przekierowujemy
+        signIn('credentials', {
+          email,
+          password: plainPwd,
+          callbackUrl: '/', // gdzie trafi po zalogowaniu
+        });
+        break;
     }
-  }, [state]);
+  }, [state.status, email, plainPwd]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);
+    setPlainPwd(formData.get('password') as string); // ← 2
     formAction(formData);
   };
 

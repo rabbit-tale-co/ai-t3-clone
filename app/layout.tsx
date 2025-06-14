@@ -69,6 +69,10 @@ export default async function RootLayout({
             __html: THEME_COLOR_SCRIPT,
           }}
         />
+        {/* <Script
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+          strategy="beforeInteractive"
+        /> */}
       </head>
       <body className="antialiased">
         <ThemeProvider
@@ -77,8 +81,13 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Toaster position="top-center" richColors />
-          <SessionProvider>{children}</SessionProvider>
+          <Toaster position="top-right" richColors />
+          <SessionProvider
+            refetchInterval={5 * 60} // Refetch every 5 minutes instead of default
+            refetchOnWindowFocus={false} // Don't refetch on window focus
+          >
+            {children}
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

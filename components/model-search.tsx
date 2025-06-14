@@ -55,7 +55,7 @@ export function ModelSearch({
                   content: 'text-white',
                   icon: 'self-start pt-1',
                 },
-                icon: <Globe className="w-4 h-4 text-white" />,
+                icon: <Globe className="size-4 text-white" />,
                 description: 'Get access to all models and features',
                 action: {
                   label: 'Upgrade',

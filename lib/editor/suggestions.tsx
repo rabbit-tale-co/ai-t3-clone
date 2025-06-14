@@ -9,7 +9,7 @@ import { createRoot } from 'react-dom/client';
 
 import { Suggestion as PreviewSuggestion } from '@/components/suggestion';
 import type { Suggestion } from '@/lib/db/schema';
-import { ArtifactKind } from '@/components/artifact';
+import type { ArtifactKind } from '@/components/chat/artifact';
 
 export interface UISuggestion extends Suggestion {
   selectionStart: number;
@@ -48,7 +48,19 @@ export function projectWithPositions(
   doc: Node,
   suggestions: Array<Suggestion>,
 ): Array<UISuggestion> {
+  if (!Array.isArray(suggestions)) {
+    return [];
+  }
+
   return suggestions.map((suggestion) => {
+    if (!suggestion || !suggestion.originalText) {
+      return {
+        ...suggestion,
+        selectionStart: 0,
+        selectionEnd: 0,
+      };
+    }
+
     const positions = findPositionsInDoc(doc, suggestion.originalText);
 
     if (!positions) {
