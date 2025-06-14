@@ -13,7 +13,7 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
         'aria-invalid:ring-red-500/20 dark:aria-invalid:ring-red-400/20 aria-invalid:border-red-500 dark:aria-invalid:border-red-400',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }

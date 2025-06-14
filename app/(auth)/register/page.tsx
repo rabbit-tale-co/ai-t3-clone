@@ -9,7 +9,7 @@ import { SubmitButton } from '@/components/submit-button';
 
 import { register, type RegisterActionState } from '../actions';
 import { toast } from '@/components/toast';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, } from 'next-auth/react';
 
 export default function Page() {
   const router = useRouter();

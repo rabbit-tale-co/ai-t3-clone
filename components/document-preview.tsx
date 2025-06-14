@@ -8,7 +8,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import type { ArtifactKind, UIArtifact } from './artifact';
+import type { ArtifactKind, UIArtifact } from './chat/artifact';
 import { FileIcon, FullscreenIcon, ImageIcon, LoaderIcon } from 'lucide-react';
 import { cn, fetcher } from '@/lib/utils';
 import type { Document } from '@/lib/db/schema';
@@ -102,7 +102,7 @@ export function DocumentPreview({
   return (
     <div className="relative w-full cursor-pointer">
       <HitboxLayer
-        hitboxRef={hitboxRef}
+        hitboxRef={hitboxRef as React.RefObject<HTMLDivElement>}
         result={result}
         setArtifact={setArtifact}
       />

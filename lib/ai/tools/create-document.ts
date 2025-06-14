@@ -1,7 +1,7 @@
 import { generateUUID } from '@/lib/utils';
-import { DataStreamWriter, tool } from 'ai';
+import { type DataStreamWriter, tool } from 'ai';
 import { z } from 'zod';
-import { Session } from 'next-auth';
+import type { Session } from 'next-auth';
 import {
   artifactKinds,
   documentHandlersByArtifactKind,
@@ -19,7 +19,7 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
     parameters: z.object({
       title: z.string(),
       kind: z.enum(artifactKinds),
-    }),
+    }) as any,
     execute: async ({ title, kind }) => {
       const id = generateUUID();
 

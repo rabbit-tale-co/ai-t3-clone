@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  FileText,
   History,
   Key,
   MessageCircle,
@@ -153,7 +152,7 @@ export function SettingsContent({
                         : 'text-pink-600 dark:text-pink-400'
                     }`}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
+                    <Icon size={16} />
                     {tab.label}
                   </Button>
                 );
@@ -322,7 +321,7 @@ export function SettingsContent({
       </Sidebar>
       <main className="flex h-full flex-1 flex-col overflow-hidden max-h-[95vh]">
         {/* Navigation Tabs */}
-        <div className="border-b border-pink-200/30 dark:border-pink-900/20 px-2 flex-shrink-0">
+        <div className="border-b border-pink-200/30 dark:border-pink-900/20 px-2">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -337,7 +336,7 @@ export function SettingsContent({
                   key={tab.id}
                   value={tab.id}
                   className="
-                    text-xs px-2 py-2 rounded-none whitespace-nowrap overflow-hidden text-ellipsis transition-colors
+                    text-xs p-2 rounded-none truncate transition-colors
                     text-pink-400 hover:text-pink-600 dark:hover:text-pink-300
                     data-[state=active]:text-pink-900 dark:data-[state=active]:text-pink-50
                     data-[state=active]:bg-pink-100/50 dark:data-[state=active]:bg-pink-900/20

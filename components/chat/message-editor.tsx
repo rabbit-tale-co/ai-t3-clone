@@ -55,17 +55,17 @@ export function MessageEditor({
   const handleCancel = () => {
     setDraftContent(message.content); // Reset to original content
     setMode('view');
-    toast.info('Anulowano edycję wiadomości');
+    toast.info('Editing cancelled');
   };
 
   const handleSave = async () => {
     if (draftContent.trim() === '') {
-      toast.error('Wiadomość nie może być pusta');
+      toast.error('Message cannot be empty');
       return;
     }
 
     if (draftContent.trim() === message.content.trim()) {
-      toast.info('Brak zmian do zapisania');
+      toast.info('No changes to save');
       setMode('view');
       return;
     }
@@ -97,12 +97,12 @@ export function MessageEditor({
       setMode('view');
       reload();
 
-      toast.success('Wiadomość została zaktualizowana', {
-        description: 'Generuję nową odpowiedź...',
+      toast.success('Message updated', {
+        description: 'Generating new response...',
       });
     } catch (error) {
       console.error('Error updating message:', error);
-      toast.error('Nie udało się zaktualizować wiadomości');
+      toast.error('Failed to update message');
     } finally {
       setIsSubmitting(false);
     }
@@ -119,11 +119,11 @@ export function MessageEditor({
   };
 
   return (
-    <div className="flex flex-col gap-3 w-full bg-gradient-to-br from-pink-50/50 to-pink-100/30 dark:from-pink-950/20 dark:to-pink-900/10 border border-pink-200/50 dark:border-pink-800/30 rounded-xl p-4 backdrop-blur-sm">
+    <div className="flex flex-col gap-3 w-full max-w-2xl bg-gradient-to-br from-pink-50/50 to-pink-100/30 dark:from-pink-950/20 dark:to-pink-900/10 border border-pink-200/50 dark:border-pink-800/30 rounded-xl p-4 backdrop-blur-sm ml-auto">
       {/* Editor Header */}
       <div className="flex items-center gap-2 text-pink-700 dark:text-pink-300">
         <Edit3 className="size-4" />
-        <span className="text-sm font-medium">Edytuj wiadomość</span>
+        <span className="text-sm font-medium">Edit message</span>
       </div>
 
       {/* Textarea */}
@@ -139,14 +139,14 @@ export function MessageEditor({
         value={draftContent}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        placeholder="Wprowadź swoją wiadomość..."
+        placeholder="Enter your message..."
         disabled={isSubmitting}
       />
 
       {/* Helper Text */}
       <div className="text-xs text-pink-600 dark:text-pink-400 flex items-center justify-between">
-        <span>Ctrl/Cmd + Enter aby zapisać, Esc aby anulować</span>
-        <span>{draftContent.length} znaków</span>
+        <span>Ctrl/Cmd + Enter to save, Esc to cancel</span>
+        <span>{draftContent.length} characters</span>
       </div>
 
       {/* Action Buttons */}
@@ -159,7 +159,7 @@ export function MessageEditor({
           className="h-9 px-4 border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50 rounded-lg"
         >
           <X className="size-4 mr-2" />
-          Anuluj
+          Cancel
         </Button>
         <Button
           data-testid="message-editor-send-button"
@@ -170,13 +170,13 @@ export function MessageEditor({
         >
           {isSubmitting ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-              Zapisuję...
+              <div className="animate-spin rounded-full size-4 border-2 border-white border-t-transparent mr-2" />
+              Saving...
             </>
           ) : (
             <>
               <Check className="size-4 mr-2" />
-              Zapisz i wyślij
+              Save and send
             </>
           )}
         </Button>

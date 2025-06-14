@@ -2,8 +2,10 @@
 
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Sparkles, Crown, Zap } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import type { UserType as AuthUserType } from '@/app/(auth)/auth';
+import { AvailableModels } from '@/components/settings/available-models';
 
 interface UserData {
   id: string;
@@ -22,72 +24,81 @@ interface ModelsTabProps {
 export function ModelsTab({ user, entitlements }: ModelsTabProps) {
   const { t } = useLanguage();
 
-  const getUserTypeLabel = (userType: AuthUserType) => {
+  const getUserTypeInfo = (userType: AuthUserType) => {
     switch (userType) {
       case 'guest':
-        return t('subscription.plans.free');
+        return {
+          label: t('subscription.plans.free'),
+          icon: <Sparkles className="size-4" />,
+          color:
+            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+          description: 'Ograniczony dostęp do podstawowych modeli',
+        };
       case 'regular':
-        return t('subscription.plans.free');
+        return {
+          label: t('subscription.plans.free'),
+          icon: <Sparkles className="size-4" />,
+          color:
+            'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+          description: 'Dostęp do standardowych modeli AI',
+        };
       case 'pro':
-        return t('subscription.plans.pro');
+        return {
+          label: t('subscription.plans.pro'),
+          icon: <Crown className="size-4" />,
+          color: 'bg-gradient-to-r from-pink-500 to-purple-600 text-white',
+          description: 'Pełny dostęp do wszystkich modeli premium',
+        };
       case 'admin':
-        return t('subscription.plans.pro');
+        return {
+          label: 'Administrator',
+          icon: <Zap className="size-4" />,
+          color: 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white',
+          description: 'Nieograniczony dostęp do wszystkich funkcji',
+        };
       default:
-        return t('subscription.plans.free');
+        return {
+          label: t('subscription.plans.free'),
+          icon: <Sparkles className="size-4" />,
+          color:
+            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+          description: 'Podstawowy dostęp',
+        };
     }
   };
 
+  const userTypeInfo = getUserTypeInfo(user.type);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-pink-900 dark:text-pink-100 mb-2">
+      {/* Header */}
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-pink-500 to-pink-600 mb-4">
+          <Sparkles className="size-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-pink-900 dark:text-pink-100 mb-2">
           {t('settings.models.title')}
         </h2>
-        <p className="text-pink-600 dark:text-pink-400">
+        <p className="text-pink-600 dark:text-pink-400 max-w-2xl mx-auto">
           {t('settings.models.description')}
         </p>
       </div>
 
-      {/* Available Models for User Type */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
-          {t('settings.models.available')}
-        </h3>
-        <p className="text-sm text-pink-600 dark:text-pink-400 mb-4">
-          {t('settings.models.forPlan')}{' '}
-          <Badge
-            variant="outline"
-            className="border-pink-200 dark:border-pink-800/50 text-pink-600 dark:text-pink-400"
-          >
-            {getUserTypeLabel(user.type)}
-          </Badge>
-        </p>
-
-        <div className="space-y-3">
-          {entitlements.availableChatModelIds.map((modelId: string) => (
-            <div
-              key={modelId}
-              className="border border-pink-200/50 dark:border-pink-800/30 rounded-lg p-4 bg-white/50 dark:bg-black/30"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-pink-900 dark:text-pink-100">
-                  {modelId}
-                </h4>
-                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200">
-                  {t('settings.models.available')}
-                </Badge>
-              </div>
-              <p className="text-sm text-pink-600 dark:text-pink-400">
-                {modelId.includes('gemini') &&
-                  t('settings.models.geminiDescription')}
-                {modelId.includes('gpt') && t('settings.models.gptDescription')}
-                {modelId.includes('claude') &&
-                  t('settings.models.claudeDescription')}
-              </p>
-            </div>
-          ))}
-        </div>
+      {/* User Plan Card */}
+      <div className="flex items-center gap-2">
+        <span className="text-lg font-semibold text-pink-900 dark:text-pink-100">
+          Your plan
+        </span>
+        <Badge className={`${userTypeInfo.color} border-0 shadow-sm`}>
+          <div className="flex items-center gap-1.5">
+            {userTypeInfo.icon}
+            {userTypeInfo.label}
+          </div>
+        </Badge>
       </div>
+
+      {/* Available Models Component */}
+      <AvailableModels userId={user.id} />
     </div>
   );
 }

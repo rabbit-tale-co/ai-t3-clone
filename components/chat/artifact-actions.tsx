@@ -1,9 +1,9 @@
-import { Button } from './ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { artifactDefinitions, type UIArtifact } from './artifact';
+import { Button } from '../ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { artifactDefinitions, type UIArtifact } from '../artifact';
 import type { Dispatch, SetStateAction } from 'react';
 import { memo, useState } from 'react';
-import type { ArtifactActionContext } from './create-artifact';
+import type { ArtifactActionContext } from '../create-artifact';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -47,16 +47,19 @@ function PureArtifactActions({
   };
 
   return (
-    <div className="flex flex-row gap-1">
+    <div className="flex flex-row gap-2">
       {artifactDefinition.actions.map((action) => (
         <Tooltip key={action.description}>
           <TooltipTrigger asChild>
             <Button
               variant="outline"
-              className={cn('h-fit dark:hover:bg-zinc-700', {
-                'p-2': !action.label,
-                'py-1.5 px-2': action.label,
-              })}
+              className={cn(
+                'border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 backdrop-blur-sm',
+                {
+                  'h-8 w-8 p-0': !action.label,
+                  'h-8 px-3': action.label,
+                },
+              )}
               onClick={async () => {
                 setIsLoading(true);
 
@@ -77,10 +80,14 @@ function PureArtifactActions({
               }
             >
               {action.icon}
-              {action.label}
+              {action.label && (
+                <span className="ml-1.5 text-xs">{action.label}</span>
+              )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{action.description}</TooltipContent>
+          <TooltipContent className="bg-pink-50 dark:bg-pink-950/90 border-pink-200 dark:border-pink-800/50 text-pink-700 dark:text-pink-300">
+            {action.description}
+          </TooltipContent>
         </Tooltip>
       ))}
     </div>

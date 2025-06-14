@@ -106,8 +106,8 @@
 .dark {
   --background: var(--color-t3-pink-950);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  --card: transparent;
+  --card-foreground: var(--color-t3-pink-50);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: var(--color-t3-accent-500);
@@ -735,8 +735,144 @@ pre code {
   text-wrap: balance;
 } */
 
+/* ProseMirror Editor Styles */
 .ProseMirror {
-    outline: none;
+  outline: none;
+  min-height: 400px;
+  line-height: 1.7;
+  font-size: 16px;
+  color: var(--foreground);
+  caret-color: var(--primary);
+}
+
+.ProseMirror p {
+  margin: 1em 0;
+}
+
+.ProseMirror p:first-child {
+  margin-top: 0;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-weight: 600;
+  margin: 1.5em 0 0.5em 0;
+  color: var(--foreground);
+}
+
+.ProseMirror h1:first-child,
+.ProseMirror h2:first-child,
+.ProseMirror h3:first-child,
+.ProseMirror h4:first-child,
+.ProseMirror h5:first-child,
+.ProseMirror h6:first-child {
+  margin-top: 0;
+}
+
+.ProseMirror h1 {
+  font-size: 2.25em;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.3em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.875em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+
+.ProseMirror h3 {
+  font-size: 1.5em;
+}
+
+.ProseMirror h4 {
+  font-size: 1.25em;
+}
+
+.ProseMirror h5 {
+  font-size: 1.125em;
+}
+
+.ProseMirror h6 {
+  font-size: 1em;
+  color: var(--muted-foreground);
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 1em 0;
+}
+
+.ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid var(--border);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.ProseMirror code {
+  background: var(--muted);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+  font-family: var(--font-mono);
+}
+
+.ProseMirror pre {
+  background: var(--muted);
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 2em 0;
+}
+
+.ProseMirror strong {
+  font-weight: 600;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ProseMirror a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Selection styles */
+.ProseMirror ::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 
 .cm-editor,
@@ -772,5 +908,5 @@ pre code {
 }
 
 .suggestion-highlight {
-    @apply bg-blue-200 hover:bg-blue-300 dark:hover:bg-blue-400/50 dark:text-blue-50 dark:bg-blue-500/40;
+    @apply bg-pink-200/60 hover:bg-pink-300/70 dark:hover:bg-pink-400/30 dark:text-pink-50 dark:bg-pink-500/20 border border-pink-300/50 dark:border-pink-600/30 rounded-sm transition-all duration-200;
 }

@@ -33,7 +33,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           info: 'group-[.toast]:bg-gradient-to-br group-[.toast]:from-sky-50 group-[.toast]:to-blue-100/90 dark:group-[.toast]:from-sky-950/95 dark:group-[.toast]:to-blue-900/70 group-[.toast]:text-sky-900 dark:group-[.toast]:text-sky-100 group-[.toast]:border-sky-200 dark:group-[.toast]:border-sky-800/60',
         },
       }}
-      {...props}
+      {...(props as any)}
     />
   );
 };

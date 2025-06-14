@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useState } from 'react';
 import {
-  History,
   Download,
   Upload,
   Trash2,

@@ -26,7 +26,7 @@ function DropdownMenuTrigger({
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -45,7 +45,7 @@ function DropdownMenuContent({
           'bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl text-pink-900 dark:text-pink-100 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border p-2 shadow-xl',
           className,
         )}
-        {...props}
+        {...(props as any)}
       />
     </DropdownMenuPrimitive.Portal>
   );
@@ -77,7 +77,7 @@ function DropdownMenuItem({
         "hover:bg-pink-100 dark:hover:bg-pink-900/50 focus:bg-pink-100 dark:focus:bg-pink-900/50 text-pink-900 dark:text-pink-100 data-[variant=destructive]:text-red-600 dark:data-[variant=destructive]:text-red-400 data-[variant=destructive]:hover:bg-red-50 dark:data-[variant=destructive]:hover:bg-red-950/30 data-[variant=destructive]:focus:bg-red-50 dark:data-[variant=destructive]:focus:bg-red-950/30 data-[variant=destructive]:focus:text-red-600 dark:data-[variant=destructive]:focus:text-red-400 data-[variant=destructive]:*:[svg]:!text-red-600 dark:data-[variant=destructive]:*:[svg]:!text-red-400 [&_svg:not([class*='text-'])]:text-pink-600 dark:[&_svg:not([class*='text-'])]:text-pink-400 relative flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 transition-colors",
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -96,7 +96,7 @@ function DropdownMenuCheckboxItem({
         className,
       )}
       checked={checked}
-      {...props}
+      {...(props as any)}
     >
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
@@ -114,7 +114,7 @@ function DropdownMenuRadioGroup({
   return (
     <DropdownMenuPrimitive.RadioGroup
       data-slot="dropdown-menu-radio-group"
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -131,7 +131,7 @@ function DropdownMenuRadioItem({
         "hover:bg-pink-100 dark:hover:bg-pink-900/50 focus:bg-pink-100 dark:focus:bg-pink-900/50 text-pink-900 dark:text-pink-100 relative flex cursor-default items-center gap-2 rounded-lg py-2 pr-3 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 transition-colors",
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
@@ -158,7 +158,7 @@ function DropdownMenuLabel({
         'px-3 py-2 text-sm font-semibold text-pink-800 dark:text-pink-200 data-[inset]:pl-8',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -174,7 +174,7 @@ function DropdownMenuSeparator({
         'bg-pink-200/50 dark:bg-pink-800/30 -mx-1 my-1 h-px',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -190,7 +190,7 @@ function DropdownMenuShortcut({
         'text-pink-600 dark:text-pink-400 ml-auto text-xs tracking-widest',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -217,7 +217,7 @@ function DropdownMenuSubTrigger({
         'hover:bg-pink-100 dark:hover:bg-pink-900/50 focus:bg-pink-100 dark:focus:bg-pink-900/50 text-pink-900 dark:text-pink-100 data-[state=open]:bg-pink-100 dark:data-[state=open]:bg-pink-900/50 flex cursor-default items-center rounded-lg px-3 py-2 text-sm outline-hidden select-none data-[inset]:pl-8 transition-colors',
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       {children}
       <ChevronRightIcon className="ml-auto size-4 text-pink-600 dark:text-pink-400" />
@@ -236,7 +236,7 @@ function DropdownMenuSubContent({
         'bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl text-pink-900 dark:text-pink-100 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border p-2 shadow-xl',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }

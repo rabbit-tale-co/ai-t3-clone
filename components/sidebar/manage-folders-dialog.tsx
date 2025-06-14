@@ -5,7 +5,6 @@ import { FolderIcon, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -13,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn, getReadableBorderColor } from '@/lib/utils';
+import { getReadableBorderColor } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import type { Folder } from '@/lib/db/schema';
 import type { UserType } from '@/app/(auth)/auth';
@@ -213,10 +212,12 @@ export function ManageFoldersDialog({
                     <FolderIcon className="size-8 text-pink-500 dark:text-pink-400" />
                   </div>
                   <h3 className="text-lg font-medium mb-2 text-pink-900 dark:text-pink-100">
-                    {t('folders.noFoldersYet')}
+                    {/* TODO: add translation */}
+                    No folders yet
                   </h3>
                   <p className="text-sm text-pink-600 dark:text-pink-400">
-                    {t('folders.createFirstFolder')}
+                    {/* TODO: add translation */}
+                    Create your first folder to organize your conversations
                   </p>
                 </div>
               )}
@@ -311,14 +312,16 @@ export function ManageFoldersDialog({
                   >
                     <FolderIcon className="size-4 mr-2" />
                     {isCreating
-                      ? t('folders.saving')
+                      ? /* TODO: add translation */
+                        'Saving...'
                       : (() => {
                           const entitlements = getUserEntitlements(userType);
                           if (
                             entitlements.maxFolders !== -1 &&
                             folders.length >= entitlements.maxFolders
                           ) {
-                            return t('folders.limitReached');
+                            // TODO: add translation
+                            return 'Limit reached';
                           }
                           return t('folders.createFolder');
                         })()}

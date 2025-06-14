@@ -60,7 +60,7 @@ export function AccountTab({ user }: AccountTabProps) {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type?.startsWith('image/')) {
       toast.error('Please select an image file');
       return;
     }

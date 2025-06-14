@@ -30,8 +30,10 @@ import {
   folder,
   tag,
   chatTag,
+  userApiKey,
+  type UserApiKey,
 } from './schema';
-import type { ArtifactKind } from '@/components/artifact';
+import type { ArtifactKind } from '@/components/chat/artifact';
 import { generateUUID } from '../utils';
 import { generateHashedPassword } from './utils';
 import type { VisibilityType } from '@/components/visibility-selector';
@@ -189,8 +191,6 @@ export async function saveChat({
   visibility: VisibilityType;
   folderId?: string | null; // Make folderId optional and allow null
 }) {
-  console.log('Saving chat:', { id, userId, title, visibility, folderId });
-
   try {
     return await db.insert(chat).values({
       id,
@@ -1159,6 +1159,131 @@ export async function getSidebarThreadsByUserId({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get sidebar threads by user id',
+    );
+  }
+}
+
+// API Keys functions
+export async function getUserApiKeys(userId: string): Promise<UserApiKey[]> {
+  try {
+    return await db
+      .select()
+      .from(userApiKey)
+      .where(and(eq(userApiKey.userId, userId), eq(userApiKey.isActive, true)));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get user API keys',
+    );
+  }
+}
+
+export async function getUserApiKeyByProvider(
+  userId: string,
+  provider: string,
+): Promise<UserApiKey | null> {
+  try {
+    const [apiKey] = await db
+      .select()
+      .from(userApiKey)
+      .where(
+        and(
+          eq(userApiKey.userId, userId),
+          eq(userApiKey.provider, provider as any),
+          eq(userApiKey.isActive, true),
+        ),
+      )
+      .limit(1);
+
+    return apiKey ?? null;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get user API key by provider',
+    );
+  }
+}
+
+export async function saveUserApiKey({
+  userId,
+  provider,
+  keyName,
+  encryptedKey,
+}: {
+  userId: string;
+  provider: string;
+  keyName: string;
+  encryptedKey: string;
+}): Promise<UserApiKey> {
+  try {
+    // First, check if there's an existing key (active or inactive) for this provider
+    const [existingKey] = await db
+      .select()
+      .from(userApiKey)
+      .where(
+        and(
+          eq(userApiKey.userId, userId),
+          eq(userApiKey.provider, provider as any),
+        ),
+      )
+      .limit(1);
+
+    if (existingKey) {
+      // Update existing key with new data and set as active
+      const [updatedKey] = await db
+        .update(userApiKey)
+        .set({
+          keyName,
+          encryptedKey,
+          isActive: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(userApiKey.id, existingKey.id))
+        .returning();
+
+      return updatedKey;
+    } else {
+      // Insert new key if none exists
+      const [newApiKey] = await db
+        .insert(userApiKey)
+        .values({
+          userId,
+          provider: provider as any,
+          keyName,
+          encryptedKey,
+          isActive: true,
+        })
+        .returning();
+
+      return newApiKey;
+    }
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to save user API key',
+    );
+  }
+}
+
+export async function deleteUserApiKey(
+  userId: string,
+  provider: string,
+): Promise<void> {
+  try {
+    // Use soft delete by setting isActive to false
+    await db
+      .update(userApiKey)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(userApiKey.userId, userId),
+          eq(userApiKey.provider, provider as any),
+        ),
+      );
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to delete user API key',
     );
   }
 }

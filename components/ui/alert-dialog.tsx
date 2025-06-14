@@ -39,7 +39,7 @@ function AlertDialogOverlay({
         'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60 backdrop-blur-sm',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -57,7 +57,7 @@ function AlertDialogContent({
           'bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border p-6 shadow-xl duration-200 sm:max-w-lg',
           className,
         )}
-        {...props}
+        {...(props as any)}
       />
     </AlertDialogPortal>
   );
@@ -71,7 +71,7 @@ function AlertDialogHeader({
     <div
       data-slot="alert-dialog-header"
       className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -87,7 +87,7 @@ function AlertDialogFooter({
         'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -103,7 +103,7 @@ function AlertDialogTitle({
         'text-lg font-semibold text-pink-900 dark:text-pink-100',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -116,7 +116,7 @@ function AlertDialogDescription({
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
       className={cn('text-pink-700 dark:text-pink-300 text-sm', className)}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -128,7 +128,7 @@ function AlertDialogAction({
   return (
     <AlertDialogPrimitive.Action
       className={cn(buttonVariants(), className)}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -140,7 +140,7 @@ function AlertDialogCancel({
   return (
     <AlertDialogPrimitive.Cancel
       className={cn(buttonVariants({ variant: 'outline' }), className)}
-      {...props}
+      {...(props as any)}
     />
   );
 }

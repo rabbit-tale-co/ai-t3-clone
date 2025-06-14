@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, memo, startTransition } from 'react';
+import { useState, useEffect, memo, } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,6 @@ import {
   ShareIcon,
   TrashIcon,
   TagIcon,
-  MessageSquare,
   Hash,
   FolderIcon,
 } from 'lucide-react';

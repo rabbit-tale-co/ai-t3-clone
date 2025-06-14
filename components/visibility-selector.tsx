@@ -32,25 +32,28 @@ export function VisibilitySelector({
 
   const { t } = useLanguage();
 
-  const visibilities: Array<{
-    id: VisibilityType;
-    label: string;
-    description: string;
-    icon: ReactNode;
-  }> = [
-    {
-      id: 'private',
-      label: t('chat.buttons.private'),
-      description: t('chat.buttons.privateDescription'),
-      icon: <LockIcon />,
-    },
-    {
-      id: 'public',
-      label: t('chat.buttons.public'),
-      description: t('chat.buttons.publicDescription'),
-      icon: <GlobeIcon />,
-    },
-  ];
+  const visibilities = useMemo(
+    (): Array<{
+      id: VisibilityType;
+      label: string;
+      description: string;
+      icon: ReactNode;
+    }> => [
+      {
+        id: 'private',
+        label: t('chat.buttons.private'),
+        description: t('chat.buttons.privateDescription'),
+        icon: <LockIcon />,
+      },
+      {
+        id: 'public',
+        label: t('chat.buttons.public'),
+        description: t('chat.buttons.publicDescription'),
+        icon: <GlobeIcon />,
+      },
+    ],
+    [t],
+  );
 
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId,
@@ -59,7 +62,7 @@ export function VisibilitySelector({
 
   const selectedVisibility = useMemo(
     () => visibilities.find((visibility) => visibility.id === visibilityType),
-    [visibilityType],
+    [visibilityType, visibilities],
   );
 
   return (

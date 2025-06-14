@@ -40,7 +40,7 @@ function SelectTrigger({
         "border-pink-300 dark:border-pink-700/50 data-[placeholder]:text-pink-500 dark:data-[placeholder]:text-pink-400 [&_svg:not([class*='text-'])]:text-pink-600 dark:[&_svg:not([class*='text-'])]:text-pink-400 focus-visible:border-pink-500 dark:focus-visible:border-pink-600 focus-visible:ring-pink-400/20 dark:focus-visible:ring-pink-600/20 aria-invalid:ring-red-500/20 dark:aria-invalid:ring-red-400/20 aria-invalid:border-red-500 dark:aria-invalid:border-red-400 bg-pink-50/50 dark:bg-pink-950/30 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 text-pink-900 dark:text-pink-100 flex w-fit items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm whitespace-nowrap shadow-sm transition-[color,box-shadow,background-color] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       {children}
       <SelectPrimitive.Icon asChild>
@@ -67,7 +67,7 @@ function SelectContent({
           className,
         )}
         position={position}
-        {...props}
+        {...(props as any)}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
@@ -96,7 +96,7 @@ function SelectLabel({
         'text-pink-800 dark:text-pink-200 px-3 py-2 text-xs font-semibold',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -113,7 +113,7 @@ function SelectItem({
         "hover:bg-pink-100 dark:hover:bg-pink-900/50 focus:bg-pink-100 dark:focus:bg-pink-900/50 text-pink-900 dark:text-pink-100 [&_svg:not([class*='text-'])]:text-pink-600 dark:[&_svg:not([class*='text-'])]:text-pink-400 relative flex w-full cursor-default items-center gap-2 rounded-lg py-2 pr-8 pl-3 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 transition-colors",
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
@@ -136,7 +136,7 @@ function SelectSeparator({
         'bg-pink-200/50 dark:bg-pink-800/30 pointer-events-none -mx-1 my-1 h-px',
         className,
       )}
-      {...props}
+      {...(props as any)}
     />
   );
 }
@@ -152,7 +152,7 @@ function SelectScrollUpButton({
         'text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 flex cursor-default items-center justify-center py-1 transition-colors',
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       <ChevronUpIcon className="size-4" />
     </SelectPrimitive.ScrollUpButton>
@@ -170,7 +170,7 @@ function SelectScrollDownButton({
         'text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 flex cursor-default items-center justify-center py-1 transition-colors',
         className,
       )}
-      {...props}
+      {...(props as any)}
     >
       <ChevronDownIcon className="size-4" />
     </SelectPrimitive.ScrollDownButton>

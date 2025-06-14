@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { chatModels } from '@/lib/ai/models';
 
 const textPartSchema = z.object({
@@ -12,9 +12,9 @@ const allowedChatModels = chatModels.map((model) => model.id) as [
 ];
 
 export const postRequestBodySchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   message: z.object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     createdAt: z.coerce.date(),
     role: z.enum(['user']),
     content: z.string().min(1).max(2000),
@@ -22,9 +22,9 @@ export const postRequestBodySchema = z.object({
     experimental_attachments: z
       .array(
         z.object({
-          url: z.string().url(),
+          url: z.url(),
           name: z.string().min(1).max(2000),
-          contentType: z.enum(['image/png', 'image/jpg', 'image/jpeg']),
+          contentType: z.file(),
         }),
       )
       .optional(),

@@ -52,7 +52,7 @@ export function FileUploadCard({
       const totalFiles = [...selectedFiles, ...newFiles];
 
       if (totalFiles.length > maxFiles) {
-        alert(`Możesz przesłać maksymalnie ${maxFiles} plików.`);
+        alert(`You can upload a maximum of ${maxFiles} files.`);
         return;
       }
 
@@ -66,7 +66,7 @@ export function FileUploadCard({
       const totalFiles = [...selectedFiles, ...newFiles];
 
       if (totalFiles.length > maxFiles) {
-        alert(`Możesz przesłać maksymalnie ${maxFiles} plików.`);
+        alert(`You can upload a maximum of ${maxFiles} files.`);
         return;
       }
 
@@ -85,11 +85,15 @@ export function FileUploadCard({
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bajtów';
+    if (bytes === 0) return '0 bytes';
     const k = 1024;
-    const sizes = ['Bajty', 'KB', 'MB', 'GB'];
+    const sizes = ['bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
+
+    const size = bytes / Math.pow(k, i);
+    const formattedSize = i === 0 ? size.toString() : size.toFixed(1);
+
+    return `${formattedSize} ${sizes[i]}`;
   };
 
   return (
@@ -98,7 +102,7 @@ export function FileUploadCard({
         <DialogHeader className="border-b border-pink-200/50 dark:border-pink-800/30 pb-4">
           <DialogTitle className="flex items-center gap-2 text-pink-900 dark:text-pink-100">
             <Paperclip className="size-5 text-pink-600 dark:text-pink-400" />
-            Prześlij Pliki
+            Upload Files
           </DialogTitle>
         </DialogHeader>
 
@@ -122,12 +126,10 @@ export function FileUploadCard({
                 <Upload className="size-6 text-pink-600 dark:text-pink-400" />
               </div>
               <h3 className="font-medium mb-1 text-pink-900 dark:text-pink-100">
-                {dragActive
-                  ? 'Upuść pliki tutaj'
-                  : 'Przeciągnij i upuść pliki tutaj'}
+                {dragActive ? 'Drop files here' : 'Drag and drop files here'}
               </h3>
               <p className="text-xs text-pink-700 dark:text-pink-300 mb-3">
-                Obrazy, PDF i dokumenty (maks. {maxFiles} plików)
+                Images, PDF and documents (max. {maxFiles} files)
               </p>
               <input
                 ref={fileInputRef}
@@ -147,7 +149,7 @@ export function FileUploadCard({
                 }}
               >
                 <ImagePlus className="size-3 mr-1.5" />
-                Przeglądaj Pliki
+                Browse Files
               </Button>
             </CardContent>
           </Card>
@@ -158,7 +160,7 @@ export function FileUploadCard({
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-medium text-pink-900 dark:text-pink-100">
-                    Wybrane Pliki
+                    Selected Files
                   </h3>
                   <Badge
                     variant="secondary"
@@ -173,7 +175,7 @@ export function FileUploadCard({
                   onClick={() => setSelectedFiles([])}
                   className="h-7 px-2 text-xs text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 rounded-lg"
                 >
-                  Usuń wszystkie
+                  Remove all
                 </Button>
               </div>
 
@@ -183,8 +185,8 @@ export function FileUploadCard({
                     key={file.name}
                     className="flex items-center gap-3 p-2 rounded-lg border border-pink-200/50 dark:border-pink-800/30 group bg-pink-50/30 dark:bg-pink-950/20"
                   >
-                    <div className="size-8 rounded border border-pink-300 dark:border-pink-700 flex items-center justify-center flex-shrink-0 bg-pink-100/50 dark:bg-pink-900/30">
-                      {file.type.startsWith('image/') ? (
+                    <div className="size-8 rounded border border-pink-300 dark:border-pink-700 flex items-center justify-center bg-pink-100/50 dark:bg-pink-900/30">
+                      {file.type?.startsWith('image/') ? (
                         <ImagePlus className="size-4 text-pink-600 dark:text-pink-400" />
                       ) : (
                         <FileText className="size-4 text-pink-600 dark:text-pink-400" />
@@ -219,14 +221,14 @@ export function FileUploadCard({
               onClick={onClose}
               className="flex-1 border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/50 rounded-lg"
             >
-              Anuluj
+              Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={selectedFiles.length === 0}
               className="flex-1 bg-gradient-to-r from-pink-500 to-pink-400 hover:from-pink-400 hover:to-pink-300 text-white rounded-lg shadow-sm"
             >
-              Prześlij {selectedFiles.length > 0 && `(${selectedFiles.length})`}
+              Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
             </Button>
           </div>
         </div>

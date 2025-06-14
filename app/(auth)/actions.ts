@@ -1,15 +1,13 @@
 'use server';
 
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { redirect } from 'next/navigation';
 
 import { createUser, getUser, updateUserById } from '@/lib/db/queries';
-import { auth } from './auth';
-import { signIn } from './auth';
+import { auth, signIn } from './auth';
 
 const authFormSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(6),
 });
 
@@ -88,7 +86,7 @@ export const register = async (
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(2).max(50),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 export interface UpdateProfileActionState {

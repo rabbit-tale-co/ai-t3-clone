@@ -38,7 +38,17 @@ export const userApiKey = pgTable('UserApiKey', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   provider: varchar('provider', {
-    enum: ['openai', 'anthropic', 'google', 'xai', 'openrouter'],
+    enum: [
+      'openai',
+      'anthropic',
+      'google',
+      'xai',
+      'openrouter',
+      'groq',
+      'perplexity',
+      'cohere',
+      'mistral',
+    ],
   }).notNull(),
   keyName: varchar('keyName', { length: 100 }).notNull(), // User-friendly name
   encryptedKey: text('encryptedKey').notNull(), // Encrypted API key

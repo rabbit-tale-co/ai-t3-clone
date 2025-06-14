@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn, getReadableBorderColor } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import type { Tag } from '@/lib/db/schema';
 import type { UserType } from '@/app/(auth)/auth';
@@ -306,14 +305,16 @@ export function ManageTagsDialog({
                   >
                     <Hash className="size-4 mr-2" />
                     {isCreating
-                      ? t('tags.saving')
+                      ? /* TODO: add translation */
+                        'Saving...'
                       : (() => {
                           const entitlements = getUserEntitlements(userType);
                           if (
                             entitlements.maxTags !== -1 &&
                             tags.length >= entitlements.maxTags
                           ) {
-                            return t('tags.limitReached');
+                            // TODO: add translation
+                            return 'Limit reached';
                           }
                           return t('tags.createTag');
                         })()}

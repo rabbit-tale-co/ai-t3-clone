@@ -68,6 +68,8 @@ export function getUserEntitlements(userType: UserType): Entitlements {
   return entitlementsByUserType[userType] || entitlementsByUserType.guest;
 }
 
+// Note: getUserEntitlementsWithModels was removed - use getAvailableModelsAction from server actions instead
+
 export function canCreateFolder(
   userType: UserType,
   currentFolderCount: number,

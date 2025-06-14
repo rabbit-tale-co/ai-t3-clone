@@ -170,7 +170,7 @@ export function PureMessageActions({
               variant="ghost"
               size="sm"
               onClick={handleCopy}
-              className="h-8 w-8 p-0 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 hover:text-pink-800 dark:hover:text-pink-200 rounded-lg"
+              className="size-8 p-0 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 hover:text-pink-800 dark:hover:text-pink-200 rounded-lg"
             >
               <CopyIcon className="size-3.5" />
             </Button>
@@ -230,7 +230,7 @@ export function PureMessageActions({
                 variant="ghost"
                 size="sm"
                 onClick={onRegenerate}
-                className="h-8 w-8 p-0 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 hover:text-pink-800 dark:hover:text-pink-200 rounded-lg"
+                className="size-8 p-0 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 hover:text-pink-800 dark:hover:text-pink-200 rounded-lg"
               >
                 <RefreshCw className="size-3.5" />
               </Button>
@@ -245,7 +245,7 @@ export function PureMessageActions({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 hover:text-pink-800 dark:hover:text-pink-200 rounded-lg"
+              className="size-8 p-0 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/50 hover:text-pink-800 dark:hover:text-pink-200 rounded-lg"
             >
               <MoreHorizontal className="size-3.5" />
             </Button>

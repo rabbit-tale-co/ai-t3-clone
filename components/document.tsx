@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import type { ArtifactKind } from './artifact';
+import type { ArtifactKind } from './chat/artifact';
 import {
   FileIcon,
   LoaderIcon,

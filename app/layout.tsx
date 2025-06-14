@@ -5,7 +5,6 @@ import { ThemeProvider } from '@/components/theme-provider';
 
 import './globals.css';
 import { SessionProvider } from 'next-auth/react';
-import Script from 'next/script';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chat.vercel.ai'),

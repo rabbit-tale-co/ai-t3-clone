@@ -1,6 +1,4 @@
 'use client';
-
-import type { Message } from 'ai';
 import cx from 'classnames';
 import {
   AnimatePresence,
@@ -26,8 +24,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { ArrowUpIcon, StopCircleIcon, FileTextIcon } from 'lucide-react';
-import { artifactDefinitions, type ArtifactKind } from './artifact';
+import {
+  ArrowUpIcon,
+  StopCircleIcon,
+  FileTextIcon,
+  Sparkles,
+} from 'lucide-react';
+import { artifactDefinitions, type ArtifactKind } from './chat/artifact';
 import type { ArtifactToolbarItem } from './create-artifact';
 import type { UseChatHelpers } from '@ai-sdk/react';
 
@@ -90,9 +93,15 @@ const Tool = ({
     <Tooltip open={isHovered && !isAnimating}>
       <TooltipTrigger asChild>
         <motion.div
-          className={cx('p-3 rounded-full', {
-            'bg-primary text-primary-foreground!': selectedTool === description,
-          })}
+          className={cx(
+            'relative p-3 rounded-full cursor-pointer transition-all duration-300 group',
+            {
+              'bg-gradient-to-r from-pink-500 to-pink-600 text-white shadow-lg shadow-pink-500/25':
+                selectedTool === description,
+              'bg-gradient-to-r from-pink-50/80 to-pink-100/60 dark:from-pink-950/50 dark:to-pink-900/30 text-pink-700 dark:text-pink-300 hover:from-pink-100/90 hover:to-pink-200/70 dark:hover:from-pink-900/60 dark:hover:to-pink-800/40 border border-pink-200/50 dark:border-pink-800/30':
+                selectedTool !== description,
+            },
+          )}
           onHoverStart={() => {
             setIsHovered(true);
           }}
@@ -104,28 +113,84 @@ const Tool = ({
               handleSelect();
             }
           }}
-          initial={{ scale: 1, opacity: 0 }}
-          animate={{ opacity: 1, transition: { delay: 0.1 } }}
-          whileHover={{ scale: 1.1 }}
+          initial={{ scale: 1, opacity: 0, y: 10 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            transition: {
+              delay: 0.1,
+              type: 'spring',
+              stiffness: 400,
+              damping: 25,
+            },
+          }}
+          whileHover={{
+            scale: 1.1,
+            transition: { type: 'spring', stiffness: 400, damping: 25 },
+          }}
           whileTap={{ scale: 0.95 }}
           exit={{
             scale: 0.9,
             opacity: 0,
-            transition: { duration: 0.1 },
+            y: 10,
+            transition: { duration: 0.2 },
           }}
           onClick={() => {
             handleSelect();
           }}
+          tabIndex={0}
         >
-          {selectedTool === description ? <ArrowUpIcon /> : icon}
+          {/* Glow effect for selected tool */}
+          {selectedTool === description && (
+            <motion.div
+              className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 opacity-20 blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.3 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
+
+          {/* Icon with animation */}
+          <motion.div
+            initial={{ rotate: 0 }}
+            animate={{
+              rotate: selectedTool === description ? 180 : 0,
+              transition: { type: 'spring', stiffness: 300, damping: 20 },
+            }}
+          >
+            {selectedTool === description ? (
+              <ArrowUpIcon className="size-5" />
+            ) : (
+              <div className="size-5 flex items-center justify-center">
+                {icon}
+              </div>
+            )}
+          </motion.div>
+
+          {/* Sparkle effect on hover */}
+          <AnimatePresence>
+            {isHovered && selectedTool !== description && (
+              <motion.div
+                className="absolute -top-1 -right-1"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0 }}
+              >
+                <Sparkles className="size-3 text-pink-500" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </TooltipTrigger>
       <TooltipContent
         side="left"
         sideOffset={16}
-        className="bg-foreground text-background rounded-2xl p-3 px-4"
+        className="bg-gradient-to-r from-pink-900 to-pink-800 text-pink-50 rounded-xl p-3 px-4 border border-pink-700/50 shadow-xl backdrop-blur-sm"
       >
-        {description}
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-3" />
+          {description}
+        </div>
       </TooltipContent>
     </Tooltip>
   );
@@ -170,16 +235,19 @@ const ReadingLevelSelector = ({
 
   return (
     <div className="relative flex flex-col justify-end items-center">
-      {randomArr.map((id) => (
+      {randomArr.map((id, index) => (
         <motion.div
           key={id}
           className="size-[40px] flex flex-row items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            transition: { delay: index * 0.05 },
+          }}
+          exit={{ opacity: 0, scale: 0 }}
         >
-          <div className="size-2 rounded-full bg-muted-foreground/40" />
+          <div className="size-2 rounded-full bg-gradient-to-r from-pink-300 to-pink-400 dark:from-pink-600 dark:to-pink-700 opacity-60" />
         </motion.div>
       ))}
 
@@ -188,53 +256,75 @@ const ReadingLevelSelector = ({
           <TooltipTrigger asChild>
             <motion.div
               className={cx(
-                'absolute bg-background p-3 border rounded-full flex flex-row items-center',
+                'absolute p-3 border rounded-full flex flex-row items-center backdrop-blur-sm transition-all duration-300 cursor-grab active:cursor-grabbing',
                 {
-                  'bg-primary text-primary-foreground': currentLevel !== 2,
-                  'bg-background text-foreground': currentLevel === 2,
+                  'bg-gradient-to-r from-pink-500 to-pink-600 text-white border-pink-400/50 shadow-lg shadow-pink-500/25':
+                    currentLevel !== 2,
+                  'bg-gradient-to-r from-pink-50/90 to-pink-100/70 dark:from-pink-950/80 dark:to-pink-900/60 text-pink-700 dark:text-pink-300 border-pink-200/50 dark:border-pink-800/30':
+                    currentLevel === 2,
                 },
               )}
               style={{ y }}
               drag="y"
               dragElastic={0}
               dragMomentum={false}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{
+                scale: 1.05,
+                transition: { type: 'spring', stiffness: 400, damping: 25 },
+              }}
               whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.1 }}
-              dragConstraints={{ top: -dragConstraints, bottom: 0 }}
-              onDragStart={() => {
-                setHasUserSelectedLevel(false);
+              dragConstraints={{
+                top: -dragConstraints,
+                bottom: 0,
               }}
               onDragEnd={() => {
-                if (currentLevel === 2) {
-                  setSelectedTool(null);
-                } else {
-                  setHasUserSelectedLevel(true);
-                }
-              }}
-              onClick={() => {
-                if (currentLevel !== 2 && hasUserSelectedLevel) {
-                  append({
-                    role: 'user',
-                    content: `Please adjust the reading level to ${LEVELS[currentLevel]} level.`,
-                  });
-
-                  setSelectedTool(null);
-                }
+                setHasUserSelectedLevel(true);
               }}
             >
-              {currentLevel === 2 ? <FileTextIcon /> : <ArrowUpIcon />}
+              <FileTextIcon className="size-4" />
+
+              {/* Glow effect */}
+              {currentLevel !== 2 && (
+                <motion.div
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-400 to-pink-600 opacity-20 blur-md -z-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.3 }}
+                />
+              )}
             </motion.div>
           </TooltipTrigger>
           <TooltipContent
             side="left"
             sideOffset={16}
-            className="bg-foreground text-background text-sm rounded-2xl p-3 px-4"
+            className="bg-gradient-to-r from-pink-900 to-pink-800 text-pink-50 rounded-xl p-3 px-4 border border-pink-700/50 shadow-xl backdrop-blur-sm"
           >
-            {LEVELS[currentLevel]}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-3" />
+                <span className="font-medium">Reading Level</span>
+              </div>
+              <span className="text-sm text-pink-200">
+                {LEVELS[currentLevel]}
+              </span>
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      <motion.div
+        className="p-3 rounded-full bg-gradient-to-r from-pink-500 to-pink-600 text-white cursor-pointer shadow-lg shadow-pink-500/25 hover:from-pink-600 hover:to-pink-700 transition-all duration-300"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => {
+          append({
+            role: 'user',
+            content: `Please adjust the reading level to: ${LEVELS[currentLevel]}`,
+          });
+          setSelectedTool(null);
+        }}
+      >
+        <ArrowUpIcon className="size-4" />
+      </motion.div>
     </div>
   );
 };
@@ -256,28 +346,55 @@ export const Tools = ({
   setIsToolbarVisible: Dispatch<SetStateAction<boolean>>;
   tools: Array<ArtifactToolbarItem>;
 }) => {
+  if (tools.length === 0) {
+    return null;
+  }
+
   const [primaryTool, ...secondaryTools] = tools;
 
   return (
     <motion.div
-      className="flex flex-col gap-1.5"
-      initial={{ opacity: 0, scale: 0.95 }}
+      className="flex flex-col gap-2"
+      initial={{ opacity: 0 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
     >
       <AnimatePresence>
         {isToolbarVisible &&
-          secondaryTools.map((secondaryTool) => (
-            <Tool
+          secondaryTools.map((secondaryTool, index) => (
+            <motion.div
               key={secondaryTool.description}
-              description={secondaryTool.description}
-              icon={secondaryTool.icon}
-              selectedTool={selectedTool}
-              setSelectedTool={setSelectedTool}
-              append={append}
-              isAnimating={isAnimating}
-              onClick={secondaryTool.onClick}
-            />
+              initial={{ opacity: 0, scale: 0, y: 20 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                transition: {
+                  delay: index * 0.05,
+                  type: 'spring',
+                  stiffness: 400,
+                  damping: 25,
+                },
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0,
+                y: 20,
+                transition: {
+                  delay: (secondaryTools.length - index - 1) * 0.03,
+                },
+              }}
+            >
+              <Tool
+                description={secondaryTool.description}
+                icon={secondaryTool.icon}
+                selectedTool={selectedTool}
+                setSelectedTool={setSelectedTool}
+                append={append}
+                isAnimating={isAnimating}
+                onClick={secondaryTool.onClick}
+              />
+            </motion.div>
           ))}
       </AnimatePresence>
 
@@ -314,12 +431,14 @@ const PureToolbar = ({
   artifactKind: ArtifactKind;
 }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  useOnClickOutside(toolbarRef, () => {
+  useOnClickOutside(toolbarRef as React.RefObject<HTMLElement>, () => {
     setIsToolbarVisible(false);
     setSelectedTool(null);
   });
@@ -372,81 +491,134 @@ const PureToolbar = ({
   return (
     <TooltipProvider delayDuration={0}>
       <motion.div
-        className="cursor-pointer absolute right-6 bottom-6 p-1.5 border rounded-full shadow-lg bg-background flex flex-col justify-end"
-        initial={{ opacity: 0, y: -20, scale: 1 }}
-        animate={
-          isToolbarVisible
-            ? selectedTool === 'adjust-reading-level'
-              ? {
-                  opacity: 1,
-                  y: 0,
-                  height: 6 * 43,
-                  transition: { delay: 0 },
-                  scale: 0.95,
-                }
-              : {
-                  opacity: 1,
-                  y: 0,
-                  height: toolsByArtifactKind.length * 50,
-                  transition: { delay: 0 },
-                  scale: 1,
-                }
-            : { opacity: 1, y: 0, height: 54, transition: { delay: 0 } }
-        }
-        exit={{ opacity: 0, y: -20, transition: { duration: 0.1 } }}
+        className="fixed right-6 bottom-6 z-50"
+        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.8 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        onHoverStart={() => {
-          if (status === 'streaming') return;
-
-          cancelCloseTimer();
-          setIsToolbarVisible(true);
-        }}
-        onHoverEnd={() => {
-          if (status === 'streaming') return;
-
-          startCloseTimer();
-        }}
-        onAnimationStart={() => {
-          setIsAnimating(true);
-        }}
-        onAnimationComplete={() => {
-          setIsAnimating(false);
-        }}
-        ref={toolbarRef}
       >
-        {status === 'streaming' ? (
+        <motion.div
+          className={cx(
+            'relative p-2 rounded-2xl backdrop-blur-md border shadow-2xl flex flex-col justify-end gap-2 cursor-pointer transition-all duration-500',
+            {
+              'bg-gradient-to-br from-pink-50/95 to-pink-100/90 dark:from-pink-950/95 dark:to-pink-900/90 border-pink-200/50 dark:border-pink-800/30 shadow-pink-500/10':
+                !status || status !== 'streaming',
+              'bg-gradient-to-br from-red-50/95 to-red-100/90 dark:from-red-950/95 dark:to-red-900/90 border-red-200/50 dark:border-red-800/30 shadow-red-500/10':
+                status === 'streaming',
+            },
+          )}
+          animate={
+            isToolbarVisible
+              ? selectedTool === 'adjust-reading-level'
+                ? {
+                    height: 6 * 50 + 32,
+                    transition: { type: 'spring', stiffness: 300, damping: 25 },
+                  }
+                : {
+                    height: toolsByArtifactKind.length * 56 + 32,
+                    transition: { type: 'spring', stiffness: 300, damping: 25 },
+                  }
+              : {
+                  height: 70,
+                  transition: { type: 'spring', stiffness: 300, damping: 25 },
+                }
+          }
+          onHoverStart={() => {
+            if (status === 'streaming') return;
+            cancelCloseTimer();
+            setIsToolbarVisible(true);
+          }}
+          onHoverEnd={() => {
+            if (status === 'streaming') return;
+            startCloseTimer();
+          }}
+          onAnimationStart={() => {
+            setIsAnimating(true);
+          }}
+          onAnimationComplete={() => {
+            setIsAnimating(false);
+          }}
+          ref={toolbarRef}
+        >
+          {/* Background glow effect */}
           <motion.div
-            key="stop-icon"
-            initial={{ scale: 1 }}
-            animate={{ scale: 1.4 }}
-            exit={{ scale: 1 }}
-            className="p-3"
-            onClick={() => {
-              stop();
-              setMessages((messages) => messages);
+            className="absolute inset-0 rounded-2xl bg-gradient-to-br from-pink-400/20 to-pink-600/20 blur-xl -z-10"
+            animate={{
+              opacity: isToolbarVisible ? 0.6 : 0.3,
+              scale: isToolbarVisible ? 1.1 : 1,
             }}
-          >
-            <StopCircleIcon />
-          </motion.div>
-        ) : selectedTool === 'adjust-reading-level' ? (
-          <ReadingLevelSelector
-            key="reading-level-selector"
-            append={append}
-            setSelectedTool={setSelectedTool}
-            isAnimating={isAnimating}
+            transition={{ duration: 0.3 }}
           />
-        ) : (
-          <Tools
-            key="tools"
-            append={append}
-            isAnimating={isAnimating}
-            isToolbarVisible={isToolbarVisible}
-            selectedTool={selectedTool}
-            setIsToolbarVisible={setIsToolbarVisible}
-            setSelectedTool={setSelectedTool}
-            tools={toolsByArtifactKind}
-          />
-        )}
+
+          {status === 'streaming' ? (
+            <motion.div
+              key="stop-icon"
+              className="p-4 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white cursor-pointer shadow-lg shadow-red-500/25 hover:from-red-600 hover:to-red-700 transition-all duration-300"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                stop();
+                setMessages((messages) => messages);
+              }}
+            >
+              <StopCircleIcon className="size-6" />
+            </motion.div>
+          ) : selectedTool === 'adjust-reading-level' ? (
+            <ReadingLevelSelector
+              key="reading-level-selector"
+              append={append}
+              setSelectedTool={setSelectedTool}
+              isAnimating={isAnimating}
+            />
+          ) : (
+            <Tools
+              key="tools"
+              append={append}
+              isAnimating={isAnimating}
+              isToolbarVisible={isToolbarVisible}
+              selectedTool={selectedTool}
+              setIsToolbarVisible={setIsToolbarVisible}
+              setSelectedTool={setSelectedTool}
+              tools={toolsByArtifactKind}
+            />
+          )}
+
+          {/* Floating particles effect */}
+          <AnimatePresence>
+            {isToolbarVisible &&
+              [...Array(3)].map((_, i) => {
+                const delay = i * 0.5;
+                return (
+                  <motion.div
+                    key={nanoid()}
+                    className="absolute size-1 bg-pink-400 rounded-full opacity-60"
+                    initial={{
+                      opacity: 0,
+                      x: Math.random() * 20 - 10,
+                      y: Math.random() * 20 - 10,
+                    }}
+                    animate={{
+                      opacity: [0, 1, 0],
+                      x: Math.random() * 40 - 20,
+                      y: Math.random() * 40 - 20,
+                      transition: {
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        delay,
+                      },
+                    }}
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                    }}
+                  />
+                );
+              })}
+          </AnimatePresence>
+        </motion.div>
       </motion.div>
     </TooltipProvider>
   );

@@ -20,12 +20,7 @@ const iconsByType: Record<'success' | 'error' | 'info' | 'warning', ReactNode> =
 
 export function toast(props: Omit<ToastProps, 'id'>) {
   return sonnerToast.custom((id) => (
-    <Toast
-      id={id}
-      type={props.type}
-      description={props.description}
-      action={props.action}
-    />
+    <Toast id={id} type={props.type} description={props.description} />
   ));
 }
 

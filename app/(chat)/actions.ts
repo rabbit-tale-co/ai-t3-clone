@@ -15,7 +15,6 @@ import {
   getTagsByChatId,
   getTagsByUserId,
   updateChatVisiblityById,
-  getChatById,
   addTagToChat,
   removeTagFromChat,
   removeChatFromFolder,

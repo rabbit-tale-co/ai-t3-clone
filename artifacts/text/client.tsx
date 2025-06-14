@@ -79,22 +79,28 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
     }
 
     return (
-      <>
-        <div className="flex flex-row py-8 md:p-20 px-4">
-          <Editor
-            content={content}
-            suggestions={metadata ? metadata.suggestions : []}
-            isCurrentVersion={isCurrentVersion}
-            currentVersionIndex={currentVersionIndex}
-            status={status}
-            onSaveContent={onSaveContent}
-          />
-
-          {metadata?.suggestions?.length > 0 ? (
-            <div className="md:hidden h-dvh w-12 shrink-0" />
-          ) : null}
+      <div className="flex flex-col h-full bg-background">
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-4xl mx-auto px-6 py-8">
+            <div className="bg-card border border-border rounded-xl shadow-sm">
+              <div className="p-8">
+                <Editor
+                  content={content}
+                  suggestions={metadata ? metadata.suggestions : []}
+                  isCurrentVersion={isCurrentVersion}
+                  currentVersionIndex={currentVersionIndex}
+                  status={status}
+                  onSaveContent={onSaveContent}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-      </>
+
+        {metadata?.suggestions?.length > 0 && (
+          <div className="md:hidden h-12 shrink-0" />
+        )}
+      </div>
     );
   },
   actions: [

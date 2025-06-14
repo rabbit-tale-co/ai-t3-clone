@@ -66,18 +66,18 @@ const PurePreviewMessage = ({
         >
           {/* Assistant Avatar */}
           {message.role === 'assistant' && (
-            <div className="flex-shrink-0">
-              <Avatar className="size-10 border-2 border-pink-200 dark:border-pink-800">
-                <AvatarImage src="/ai-avatar.png" />
-                <AvatarFallback className="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900 dark:to-pink-800">
-                  <Bot className="size-5 text-pink-600 dark:text-pink-400" />
-                </AvatarFallback>
-              </Avatar>
-            </div>
+            <Avatar className="size-10 border-2 border-pink-200 dark:border-pink-800">
+              <AvatarImage src="/ai-avatar.png" />
+              <AvatarFallback className="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900 dark:to-pink-800">
+                <Bot className="size-5 text-pink-600 dark:text-pink-400" />
+              </AvatarFallback>
+            </Avatar>
           )}
 
           <div
-            className={cn('flex flex-col gap-3 w-full', {
+            className={cn('flex flex-col gap-3', {
+              'w-fit': mode !== 'edit',
+              'w-full': mode === 'edit',
               'min-h-96': message.role === 'assistant' && requiresScrollPadding,
             })}
           >
@@ -118,10 +118,10 @@ const PurePreviewMessage = ({
                     <div key={key} className="flex flex-col gap-2">
                       <div
                         className={cn(
-                          'relative rounded-2xl px-4 py-3 backdrop-blur-sm border group',
+                          'relative rounded-t-[38px] px-3 py-1.5 backdrop-blur-sm border group',
                           message.role === 'user'
-                            ? 'bg-gradient-to-br from-pink-500 to-pink-600 text-white border-pink-400 ml-auto max-w-2xl'
-                            : 'bg-gradient-to-br from-pink-50/80 to-pink-100/60 dark:from-pink-950/20 dark:to-pink-900/10 text-pink-900 dark:text-pink-100 border-pink-200/50 dark:border-pink-800/30',
+                            ? 'rounded-bl-[38px] rounded-br-xl bg-gradient-to-br from-pink-500 to-pink-600 text-white border-pink-400 ml-auto max-w-2xl'
+                            : 'rounded-br-[38px] rounded-bl-xl bg-gradient-to-br from-pink-50/80 to-pink-100/60 dark:from-pink-950/20 dark:to-pink-900/10 text-pink-900 dark:text-pink-100 border-pink-200/50 dark:border-pink-800/30',
                         )}
                       >
                         {/* Edit Button for User Messages */}
@@ -138,7 +138,7 @@ const PurePreviewMessage = ({
                                 <PencilIcon className="size-3.5" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Edytuj wiadomość</TooltipContent>
+                            <TooltipContent>Edit message</TooltipContent>
                           </Tooltip>
                         )}
 
@@ -263,14 +263,12 @@ const PurePreviewMessage = ({
 
           {/* User Avatar */}
           {message.role === 'user' && (
-            <div className="flex-shrink-0">
-              <Avatar className="size-10 border-2 border-pink-300 dark:border-pink-700">
-                <AvatarImage src="/user-avatar.png" />
-                <AvatarFallback className="bg-gradient-to-br from-pink-500 to-pink-600">
-                  <User className="size-5 text-white" />
-                </AvatarFallback>
-              </Avatar>
-            </div>
+            <Avatar className="size-10 border-2 border-pink-300 dark:border-pink-700">
+              <AvatarImage src="/user-avatar.png" />
+              <AvatarFallback className="bg-gradient-to-br from-pink-500 to-pink-600">
+                <User className="size-5 text-white" />
+              </AvatarFallback>
+            </Avatar>
           )}
         </div>
       </motion.div>
@@ -305,17 +303,15 @@ export const ThinkingMessage = () => {
     >
       <div className="flex gap-3">
         {/* Assistant Avatar */}
-        <div className="flex-shrink-0">
-          <Avatar className="size-10 border-2 border-pink-200 dark:border-pink-800">
-            <AvatarFallback className="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900 dark:to-pink-800">
-              <Bot className="size-5 text-pink-600 dark:text-pink-400" />
-            </AvatarFallback>
-          </Avatar>
-        </div>
+        <Avatar className="size-10 border-2 border-pink-200 dark:border-pink-800">
+          <AvatarFallback className="bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900 dark:to-pink-800">
+            <Bot className="size-5 text-pink-600 dark:text-pink-400" />
+          </AvatarFallback>
+        </Avatar>
 
         {/* Thinking Animation */}
-        <div className="flex flex-col gap-2 w-full">
-          <div className="bg-gradient-to-br from-pink-50/80 to-pink-100/60 dark:from-pink-950/20 dark:to-pink-900/10 border border-pink-200/50 dark:border-pink-800/30 rounded-2xl px-4 py-3 backdrop-blur-sm">
+        <div className="flex flex-col gap-2 w-fit">
+          <div className="bg-gradient-to-br from-pink-50/80 to-pink-100/60 dark:from-pink-950/20 dark:to-pink-900/10 border border-pink-200/50 dark:border-pink-800/30 rounded-t-[38px] rounded-br-[38px] rounded-bl-xl px-3 py-1.5 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-pink-700 dark:text-pink-300">
               <SparklesIcon className="size-4 animate-pulse" />
               <span className="text-sm font-medium">Hmm...</span>

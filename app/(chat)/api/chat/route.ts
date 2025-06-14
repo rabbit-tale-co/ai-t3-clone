@@ -96,10 +96,9 @@ export async function POST(request: Request) {
 
     if (!chat) {
       const title = await generateTitleFromUserMessage({
-        message,
+        message: message as any,
       });
 
-      console.log('Saving chat with folderId:', folderId);
       await saveChat({
         id,
         userId: session.user.id,
@@ -118,7 +117,7 @@ export async function POST(request: Request) {
     const messages = appendClientMessage({
       // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
       messages: previousMessages,
-      message,
+      message: message as any,
     });
 
     const { longitude, latitude, city, country } = geolocation(request);
@@ -187,7 +186,7 @@ export async function POST(request: Request) {
                 }
 
                 const [, assistantMessage] = appendResponseMessages({
-                  messages: [message],
+                  messages: [message as any],
                   responseMessages: response.messages,
                 });
 

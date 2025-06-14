@@ -1,15 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useWindowSize } from 'usehooks-ts';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { PlusIcon, Settings } from 'lucide-react';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { PlusIcon } from 'lucide-react';
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { memo } from 'react';
 import {
   type VisibilityType,
@@ -34,8 +33,8 @@ function PureChatHeader({
   session: Session;
 }) {
   const router = useRouter();
-  const { width: windowWidth } = useWindowSize();
   const { t } = useLanguage();
+  const { open: sidebarOpen, isMobile } = useSidebar();
 
   return (
     <header className="flex sticky top-0 bg-gradient-to-r from-pink-50/80 to-pink-100/60 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-md py-3 items-center px-4 gap-3 border-b border-pink-200/50 dark:border-pink-800/30 rounded-t-3xl z-10">
@@ -44,25 +43,30 @@ function PureChatHeader({
         {/* Sidebar Toggle */}
         <SidebarTrigger />
 
-        {/* New Chat Button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              // variant="outline"
-              onClick={() => {
-                router.push('/');
-                router.refresh();
-              }}
-              className="rounded-full"
-            >
-              <PlusIcon className="size-4" />
-              <span className="hidden sm:inline">
-                {t('navigation.header.newChat')}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('navigation.header.startNewChat')}</TooltipContent>
-        </Tooltip>
+        {/* New Chat Button - only show when sidebar is hidden */}
+        {(!sidebarOpen || isMobile) && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                // variant="outline"
+                size={isMobile ? 'icon' : 'default'}
+                onClick={() => {
+                  router.push('/');
+                  router.refresh();
+                }}
+                className="rounded-full"
+              >
+                <PlusIcon className="size-4" />
+                <span className="hidden sm:inline">
+                  {t('navigation.header.newChat')}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('navigation.header.startNewChat')}
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Visibility Selector */}
         {!isReadonly && (

@@ -126,27 +126,34 @@ function PureEditor({
   }, [content, status]);
 
   useEffect(() => {
-    if (editorRef.current?.state.doc && content) {
-      const projectedSuggestions = projectWithPositions(
-        editorRef.current.state.doc,
-        suggestions,
-      ).filter(
-        (suggestion) => suggestion.selectionStart && suggestion.selectionEnd,
-      );
+    if (editorRef.current?.state.doc && content && Array.isArray(suggestions)) {
+      try {
+        const projectedSuggestions = projectWithPositions(
+          editorRef.current.state.doc,
+          suggestions,
+        ).filter(
+          (suggestion) => suggestion.selectionStart && suggestion.selectionEnd,
+        );
 
-      const decorations = createDecorations(
-        projectedSuggestions,
-        editorRef.current,
-      );
+        const decorations = createDecorations(
+          projectedSuggestions,
+          editorRef.current,
+        );
 
-      const transaction = editorRef.current.state.tr;
-      transaction.setMeta(suggestionsPluginKey, { decorations });
-      editorRef.current.dispatch(transaction);
+        const transaction = editorRef.current.state.tr;
+        transaction.setMeta(suggestionsPluginKey, { decorations });
+        editorRef.current.dispatch(transaction);
+      } catch (error) {
+        console.error('Error processing suggestions:', error);
+      }
     }
   }, [suggestions, content]);
 
   return (
-    <div className="relative prose dark:prose-invert" ref={containerRef} />
+    <div
+      className="relative prose prose-neutral dark:prose-invert max-w-none prose-lg focus-within:outline-none"
+      ref={containerRef}
+    />
   );
 }
 
