@@ -2,14 +2,19 @@ import { Toaster } from '@/components/ui/sonner';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
+import PlausibleProvider from 'next-plausible';
 
 import './globals.css';
 import { SessionProvider } from 'next-auth/react';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://chat.vercel.ai'),
-  title: 'Next.js Chatbot Template',
-  description: 'Next.js chatbot template using the AI SDK.',
+  title: 'T3 Chat Cloneathon',
+  description:
+    'Build an open source clone of T3 Chat and compete for over $10,000 in prizes.',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export const viewport = {
@@ -54,42 +59,46 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      // `next-themes` injects an extra classname to the body element to avoid
-      // visual flicker before hydration. Hence the `suppressHydrationWarning`
-      // prop is necessary to avoid the React hydration mismatch warning.
-      // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
-      suppressHydrationWarning
-      className={`${geist.variable} ${geistMono.variable}`}
-    >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: THEME_COLOR_SCRIPT,
-          }}
-        />
-        {/* <Script
+    <PlausibleProvider domain="cloneathon.t3.gg">
+      <Analytics />
+
+      <html
+        lang="en"
+        // `next-themes` injects an extra classname to the body element to avoid
+        // visual flicker before hydration. Hence the `suppressHydrationWarning`
+        // prop is necessary to avoid the React hydration mismatch warning.
+        // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
+        suppressHydrationWarning
+        className={`${geist.variable} ${geistMono.variable}`}
+      >
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: THEME_COLOR_SCRIPT,
+            }}
+          />
+          {/* <Script
           src="//unpkg.com/react-scan/dist/auto.global.js"
           strategy="beforeInteractive"
         /> */}
-      </head>
-      <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Toaster position="top-right" richColors />
-          <SessionProvider
-            refetchInterval={5 * 60} // Refetch every 5 minutes instead of default
-            refetchOnWindowFocus={false} // Don't refetch on window focus
+        </head>
+        <body className="antialiased">
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
           >
-            {children}
-          </SessionProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+            <Toaster position="top-right" richColors />
+            <SessionProvider
+              refetchInterval={5 * 60} // Refetch every 5 minutes instead of default
+              refetchOnWindowFocus={false} // Don't refetch on window focus
+            >
+              {children}
+            </SessionProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    </PlausibleProvider>
   );
 }
