@@ -48,7 +48,24 @@ export function SettingsDialog({ user }: { user: UserData }) {
     maxMessages,
     resetTime,
     status: messageCountStatus,
+    refetch: refetchMessageCount,
   } = useMessageCount(session);
+
+  // Refetch data when dialog opens or when switching to account tab
+  React.useEffect(() => {
+    if (open && refetchMessageCount) {
+      refetchMessageCount();
+    }
+  }, [open, refetchMessageCount]);
+
+  // Also refetch when switching to account tab (where token info is displayed)
+  React.useEffect(() => {
+    if (open && activeTab === 'account' && refetchMessageCount) {
+      refetchMessageCount();
+    }
+  }, [activeTab, open, refetchMessageCount]);
+
+
 
   // Get user entitlements
   const entitlements = getUserEntitlements(user.type);
@@ -70,7 +87,7 @@ export function SettingsDialog({ user }: { user: UserData }) {
     const timeString = resetTime.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
+      hour12: true,
     });
 
     if (isToday) {

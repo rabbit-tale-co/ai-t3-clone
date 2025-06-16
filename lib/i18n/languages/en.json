@@ -242,8 +242,8 @@
       "accountCreated": "Account Created",
       "lastUpdated": "Last Updated",
       "upgradeToPro": "Upgrade to Pro",
-      "perMonth": "per month",
-      "perYear": "per year",
+      "perMonth": "month",
+      "perYear": "year",
       "card": {
         "accessToAllModels": {
           "title": "Access to All Models",
