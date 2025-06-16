@@ -243,8 +243,8 @@
       "accountCreated": "Konto utworzone",
       "lastUpdated": "Ostatnia aktualizacja",
       "upgradeToPro": "Przejdź na Pro",
-      "perMonth": "na miesiąc",
-      "perYear": "na rok",
+      "perMonth": "miesiąc",
+      "perYear": "rok",
       "card": {
         "accessToAllModels": {
           "title": "Dostęp do wszystkich modeli",

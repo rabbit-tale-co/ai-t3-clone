@@ -6,6 +6,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useSession } from 'next-auth/react';
+import { useMessageCount } from '@/hooks/use-message-count';
+import { getUserEntitlements } from '@/lib/ai/entitlements';
 
 interface UserType {
   id: string;

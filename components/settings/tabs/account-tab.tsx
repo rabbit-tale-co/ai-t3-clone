@@ -17,6 +17,8 @@ import {
   type UpdateProfileActionState,
   revalidateUserData,
 } from '@/app/(auth)/actions';
+import { useMessageCount } from '@/hooks/use-message-count';
+import { useSession } from 'next-auth/react';
 
 interface UserData {
   id: string;
@@ -44,9 +46,13 @@ function SubmitButton({ t }: { t: any }) {
 export function AccountTab({ user }: AccountTabProps) {
   const { t } = useLanguage();
   const router = useRouter();
+  const { data: session } = useSession();
   const [avatarUrl, setAvatarUrl] = React.useState(user?.avatar_url || '');
   const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Get token usage information
+  const { messagesLeft, messagesUsed, maxMessages, resetTime } = useMessageCount(session);
 
   const [state, formAction] = useActionState<
     UpdateProfileActionState,
