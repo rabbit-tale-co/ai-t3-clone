@@ -89,7 +89,7 @@
         "react-resizable-panels": "^3.0.2",
         "redis": "^5.0.0",
         "remark-gfm": "^4.0.0",
-        "resumable-stream": "^2.0.0",
+        "resumable-stream": "^2.2.0",
         "server-only": "^0.0.1",
         "sonner": "^2.0.5",
         "swr": "^2.2.5",

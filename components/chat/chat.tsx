@@ -24,6 +24,7 @@ import { FileUploadCard } from './file-upload-card';
 import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { chatModels } from '@/lib/ai/models';
 import { getAvailableModelsAction } from '@/app/(auth)/models-actions';
+import { useMessageCount } from '@/hooks/use-message-count';
 
 // Helper function to get provider ID from model ID
 const getProviderIdFromModelId = (modelId: string): string => {
@@ -75,6 +76,53 @@ export function Chat({
     chatId: id,
     initialVisibilityType,
   });
+
+  // Token reset confetti callback
+  const handleTokenReset = useCallback(() => {
+    // Import confetti dynamically to avoid SSR issues
+    import('canvas-confetti').then((confetti) => {
+      // Find the input textarea to get its position
+      const inputElement = document.querySelector('textarea');
+      let origin = { x: 0.5, y: 0.8 }; // Default to bottom center
+
+      if (inputElement) {
+        const rect = inputElement.getBoundingClientRect();
+        origin = {
+          x: (rect.left + rect.width / 2) / window.innerWidth,
+          y: (rect.top + rect.height / 2) / window.innerHeight,
+        };
+      }
+
+      // Confetti burst from input position
+      confetti.default({
+        particleCount: 150,
+        spread: 70,
+        origin,
+        colors: ['#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d'],
+        ticks: 300,
+        gravity: 0.6,
+        decay: 0.9,
+        startVelocity: 45,
+      });
+
+      // Additional burst after short delay
+      setTimeout(() => {
+        confetti.default({
+          particleCount: 100,
+          spread: 60,
+          origin,
+          colors: ['#fbbf24', '#f59e0b', '#d97706', '#b45309'],
+          ticks: 200,
+          gravity: 0.8,
+          decay: 0.9,
+          startVelocity: 35,
+        });
+      }, 300);
+    });
+  }, []);
+
+  // Fetch message count and usage info
+  const { messagesLeft, messagesUsed, maxMessages, resetTime, refetch: refetchMessageCount } = useMessageCount(session, handleTokenReset);
 
   // Fetch available models
   useEffect(() => {
@@ -170,6 +218,10 @@ export function Chat({
           addChatToSidebarCache(chatData);
         }
       }
+
+      // Refresh message count after AI response (user message was sent)
+      console.log('Calling refetchMessageCount from onFinish...');
+      refetchMessageCount();
 
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
@@ -379,8 +431,10 @@ export function Chat({
         setInput('');
         setAttachments([]);
       } else {
-        return handleSubmit(event);
+        handleSubmit(event);
       }
+
+      // Note: refetchMessageCount is called in onFinish callback after AI response
     },
     [
       messages.length,
@@ -445,7 +499,9 @@ export function Chat({
             isStreaming={status === 'streaming'}
             disabled={!input.trim() && attachments.length === 0}
             fileInputRef={{ current: null }}
-            hasRemainingUsage={true}
+            hasRemainingUsage={messagesLeft === null || messagesLeft > 0}
+            usage={messagesLeft !== null && maxMessages !== null ? { remaining: messagesLeft, limit: maxMessages } : null}
+            resetTime={resetTime}
             userType={session?.user?.type}
             isModelAvailable={isModelAvailable}
             loadingModels={loadingModels}

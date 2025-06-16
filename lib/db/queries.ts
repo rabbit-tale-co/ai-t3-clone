@@ -10,6 +10,8 @@ import {
   gte,
   inArray,
   lt,
+  not,
+  sql,
   type SQL,
 } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -32,12 +34,15 @@ import {
   chatTag,
   userApiKey,
   type UserApiKey,
+  type TokenRequestMonitor,
+  tokenRequestMonitor,
 } from './schema';
 import type { ArtifactKind } from '@/components/chat/artifact';
 import { generateUUID } from '../utils';
 import { generateHashedPassword } from './utils';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
+import { encryptApiKey } from '@/lib/crypto';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -100,6 +105,7 @@ export async function getFullUserData(id: string) {
       type: userType,
     };
   } catch (error) {
+    console.error('Failed to get full user data:', error);
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get full user data',
@@ -183,13 +189,13 @@ export async function saveChat({
   userId,
   title,
   visibility,
-  folderId, // Add folderId parameter
+  folderId,
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
-  folderId?: string | null; // Make folderId optional and allow null
+  folderId?: string | null;
 }) {
   try {
     return await db.insert(chat).values({
@@ -198,7 +204,7 @@ export async function saveChat({
       userId,
       title,
       visibility,
-      folderId, // Add folderId to the values
+      folderId,
     });
   } catch (error) {
     console.error('Failed to save chat:', error);
@@ -230,13 +236,13 @@ export async function getChatsByUserId({
   limit,
   startingAfter,
   endingBefore,
-  folderId, // Add folderId parameter
+  folderId,
 }: {
   id: string;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
-  folderId?: string | null; // Make folderId optional
+  folderId?: string | null;
 }) {
   try {
     const extendedLimit = limit + 1;
@@ -1285,5 +1291,152 @@ export async function deleteUserApiKey(
       'bad_request:database',
       'Failed to delete user API key',
     );
+  }
+}
+
+// Token Request Monitor Functions
+export async function incrementUserTokenRequest(userId: string): Promise<void> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const now = new Date();
+
+  try {
+    // Try to find existing record for today
+    const existingRecord = await db
+      .select()
+      .from(tokenRequestMonitor)
+      .where(
+        and(
+          eq(tokenRequestMonitor.userId, userId),
+          eq(tokenRequestMonitor.date, today)
+        )
+      )
+      .limit(1);
+
+    if (existingRecord.length > 0) {
+      // Update existing record - increment counter and update lastRequestAt
+      const currentCount = existingRecord[0].requestCount || 0;
+      await db
+        .update(tokenRequestMonitor)
+        .set({
+          requestCount: currentCount + 1,
+          lastRequestAt: now,
+          updatedAt: now,
+        })
+        .where(eq(tokenRequestMonitor.id, existingRecord[0].id));
+    } else {
+      // Create new record for today
+      await db.insert(tokenRequestMonitor).values({
+        userId,
+        date: today,
+        requestCount: 1,
+        firstRequestAt: now,
+        lastRequestAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  } catch (error) {
+    console.error('Error incrementing token request:', error);
+    throw error;
+  }
+}
+
+export async function getUserTokenRequestCount(userId: string): Promise<number> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  try {
+    const record = await db
+      .select()
+      .from(tokenRequestMonitor)
+      .where(
+        and(
+          eq(tokenRequestMonitor.userId, userId),
+          eq(tokenRequestMonitor.date, today)
+        )
+      )
+      .limit(1);
+
+    if (record.length > 0) {
+      // Check if reset time has passed
+      const resetTime = new Date(record[0].firstRequestAt);
+      resetTime.setHours(resetTime.getHours() + 24);
+
+      const now = new Date();
+      if (now >= resetTime) {
+        // Reset time has passed, delete the old record so count starts fresh
+        await db
+          .delete(tokenRequestMonitor)
+          .where(eq(tokenRequestMonitor.id, record[0].id));
+
+        return 0; // Fresh start
+      }
+
+      return record[0].requestCount || 0;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error('Error getting token request count:', error);
+    return 0;
+  }
+}
+
+export async function getUserTokenRequestResetTime(userId: string): Promise<Date | null> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  try {
+    const record = await db
+      .select()
+      .from(tokenRequestMonitor)
+      .where(
+        and(
+          eq(tokenRequestMonitor.userId, userId),
+          eq(tokenRequestMonitor.date, today)
+        )
+      )
+      .limit(1);
+
+    if (record.length > 0 && record[0].firstRequestAt) {
+      // Reset time is 24 hours after first request
+      const resetTime = new Date(record[0].firstRequestAt);
+      resetTime.setHours(resetTime.getHours() + 24);
+
+      const now = new Date();
+      if (now >= resetTime) {
+        // Reset time has passed, return null to indicate fresh start
+        return null;
+      }
+
+      return resetTime;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error getting token request reset time:', error);
+    return null;
+  }
+}
+
+// Fallback function for backward compatibility
+export async function getUserMessageCountFallback(userId: string): Promise<number> {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  try {
+    const messageCount = await db
+      .select()
+      .from(message)
+      .innerJoin(chat, eq(message.chatId, chat.id))
+      .where(
+        and(
+          eq(chat.userId, userId),
+          eq(message.role, 'user'),
+          gte(message.createdAt, twentyFourHoursAgo)
+        )
+      );
+
+    return messageCount.length;
+  } catch (error) {
+    console.error('Error getting fallback message count:', error);
+    return 0;
   }
 }

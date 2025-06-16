@@ -10,8 +10,9 @@ import {
   getChatsByFolderId,
   getFoldersByUserId,
   getMessageById,
-  getMessageCountByUserId,
-  getLastUserMessageTimestamp,
+  getUserTokenRequestCount,
+  getUserTokenRequestResetTime,
+  getUserMessageCountFallback,
   getTagsByChatId,
   getTagsByUserId,
   updateChatVisiblityById,
@@ -105,32 +106,41 @@ export async function getUserMessageCount(userId: string, userType: UserType) {
   'use server';
 
   try {
-    const messageCount = await getMessageCountByUserId({
-      id: userId,
-      differenceInHours: 24,
-    });
+    let messageCount: number;
+    let resetTime: Date | null;
 
-    const lastMessageTimestamp = await getLastUserMessageTimestamp({
-      id: userId,
-    });
+    try {
+      // Try new token request monitor system first
+      messageCount = await getUserTokenRequestCount(userId);
+      resetTime = await getUserTokenRequestResetTime(userId);
+
+    } catch (trackingError) {
+      console.warn(
+        'Token request monitor not available, falling back to old system:',
+        trackingError,
+      );
+
+      // Fallback to old system if token request monitor doesn't exist
+      messageCount = await getUserMessageCountFallback(userId);
+
+      // Use default reset time (2 AM tomorrow) for fallback
+      resetTime = new Date();
+      resetTime.setDate(resetTime.getDate() + 1);
+      resetTime.setHours(2, 0, 0, 0);
+    }
 
     const maxMessages =
       entitlementsByUserType[userType]?.maxMessagesPerDay || 0;
 
     const messagesLeft = Math.max(0, maxMessages - messageCount);
 
-    // Calculate reset time: 24 hours after the last message, or tomorrow at 2 AM if no messages
-    let resetTime: Date;
-    if (lastMessageTimestamp) {
-      resetTime = new Date(
-        lastMessageTimestamp.getTime() + 24 * 60 * 60 * 1000,
-      );
-    } else {
-      // If no messages, reset at 2 AM tomorrow
+    // If no reset time calculated, default to 2 AM tomorrow
+    if (!resetTime) {
       resetTime = new Date();
       resetTime.setDate(resetTime.getDate() + 1);
       resetTime.setHours(2, 0, 0, 0);
     }
+
     return {
       messagesLeft,
       messagesUsed: messageCount,

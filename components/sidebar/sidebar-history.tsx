@@ -416,6 +416,7 @@ export function SidebarHistory({
     if (!deleteId) return;
 
     const chatIdToDelete = deleteId;
+    const isCurrentChat = chatIdToDelete === params?.id;
 
     try {
       // Server action
@@ -424,14 +425,26 @@ export function SidebarHistory({
       // Revalidate to get fresh data
       await mutate();
 
-      toast.success('Chat deleted');
+      toast.success('Chat usuniety');
+
+      // Przekieruj jesli to aktualny chat
+      if (isCurrentChat) {
+        // Uzywamy replace zamiast push aby zastapic historie
+        router.replace('/');
+
+        // Dodatkowy fallback dla przypadkow gdy router.replace nie dziala
+        setTimeout(() => {
+          if (window.location.pathname !== '/') {
+            window.location.href = '/';
+          }
+        }, 100);
+      }
     } catch (error) {
       console.error('Failed to delete chat:', error);
-      toast.error('Failed to delete chat');
+      toast.error('Nie udalo sie usunac chatu');
     }
 
     setShowDeleteDialog(false);
-    if (chatIdToDelete === params?.id) router.push('/');
     setDeleteId(null);
   };
 

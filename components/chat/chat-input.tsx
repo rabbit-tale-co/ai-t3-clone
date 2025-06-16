@@ -62,6 +62,7 @@ interface ChatInputProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   hasRemainingUsage?: boolean;
   usage?: { remaining: number; limit: number } | null;
+  resetTime?: Date | null;
   userType?: 'guest' | 'regular' | 'pro' | 'admin';
   isModelAvailable?: boolean;
   loadingModels?: boolean;
@@ -86,6 +87,7 @@ export function ChatInput({
   fileInputRef,
   hasRemainingUsage = true,
   usage,
+  resetTime,
   userType = 'guest',
   isModelAvailable = true,
   loadingModels = false,
@@ -93,6 +95,39 @@ export function ChatInput({
   const { t } = useLanguage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
+  const [timeUntilReset, setTimeUntilReset] = useState<string>('');
+
+  // Update countdown timer
+  useEffect(() => {
+    if (!resetTime) return;
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const diff = resetTime.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeUntilReset('');
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (hours > 0) {
+        setTimeUntilReset(`${hours}h ${minutes}m`);
+      } else if (minutes > 0) {
+        setTimeUntilReset(`${minutes}m ${seconds}s`);
+      } else {
+        setTimeUntilReset(`${seconds}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [resetTime]);
 
   // Auto-resize textarea
   const adjustTextareaHeight = () => {
@@ -111,7 +146,6 @@ export function ChatInput({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      console.log('Enter pressed in ChatInput, calling onSubmit');
       onSubmit(e as unknown as React.FormEvent);
     }
   };
@@ -249,22 +283,51 @@ export function ChatInput({
             </div>
           )}
 
-          {/* Usage Warning for Guests */}
+          {/* Token Usage Alert - Always visible when 10 or fewer tokens remaining */}
           {usage && usage.remaining <= 10 && (
-            <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 max-w-sm mx-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200">
-              <Alert
-                variant={usage.remaining === 0 ? 'destructive' : 'default'}
-                className="bg-pink-50/90 dark:bg-pink-950/90 border-pink-200 dark:border-pink-800/50 backdrop-blur-md shadow-lg"
-              >
-                <AlertDescription className="text-pink-800 dark:text-pink-200">
-                  You have {usage.remaining} of {usage.limit} free messages
-                  remaining.
-                  {usage.remaining === 0
-                    ? ' Please sign in to continue.'
-                    : ' Sign in to increase your limits.'}
-                </AlertDescription>
-              </Alert>
-            </div>
+            <Alert
+              variant={usage.remaining === 0 ? 'destructive' : usage.remaining <= 3 ? 'destructive' : 'default'}
+              className={`backdrop-blur-md shadow-lg mb-3 w-fit mx-auto ${
+                usage.remaining === 0
+                  ? 'bg-red-50/90 dark:bg-red-950/90 border-red-200 dark:border-red-800/50'
+                  : usage.remaining <= 3
+                    ? 'bg-orange-50/90 dark:bg-orange-950/90 border-orange-200 dark:border-orange-800/50'
+                    : 'bg-yellow-50/90 dark:bg-yellow-950/90 border-yellow-200 dark:border-yellow-800/50'
+              }`}
+            >
+              <AlertDescription className={
+                usage.remaining === 0
+                  ? 'text-red-800 dark:text-red-200'
+                  : usage.remaining <= 3
+                    ? 'text-orange-800 dark:text-orange-200'
+                    : 'text-yellow-800 dark:text-yellow-200'
+              }>
+                {usage.remaining === 0 ? (
+                  <>
+                    {userType === 'guest'
+                      ? 'No free messages remaining. Please sign in to continue.'
+                      : 'Daily message limit reached. Try again later or upgrade to Pro.'
+                    }
+                    {timeUntilReset && (
+                      <div className="text-sm mt-1 opacity-80">
+                        New tokens available in: {timeUntilReset}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {usage.remaining} of {usage.limit} messages remaining today.
+                    {userType === 'guest' && ' Sign in to increase your limits.'}
+                    {userType === 'regular' && usage.remaining <= 3 && ' Consider upgrading to Pro for unlimited messages.'}
+                    {timeUntilReset && usage.remaining === 0 && (
+                      <div className="text-sm mt-1 opacity-80">
+                        Reset in: {timeUntilReset}
+                      </div>
+                    )}
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Main Input Form */}
@@ -281,7 +344,7 @@ export function ChatInput({
                 placeholder={t('chat.greetings.placeholder')}
                 className="min-h-16 max-h-48 resize-none rounded-2xl border-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-white/80 dark:bg-black/50 backdrop-blur-sm focus:bg-white dark:focus:bg-black/70 transition-colors focus:border-pink-400 dark:focus:border-pink-600 focus:ring-pink-400/20 dark:focus:ring-pink-600/20"
                 onKeyDown={handleKeyDown}
-                disabled={isStreaming}
+                disabled={isStreaming || !hasRemainingUsage}
               />
             </div>
 
@@ -314,7 +377,7 @@ export function ChatInput({
                       <span className="hidden sm:inline">
                         {t('chat.input.search')}
                       </span>
-                      {isPro && (
+                      {!isPro && (
                         <Badge className="absolute -top-2.5 -right-2.5 h-4 px-1.5 text-xs bg-pink-600 dark:bg-pink-700 text-white">
                           Pro
                         </Badge>

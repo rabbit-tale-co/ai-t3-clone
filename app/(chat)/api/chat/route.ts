@@ -11,11 +11,13 @@ import {
   createStreamId,
   deleteChatById,
   getChatById,
-  getMessageCountByUserId,
   getMessagesByChatId,
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
+  incrementUserTokenRequest,
+  getUserTokenRequestCount,
+  getUserMessageCountFallback,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
@@ -83,12 +85,21 @@ export async function POST(request: Request) {
 
     const userType: UserType = session.user.type;
 
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
+    let messageCount: number;
+    try {
+      // Try new token request monitor first
+      messageCount = await getUserTokenRequestCount(session.user.id);
+    } catch (trackingError) {
+      console.warn(
+        'Token request monitor not available, falling back to old system:',
+        trackingError,
+      );
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+      // Fallback to old system if token request monitor doesn't exist
+      messageCount = await getUserMessageCountFallback(session.user.id);
+    }
+
+    if (messageCount >= entitlementsByUserType[userType].maxMessagesPerDay) {
       return new ChatSDKError('rate_limit:chat').toResponse();
     }
 
@@ -114,9 +125,19 @@ export async function POST(request: Request) {
 
     const previousMessages = await getMessagesByChatId({ id });
 
+            // Convert DB messages to AI SDK format
+    const convertedMessages = previousMessages.map((msg) => ({
+      id: msg.id,
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content: Array.isArray(msg.parts) && msg.parts.length > 0
+        ? (msg.parts[0] as any)?.text || ''
+        : '',
+      experimental_attachments: Array.isArray(msg.attachments) ? msg.attachments : [],
+      createdAt: msg.createdAt,
+    }));
+
     const messages = appendClientMessage({
-      // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
-      messages: previousMessages,
+      messages: convertedMessages,
       message: message as any,
     });
 
@@ -141,6 +162,14 @@ export async function POST(request: Request) {
         },
       ],
     });
+
+    // Track user token request for limits
+    try {
+      await incrementUserTokenRequest(session.user.id);
+    } catch (trackingError) {
+      console.warn('Token request tracking not available yet:', trackingError);
+      // Continue without tracking until migration is run
+    }
 
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
