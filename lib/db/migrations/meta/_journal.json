@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1749713002990,
-      "tag": "0000_common_pretty_boy",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1749713612748,
-      "tag": "0001_many_silver_sable",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1749727675137,
-      "tag": "0002_old_sway",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1749825551284,
-      "tag": "0003_loud_clint_barton",
+      "when": 1750068360907,
+      "tag": "0000_wooden_talkback",
       "breakpoints": true
     }
   ]

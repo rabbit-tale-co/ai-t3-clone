@@ -1,255 +1,290 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import {
   pgTable,
+  pgEnum,
   varchar,
-  timestamp,
-  json,
-  uuid,
   text,
-  primaryKey,
-  foreignKey,
+  timestamp,
+  uuid,
   boolean,
+  json,
+  primaryKey,
+  index,
+  uniqueIndex,
+  foreignKey,
+  integer,
 } from 'drizzle-orm/pg-core';
 
-export const user = pgTable('User', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  email: varchar('email', { length: 64 }).notNull(),
-  password: varchar('password', { length: 64 }),
-  fullName: varchar('fullName', { length: 100 }),
-  avatarUrl: text('avatarUrl'),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-  // Subscription fields
-  subscriptionId: varchar('subscriptionId', { length: 255 }), // Stripe subscription ID
-  subscriptionStatus: varchar('subscriptionStatus', {
-    enum: ['active', 'canceled', 'past_due', 'unpaid', 'incomplete'],
+/* ---------- ENUM TYPES ---------- */
+
+export const subscriptionStatusEnum = pgEnum('subscription_status', [
+  'active',
+  'canceled',
+  'past_due',
+  'unpaid',
+  'incomplete',
+]);
+
+export const providerEnum = pgEnum('provider', [
+  'openai',
+  'anthropic',
+  'google',
+  'xai',
+  'openrouter',
+  'groq',
+  'perplexity',
+  'cohere',
+  'mistral',
+]);
+
+export const visibilityEnum = pgEnum('visibility', ['public', 'private']);
+
+export const documentKindEnum = pgEnum('document_kind', [
+  'text',
+  'code',
+  'image',
+  'sheet',
+]);
+
+/* ---------- USER ---------- */
+
+export const user = pgTable(
+  'user',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: varchar('email', { length: 64 }).notNull(),
+    password: varchar('password', { length: 64 }),
+    fullName: varchar('full_name', { length: 100 }),
+    avatarUrl: text('avatar_url'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdateFn(() => new Date()).notNull(),
+    /* Stripe */
+    subscriptionId: varchar('subscription_id', { length: 255 }),
+    subscriptionStatus: subscriptionStatusEnum('subscription_status'),
+    subscriptionCurrentPeriodEnd: timestamp('subscription_period_end'),
+    subscriptionCurrentPeriodStart: timestamp('subscription_period_start'),
+    customerId: varchar('customer_id', { length: 255 }),
+  },
+  table => ({
+    emailUnique: uniqueIndex('user_email_unique').on(table.email),
   }),
-  subscriptionCurrentPeriodEnd: timestamp('subscriptionCurrentPeriodEnd'),
-  subscriptionCurrentPeriodStart: timestamp('subscriptionCurrentPeriodStart'),
-  customerId: varchar('customerId', { length: 255 }), // Stripe customer ID
-});
+);
 
 export type User = InferSelectModel<typeof user>;
 
-// User API Keys table
-export const userApiKey = pgTable('UserApiKey', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  provider: varchar('provider', {
-    enum: [
-      'openai',
-      'anthropic',
-      'google',
-      'xai',
-      'openrouter',
-      'groq',
-      'perplexity',
-      'cohere',
-      'mistral',
-    ],
-  }).notNull(),
-  keyName: varchar('keyName', { length: 100 }).notNull(), // User-friendly name
-  encryptedKey: text('encryptedKey').notNull(), // Encrypted API key
-  isActive: boolean('isActive').notNull().default(true),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-  lastUsedAt: timestamp('lastUsedAt'),
-});
+/* ---------- USER API KEY ---------- */
+
+export const userApiKey = pgTable(
+  'user_api_key',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
+    provider: providerEnum('provider').notNull(),
+    keyName: varchar('key_name', { length: 100 }).notNull(),
+    encryptedKey: text('encrypted_key').notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdateFn(() => new Date()).notNull(),
+    lastUsedAt: timestamp('last_used_at'),
+  },
+  table => ({
+    userProviderKey: uniqueIndex('user_provider_key').on(
+      table.userId,
+      table.provider,
+      table.keyName,
+    ),
+  }),
+);
 
 export type UserApiKey = InferSelectModel<typeof userApiKey>;
 
-// --- ADD FOLDER TABLE ---
-export const folder = pgTable('Folder', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp('createdAt').notNull().defaultNow(), // Added defaultNow
+/* ---------- TOKEN REQUEST MONITOR ---------- */
+
+export const tokenRequestMonitor = pgTable(
+  'token_request_monitor',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
+    date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD
+    requestCount: integer('request_count').default(0).notNull(),
+    firstRequestAt: timestamp('first_request_at').defaultNow().notNull(),
+    lastRequestAt: timestamp('last_request_at').defaultNow().$onUpdateFn(() => new Date()).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdateFn(() => new Date()).notNull(),
+  },
+  table => ({
+    userDateUnique: uniqueIndex('token_monitor_user_date').on(
+      table.userId,
+      table.date,
+    ),
+    userIdIdx: index('token_monitor_user_idx').on(table.userId),
+    dateIdx: index('token_monitor_date_idx').on(table.date),
+  }),
+);
+
+export type TokenRequestMonitor = InferSelectModel<typeof tokenRequestMonitor>;
+
+/* ---------- FOLDER ---------- */
+
+export const folder = pgTable('folder', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
   name: varchar('name', { length: 256 }).notNull(),
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id),
+  userId: uuid('user_id')
+    .references(() => user.id, { onDelete: 'cascade' })
+    .notNull(),
   color: varchar('color', { length: 32 }).default('blue'),
 });
 
 export type Folder = InferSelectModel<typeof folder>;
 
-export const chat = pgTable('Chat', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp('createdAt').notNull().defaultNow(), // Added defaultNow
+/* ---------- CHAT ---------- */
+
+export const chat = pgTable('chat', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
   title: text('title').notNull(),
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id),
-  visibility: varchar('visibility', { enum: ['public', 'private'] })
-    .notNull()
-    .default('private'),
-  // --- ADD FOLDER ID FOREIGN KEY ---
-  folderId: uuid('folderId').references(() => folder.id), // Can be null if chat isn't in a folder
+  userId: uuid('user_id')
+    .references(() => user.id, { onDelete: 'cascade' })
+    .notNull(),
+  visibility: visibilityEnum('visibility').default('private').notNull(),
+  folderId: uuid('folder_id').references(() => folder.id),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
 
-// --- ADD TAG TABLE ---
-export const tag = pgTable('Tag', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
+/* ---------- TAG & CHAT-TAG ---------- */
+
+export const tag = pgTable('tag', {
+  id: uuid('id').primaryKey().defaultRandom(),
   label: varchar('label', { length: 64 }).notNull(),
-  color: varchar('color', { length: 7 }).notNull(), // Assuming hex code for color
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id),
+  color: varchar('color', { length: 7 }).notNull(),
+  userId: uuid('user_id')
+    .references(() => user.id, { onDelete: 'cascade' })
+    .notNull(),
 });
 
 export type Tag = InferSelectModel<typeof tag>;
 
-// --- ADD CHAT-TAG RELATION TABLE ---
 export const chatTag = pgTable(
-  'ChatTag',
+  'chat_tag',
   {
-    chatId: uuid('chatId')
-      .notNull()
-      .references(() => chat.id),
-    tagId: uuid('tagId')
-      .notNull()
-      .references(() => tag.id),
+    chatId: uuid('chat_id')
+      .references(() => chat.id, { onDelete: 'cascade' })
+      .notNull(),
+    tagId: uuid('tag_id')
+      .references(() => tag.id, { onDelete: 'cascade' })
+      .notNull(),
   },
-  (table) => ({
+  table => ({
     pk: primaryKey({ columns: [table.chatId, table.tagId] }),
   }),
 );
 
 export type ChatTag = InferSelectModel<typeof chatTag>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
-export const messageDeprecated = pgTable('Message', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  chatId: uuid('chatId')
-    .notNull()
-    .references(() => chat.id),
-  role: varchar('role').notNull(),
-  content: json('content').notNull(),
-  createdAt: timestamp('createdAt').notNull(),
-});
+/* ---------- MESSAGE (v2, new format) ---------- */
 
-export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
-
-export const message = pgTable('Message_v2', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  chatId: uuid('chatId')
-    .notNull()
-    .references(() => chat.id),
+export const message = pgTable('message', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id')
+    .references(() => chat.id, { onDelete: 'cascade' })
+    .notNull(),
   role: varchar('role').notNull(),
   parts: json('parts').notNull(),
   attachments: json('attachments').notNull(),
-  createdAt: timestamp('createdAt').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export type DBMessage = InferSelectModel<typeof message>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
-export const voteDeprecated = pgTable(
-  'Vote',
-  {
-    chatId: uuid('chatId')
-      .notNull()
-      .references(() => chat.id),
-    messageId: uuid('messageId')
-      .notNull()
-      .references(() => messageDeprecated.id),
-    isUpvoted: boolean('isUpvoted').notNull(),
-  },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-    };
-  },
-);
-
-export type VoteDeprecated = InferSelectModel<typeof voteDeprecated>;
+/* ---------- VOTE ---------- */
 
 export const vote = pgTable(
-  'Vote_v2',
+  'vote',
   {
-    chatId: uuid('chatId')
-      .notNull()
-      .references(() => chat.id),
-    messageId: uuid('messageId')
-      .notNull()
-      .references(() => message.id),
-    isUpvoted: boolean('isUpvoted').notNull(),
+    chatId: uuid('chat_id')
+      .references(() => chat.id, { onDelete: 'cascade' })
+      .notNull(),
+    messageId: uuid('message_id')
+      .references(() => message.id, { onDelete: 'cascade' })
+      .notNull(),
+    isUpvoted: boolean('is_upvoted').notNull(),
   },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-    };
-  },
+  table => ({
+    pk: primaryKey({ columns: [table.chatId, table.messageId] }),
+  }),
 );
 
 export type Vote = InferSelectModel<typeof vote>;
 
+/* ---------- DOCUMENT ---------- */
+
 export const document = pgTable(
-  'Document',
+  'document',
   {
-    id: uuid('id').notNull().defaultRandom(),
-    createdAt: timestamp('createdAt').notNull(),
+    id: uuid('id').defaultRandom().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
     title: text('title').notNull(),
     content: text('content'),
-    kind: varchar('text', { enum: ['text', 'code', 'image', 'sheet'] })
-      .notNull()
-      .default('text'),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => user.id),
+    kind: documentKindEnum('kind').default('text').notNull(),
+    userId: uuid('user_id')
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
   },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.id, table.createdAt] }),
-    };
-  },
+  table => ({
+    pk: primaryKey({ columns: [table.id, table.createdAt] }),
+  }),
 );
 
 export type Document = InferSelectModel<typeof document>;
 
+/* ---------- SUGGESTION ---------- */
+
 export const suggestion = pgTable(
-  'Suggestion',
+  'suggestion',
   {
-    id: uuid('id').notNull().defaultRandom(),
-    documentId: uuid('documentId').notNull(),
-    documentCreatedAt: timestamp('documentCreatedAt').notNull(),
-    originalText: text('originalText').notNull(),
-    suggestedText: text('suggestedText').notNull(),
+    id: uuid('id').defaultRandom().notNull(),
+    documentId: uuid('document_id').notNull(),
+    documentCreatedAt: timestamp('document_created_at').notNull(),
+    originalText: text('original_text').notNull(),
+    suggestedText: text('suggested_text').notNull(),
     description: text('description'),
-    isResolved: boolean('isResolved').notNull().default(false),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => user.id),
-    createdAt: timestamp('createdAt').notNull(),
+    isResolved: boolean('is_resolved').default(false).notNull(),
+    userId: uuid('user_id')
+      .references(() => user.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  (table) => ({
+  table => ({
     pk: primaryKey({ columns: [table.id] }),
     documentRef: foreignKey({
       columns: [table.documentId, table.documentCreatedAt],
       foreignColumns: [document.id, document.createdAt],
+      name: 'suggestion_document_fk',
     }),
   }),
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
 
+/* ---------- STREAM ---------- */
+
 export const stream = pgTable(
-  'Stream',
+  'stream',
   {
-    id: uuid('id').notNull().defaultRandom(),
-    chatId: uuid('chatId').notNull(),
-    createdAt: timestamp('createdAt').notNull(),
+    id: uuid('id').defaultRandom().notNull(),
+    chatId: uuid('chat_id')
+      .references(() => chat.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  (table) => ({
+  table => ({
     pk: primaryKey({ columns: [table.id] }),
-    chatRef: foreignKey({
-      columns: [table.chatId],
-      foreignColumns: [chat.id],
-    }),
   }),
 );
 

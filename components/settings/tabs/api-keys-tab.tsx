@@ -299,7 +299,7 @@ export function ApiKeysTab({ user }: ApiKeysTabProps) {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {providers.map((provider) => (
-              <Card key={provider.id} className="animate-pulse">
+              <Card key={provider.id} className="animate-pulse py-0">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="size-10 bg-gray-200 dark:bg-gray-700 rounded-lg" />
