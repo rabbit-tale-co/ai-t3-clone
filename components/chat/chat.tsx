@@ -497,7 +497,7 @@ export function Chat({
             searchEnabled={searchEnabled}
             onToggleSearch={handleToggleSearch}
             isStreaming={status === 'streaming'}
-            disabled={!input.trim() && attachments.length === 0}
+            disabled={false}
             fileInputRef={{ current: null }}
             hasRemainingUsage={messagesLeft === null || messagesLeft > 0}
             usage={messagesLeft !== null && maxMessages !== null ? { remaining: messagesLeft, limit: maxMessages } : null}

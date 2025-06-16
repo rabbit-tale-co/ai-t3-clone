@@ -87,7 +87,7 @@ export function ModelDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="inline-flex items-center gap-2 text-gray-600 dark:text-pink-300 hover:text-gray-900 dark:hover:text-pink-200 bg-pink-300/30 dark:bg-black/50 hover:bg-pink-300/40 dark:hover:bg-black/70 rounded-xl px-3 py-1.5 backdrop-blur-sm"
+          className="inline-flex items-center gap-2 text-gray-600 dark:text-pink-300 hover:text-gray-900 dark:hover:text-pink-200 bg-pink-300/30 dark:bg-black/50 hover:bg-pink-300/40 dark:hover:bg-black/70 rounded-full px-3 py-1.5 backdrop-blur-sm"
         >
           <Zap className="size-4" />
           <span className="text-sm font-medium">
