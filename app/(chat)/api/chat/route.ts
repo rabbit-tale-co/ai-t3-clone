@@ -125,16 +125,26 @@ export async function POST(request: Request) {
 
     const previousMessages = await getMessagesByChatId({ id });
 
-            // Convert DB messages to AI SDK format
-    const convertedMessages = previousMessages.map((msg) => ({
-      id: msg.id,
-      role: msg.role as 'user' | 'assistant' | 'system',
-      content: Array.isArray(msg.parts) && msg.parts.length > 0
-        ? (msg.parts[0] as any)?.text || ''
-        : '',
-      experimental_attachments: Array.isArray(msg.attachments) ? msg.attachments : [],
-      createdAt: msg.createdAt,
-    }));
+    // Convert DB messages to AI SDK format and filter out messages with empty content
+    const convertedMessages = previousMessages
+      .map((msg) => {
+        let content = '';
+
+        // Extract text content from parts
+        if (Array.isArray(msg.parts) && msg.parts.length > 0) {
+          const textPart = msg.parts.find((part: any) => part?.text && part.text.trim());
+          content = textPart?.text || '';
+        }
+
+        return {
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: content.trim(),
+          experimental_attachments: Array.isArray(msg.attachments) ? msg.attachments : [],
+          createdAt: msg.createdAt,
+        };
+      })
+      .filter((msg) => msg.content.length > 0 || (msg.experimental_attachments && msg.experimental_attachments.length > 0)); // Keep messages with content or attachments
 
     const messages = appendClientMessage({
       messages: convertedMessages,

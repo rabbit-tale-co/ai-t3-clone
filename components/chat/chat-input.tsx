@@ -96,6 +96,18 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
   const [timeUntilReset, setTimeUntilReset] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const prevStreamingRef = useRef(isStreaming);
+
+  // Reset submitting state when streaming ends
+  useEffect(() => {
+    // Only reset when streaming changes from true to false
+    if (prevStreamingRef.current && !isStreaming) {
+
+      setIsSubmitting(false);
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming]);
 
   // Update countdown timer
   useEffect(() => {
@@ -146,12 +158,29 @@ export function ChatInput({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+
+      // Block submission if bot is streaming/thinking or other conditions
+      if (isButtonDisabled) {
+        return;
+      }
+
+      // Set submitting state immediately when user presses Enter
+      setIsSubmitting(true);
       onSubmit(e as unknown as React.FormEvent);
     }
   };
 
-  const onSubmitForm = (e: React.FormEvent) => {
+    const onSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Block submission if bot is streaming/thinking or other conditions
+    if (isButtonDisabled) {
+      return;
+    }
+
+    // Set submitting state immediately when user clicks submit
+
+    setIsSubmitting(true);
     onSubmit(e);
   };
 
@@ -165,10 +194,14 @@ export function ChatInput({
 
   const isButtonDisabled =
     disabled ||
+    isSubmitting ||
     isStreaming ||
     !hasRemainingUsage ||
-    !isModelAvailable ||
-    loadingModels;
+    (!input.trim() && attachments.length === 0);
+
+  const isInputDisabled = isSubmitting || isStreaming || disabled;
+
+
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -342,9 +375,9 @@ export function ChatInput({
                 value={input}
                 onChange={onInputChange}
                 placeholder={t('chat.greetings.placeholder')}
-                className="min-h-16 max-h-48 resize-none rounded-2xl border-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-white/80 dark:bg-black/50 backdrop-blur-sm focus:bg-white dark:focus:bg-black/70 transition-colors focus:border-pink-400 dark:focus:border-pink-600 focus:ring-pink-400/20 dark:focus:ring-pink-600/20"
+                className="min-h-16 max-h-48 resize-none rounded-2xl border-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-transparent dark:bg-transparent backdrop-blur-sm focus:bg-transparent dark:focus:bg-transparent transition-colors focus:border-pink-400 dark:focus:border-pink-600 focus:ring-pink-400/20 dark:focus:ring-pink-600/20"
                 onKeyDown={handleKeyDown}
-                disabled={isStreaming || !hasRemainingUsage}
+                disabled={isInputDisabled}
               />
             </div>
 
@@ -353,12 +386,14 @@ export function ChatInput({
               {/* Left side - Tools */}
               <div className="flex items-center space-x-2">
                 {/* Model Dropdown */}
-                <ModelDropdown
-                  selectedModel={selectedModel}
-                  onModelChange={onModelChange}
-                  onOpenFullSelector={() => setIsModelSelectorOpen(true)}
-                  availableModels={availableModels}
-                />
+                <div className={isStreaming ? 'opacity-50 pointer-events-none' : ''}>
+                  <ModelDropdown
+                    selectedModel={selectedModel}
+                    onModelChange={onModelChange}
+                    onOpenFullSelector={() => setIsModelSelectorOpen(true)}
+                    availableModels={availableModels}
+                  />
+                </div>
 
                 {/* Web Search Toggle */}
                 <Tooltip>
@@ -367,11 +402,12 @@ export function ChatInput({
                       type="button"
                       variant="ghost"
                       onClick={onToggleSearch}
+                      disabled={isStreaming}
                       className={`p-2 backdrop-blur-sm transition-all ${
                         searchEnabled
                           ? 'bg-pink-500/80 dark:bg-pink-600/80 text-white shadow-md shadow-pink-400/30 dark:shadow-pink-600/30 hover:bg-pink-600 dark:hover:bg-pink-700 border border-pink-400 dark:border-pink-500'
                           : 'text-pink-600 dark:text-pink-300 hover:text-pink-800 dark:hover:text-pink-200 hover:bg-pink-100/50 dark:hover:bg-pink-900/30'
-                      }`}
+                      } ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Globe className="size-4" />
                       <span className="hidden sm:inline">
@@ -408,7 +444,8 @@ export function ChatInput({
                       variant="ghost"
                       size="icon"
                       onClick={onShowFileUpload}
-                      className="text-pink-600 dark:text-pink-300 hover:text-pink-800 dark:hover:text-pink-200 p-2  relative hover:bg-pink-100/50 dark:hover:bg-pink-900/30 backdrop-blur-sm"
+                      disabled={isStreaming}
+                      className={`text-pink-600 dark:text-pink-300 hover:text-pink-800 dark:hover:text-pink-200 p-2 relative hover:bg-pink-100/50 dark:hover:bg-pink-900/30 backdrop-blur-sm ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Paperclip className="size-4" />
                       {!isNotGuest ? (
@@ -435,6 +472,13 @@ export function ChatInput({
                     type="submit"
                     disabled={isButtonDisabled}
                     className="rounded-full"
+                    onClick={(e) => {
+                      if (isButtonDisabled) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                      }
+                    }}
                   >
                     <Send className="size-4" />
                     <span className="hidden sm:inline">
