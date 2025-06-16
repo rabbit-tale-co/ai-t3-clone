@@ -132,23 +132,6 @@ export function Chat({
         const data = await getAvailableModelsAction();
         const modelIds = data.models.map((model) => model.id);
         setAvailableModels(modelIds);
-
-        // Check if currently selected model is available
-        if (!modelIds.includes(selectedModel)) {
-          // If selected model is not available, switch to first available model
-          if (modelIds.length > 0) {
-            setSelectedModel(modelIds[0]);
-            const newModel = chatModels.find(
-              (model) => model.id === modelIds[0],
-            );
-            if (newModel) {
-              toast({
-                type: 'warning',
-                description: `Selected model is not available. Switched to ${newModel.name}.`,
-              });
-            }
-          }
-        }
       } catch (error) {
         console.error('Error fetching available models:', error);
         setAvailableModels([]);
@@ -158,7 +141,33 @@ export function Chat({
     };
 
     fetchAvailableModels();
-  }, [selectedModel]);
+  }, []); // Remove selectedModel from dependencies to prevent infinite loop
+
+  // Validate selected model when available models are loaded
+  useEffect(() => {
+    if (!loadingModels && availableModels.length > 0) {
+      // console.log('Model validation:', {
+      //   selectedModel,
+      //   availableModels,
+      //   isIncluded: availableModels.includes(selectedModel)
+      // });
+
+      if (!availableModels.includes(selectedModel)) {
+        const fallbackModel = availableModels[0];
+        // console.log('Switching model from', selectedModel, 'to', fallbackModel);
+        setSelectedModel(fallbackModel);
+        const newModel = chatModels.find(
+          (model) => model.id === fallbackModel,
+        );
+        if (newModel) {
+          toast({
+            type: 'warning',
+            description: `Selected model is not available. Switched to ${newModel.name}.`,
+          });
+        }
+      }
+    }
+  }, [availableModels, loadingModels, selectedModel]);
 
   // Check if selected model is available
   const isModelAvailable = availableModels.includes(selectedModel);
