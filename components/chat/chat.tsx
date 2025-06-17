@@ -478,7 +478,7 @@ export function Chat({
 
         {/* Messages Area - Flex grow with overflow */}
         <div className="flex-1 min-h-0 relative">
-          <div className="absolute inset-0 pb-32 md:pb-4 overflow-hidden">
+          <div className="absolute inset-0 pb-40 md:pb-32 overflow-hidden">
             <Messages
               chatId={id}
               status={status}
