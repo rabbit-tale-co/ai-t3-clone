@@ -122,7 +122,13 @@ export function Chat({
   }, []);
 
   // Fetch message count and usage info
-  const { messagesLeft, messagesUsed, maxMessages, resetTime, refetch: refetchMessageCount } = useMessageCount(session, handleTokenReset);
+  const {
+    messagesLeft,
+    messagesUsed,
+    maxMessages,
+    resetTime,
+    refetch: refetchMessageCount,
+  } = useMessageCount(session, handleTokenReset);
 
   // Fetch available models
   useEffect(() => {
@@ -156,9 +162,7 @@ export function Chat({
         const fallbackModel = availableModels[0];
         // console.log('Switching model from', selectedModel, 'to', fallbackModel);
         setSelectedModel(fallbackModel);
-        const newModel = chatModels.find(
-          (model) => model.id === fallbackModel,
-        );
+        const newModel = chatModels.find((model) => model.id === fallbackModel);
         if (newModel) {
           toast({
             type: 'warning',
@@ -460,18 +464,20 @@ export function Chat({
 
   return (
     <>
-      <div className="flex flex-col min-w-0 h-dvh bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm overflow-hidden">
+      <div className="flex flex-col h-dvh bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm">
         {/* Chat Header */}
-        <ChatHeader
-          chatId={id}
-          selectedModelId={selectedModel}
-          selectedVisibilityType={initialVisibilityType}
-          isReadonly={isReadonly}
-          session={session}
-        />
+        <div className="sticky top-0 z-50 shrink-0">
+          <ChatHeader
+            chatId={id}
+            selectedModelId={selectedModel}
+            selectedVisibilityType={initialVisibilityType}
+            isReadonly={isReadonly}
+            session={session}
+          />
+        </div>
 
         {/* Messages Area */}
-        <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div className="flex-1 min-h-0 relative">
           <Messages
             chatId={id}
             status={status}
@@ -488,33 +494,39 @@ export function Chat({
 
         {/* Chat Input */}
         {!isReadonly && (
-          <ChatInput
-            input={input}
-            onInputChange={(e) => setInput(e.target.value)}
-            onSubmit={handleSubmitWithOptimistic}
-            attachments={attachments}
-            onFileUpload={(e) => {
-              const files = Array.from(e.target.files || []) as File[];
-              handleFilesSelected(files);
-            }}
-            onRemoveAttachment={handleRemoveAttachment}
-            onClearAttachments={handleClearAttachments}
-            onShowFileUpload={handleShowFileUpload}
-            uploadProgress={0}
-            selectedModel={selectedModel}
-            onModelChange={handleModelChange}
-            searchEnabled={searchEnabled}
-            onToggleSearch={handleToggleSearch}
-            isStreaming={status === 'streaming'}
-            disabled={false}
-            fileInputRef={{ current: null }}
-            hasRemainingUsage={messagesLeft === null || messagesLeft > 0}
-            usage={messagesLeft !== null && maxMessages !== null ? { remaining: messagesLeft, limit: maxMessages } : null}
-            resetTime={resetTime}
-            userType={session?.user?.type}
-            isModelAvailable={isModelAvailable}
-            loadingModels={loadingModels}
-          />
+          <div className="shrink-0">
+            <ChatInput
+              input={input}
+              onInputChange={(e) => setInput(e.target.value)}
+              onSubmit={handleSubmitWithOptimistic}
+              attachments={attachments}
+              onFileUpload={(e) => {
+                const files = Array.from(e.target.files || []) as File[];
+                handleFilesSelected(files);
+              }}
+              onRemoveAttachment={handleRemoveAttachment}
+              onClearAttachments={handleClearAttachments}
+              onShowFileUpload={handleShowFileUpload}
+              uploadProgress={0}
+              selectedModel={selectedModel}
+              onModelChange={handleModelChange}
+              searchEnabled={searchEnabled}
+              onToggleSearch={handleToggleSearch}
+              isStreaming={status === 'streaming'}
+              disabled={false}
+              fileInputRef={{ current: null }}
+              hasRemainingUsage={messagesLeft === null || messagesLeft > 0}
+              usage={
+                messagesLeft !== null && maxMessages !== null
+                  ? { remaining: messagesLeft, limit: maxMessages }
+                  : null
+              }
+              resetTime={resetTime}
+              userType={session?.user?.type}
+              isModelAvailable={isModelAvailable}
+              loadingModels={loadingModels}
+            />
+          </div>
         )}
       </div>
 

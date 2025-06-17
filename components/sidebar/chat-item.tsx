@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, memo, } from 'react';
+import { useState, useEffect, memo } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
+import {
   CheckCircleIcon,
   GlobeIcon,
   LockIcon,
@@ -40,10 +49,12 @@ import {
   TagIcon,
   Hash,
   FolderIcon,
+  X,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/use-language';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Default color accents if not provided
 const defaultColorAccents = {
@@ -162,6 +173,7 @@ export const ChatItem = memo(
     });
     const { data: session } = useSession();
     const userId = session?.user?.id;
+    const isMobile = useIsMobile();
 
     // Use provided colorAccents or fallback to defaults
     const activeColorAccents = colorAccents || defaultColorAccents;
@@ -452,6 +464,62 @@ export const ChatItem = memo(
                         {t('navigation.dropdown.removeFromFolder')}
                       </span>
                     </DropdownMenuItem>
+                  ) : isMobile ? (
+                    <Drawer>
+                      <DrawerTrigger asChild>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <FolderIcon
+                            size={16}
+                            className="mr-2 text-blue-600 dark:text-blue-400"
+                          />
+                          <span>{t('navigation.dropdown.moveToFolder')}</span>
+                        </DropdownMenuItem>
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <DrawerHeader className="text-left">
+                          <DrawerTitle>
+                            {t('navigation.dropdown.moveToFolder')}
+                          </DrawerTitle>
+                        </DrawerHeader>
+                        <div className="p-4 pb-8 space-y-2">
+                          {loadingFolders ? (
+                            <div className="py-8 text-center text-muted-foreground">
+                              {t('navigation.dropdown.loadingFolders')}
+                            </div>
+                          ) : availableFolders.length === 0 ? (
+                            <div className="py-8 text-center text-muted-foreground">
+                              {t('navigation.dropdown.noFoldersAvailable')}
+                            </div>
+                          ) : (
+                            availableFolders.map((folder) => (
+                              <DrawerClose key={folder.id} asChild>
+                                <Button
+                                  variant="ghost"
+                                  className="w-full justify-start h-auto p-3"
+                                  onClick={() => handleAddToFolder(folder.id)}
+                                >
+                                  <FolderIcon
+                                    size={16}
+                                    className="mr-2"
+                                    style={{
+                                      color: (
+                                        activeColorAccents[
+                                          folder.color as keyof typeof activeColorAccents
+                                        ] || activeColorAccents.gray
+                                      ).accent,
+                                    }}
+                                  />
+                                  <span>{folder.name}</span>
+                                </Button>
+                              </DrawerClose>
+                            ))
+                          )}
+                        </div>
+                      </DrawerContent>
+                    </Drawer>
                   ) : (
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger className="cursor-pointer">
@@ -499,47 +567,57 @@ export const ChatItem = memo(
                   )}
 
                   {/* Tag Management */}
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="cursor-pointer">
-                      <TagIcon
-                        size={16}
-                        className="mr-2 text-purple-600 dark:text-purple-400"
-                      />
-                      <span>{t('navigation.dropdown.manageTags')}</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
-                        {loadingFolders ? (
-                          <div className="px-3 py-2 text-sm text-muted-foreground">
-                            {t('navigation.dropdown.loadingTags')}
-                          </div>
-                        ) : availableTags.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-muted-foreground">
-                            {t('navigation.dropdown.noTagsAvailable')}
-                          </div>
-                        ) : (
-                          availableTags.map((tag) => {
-                            const isAlreadyAdded = chatTags.some(
-                              (t) => t.id === tag.id,
-                            );
-                            return (
-                              <DropdownMenuItem
-                                key={tag.id}
-                                className={cn(
-                                  'cursor-pointer flex items-center justify-between',
-                                )}
-                                onClick={() => {
-                                  if (isAlreadyAdded) {
-                                    handleRemoveTag(tag.id);
-                                  } else {
-                                    handleAddTag(tag.id);
-                                  }
-                                }}
-                              >
-                                <div className="flex items-center">
-                                  <div className="mr-2 flex items-center">
+                  {isMobile ? (
+                    <Drawer>
+                      <DrawerTrigger asChild>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <TagIcon
+                            size={16}
+                            className="mr-2 text-purple-600 dark:text-purple-400"
+                          />
+                          <span>{t('navigation.dropdown.manageTags')}</span>
+                        </DropdownMenuItem>
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <DrawerHeader className="text-left">
+                          <DrawerTitle>
+                            {t('navigation.dropdown.manageTags')}
+                          </DrawerTitle>
+                        </DrawerHeader>
+                        <div className="p-4 pb-8 space-y-2 max-h-[60vh] overflow-y-auto">
+                          {loadingFolders ? (
+                            <div className="py-8 text-center text-muted-foreground">
+                              {t('navigation.dropdown.loadingTags')}
+                            </div>
+                          ) : availableTags.length === 0 ? (
+                            <div className="py-8 text-center text-muted-foreground">
+                              {t('navigation.dropdown.noTagsAvailable')}
+                            </div>
+                          ) : (
+                            availableTags.map((tag) => {
+                              const isAlreadyAdded = chatTags.some(
+                                (t) => t.id === tag.id,
+                              );
+                              return (
+                                <Button
+                                  key={tag.id}
+                                  variant="ghost"
+                                  className="w-full justify-between h-auto p-3"
+                                  onClick={() => {
+                                    if (isAlreadyAdded) {
+                                      handleRemoveTag(tag.id);
+                                    } else {
+                                      handleAddTag(tag.id);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center">
                                     <Hash
                                       size={14}
+                                      className="mr-2"
                                       style={{
                                         color: (
                                           activeColorAccents[
@@ -548,22 +626,88 @@ export const ChatItem = memo(
                                         ).accent,
                                       }}
                                     />
+                                    <span>{tag.label}</span>
                                   </div>
-                                  <span>{tag.label}</span>
-                                </div>
-                                {isAlreadyAdded && (
-                                  <CheckCircleIcon
-                                    size={14}
-                                    className="text-green-500"
-                                  />
-                                )}
-                              </DropdownMenuItem>
-                            );
-                          })
-                        )}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
+                                  {isAlreadyAdded && (
+                                    <CheckCircleIcon
+                                      size={14}
+                                      className="text-green-500"
+                                    />
+                                  )}
+                                </Button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </DrawerContent>
+                    </Drawer>
+                  ) : (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="cursor-pointer">
+                        <TagIcon
+                          size={16}
+                          className="mr-2 text-purple-600 dark:text-purple-400"
+                        />
+                        <span>{t('navigation.dropdown.manageTags')}</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuPortal>
+                        <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                          {loadingFolders ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              {t('navigation.dropdown.loadingTags')}
+                            </div>
+                          ) : availableTags.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              {t('navigation.dropdown.noTagsAvailable')}
+                            </div>
+                          ) : (
+                            availableTags.map((tag) => {
+                              const isAlreadyAdded = chatTags.some(
+                                (t) => t.id === tag.id,
+                              );
+                              return (
+                                <DropdownMenuItem
+                                  key={tag.id}
+                                  className={cn(
+                                    'cursor-pointer flex items-center justify-between',
+                                  )}
+                                  onClick={() => {
+                                    if (isAlreadyAdded) {
+                                      handleRemoveTag(tag.id);
+                                    } else {
+                                      handleAddTag(tag.id);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center">
+                                    <div className="mr-2 flex items-center">
+                                      <Hash
+                                        size={14}
+                                        style={{
+                                          color: (
+                                            activeColorAccents[
+                                              tag.color as keyof typeof activeColorAccents
+                                            ] || activeColorAccents.gray
+                                          ).accent,
+                                        }}
+                                      />
+                                    </div>
+                                    <span>{tag.label}</span>
+                                  </div>
+                                  {isAlreadyAdded && (
+                                    <CheckCircleIcon
+                                      size={14}
+                                      className="text-green-500"
+                                    />
+                                  )}
+                                </DropdownMenuItem>
+                              );
+                            })
+                          )}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuPortal>
+                    </DropdownMenuSub>
+                  )}
                 </div>
               </div>
 
@@ -572,50 +716,123 @@ export const ChatItem = memo(
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
                   {t('navigation.dropdown.sharing')}
                 </div>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer">
-                    <ShareIcon
-                      size={16}
-                      className="mr-2 text-green-600 dark:text-green-400"
-                    />
-                    <span>{t('navigation.dropdown.visibility')}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {visibilityType === 'private'
-                        ? t('navigation.dropdown.private')
-                        : t('navigation.dropdown.public')}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
+                {isMobile ? (
+                  <Drawer>
+                    <DrawerTrigger asChild>
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => setVisibilityType('private')}
+                        onSelect={(e) => e.preventDefault()}
                       >
-                        <LockIcon size={16} className="mr-2 text-inherit" />
-                        <span>{t('navigation.dropdown.private')}</span>
-                        {visibilityType === 'private' && (
-                          <CheckCircleIcon
-                            size={16}
-                            className="ml-auto text-green-500"
-                          />
-                        )}
+                        <ShareIcon
+                          size={16}
+                          className="mr-2 text-green-600 dark:text-green-400"
+                        />
+                        <span>{t('navigation.dropdown.visibility')}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {visibilityType === 'private'
+                            ? t('navigation.dropdown.private')
+                            : t('navigation.dropdown.public')}
+                        </span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setVisibilityType('public')}
-                      >
-                        <GlobeIcon size={16} className="mr-2 text-inherit" />
-                        <span>{t('navigation.dropdown.public')}</span>
-                        {visibilityType === 'public' && (
-                          <CheckCircleIcon
-                            size={16}
-                            className="ml-auto text-green-500"
-                          />
-                        )}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
+                    </DrawerTrigger>
+                    <DrawerContent>
+                      <DrawerHeader className="text-left">
+                        <DrawerTitle>
+                          {t('navigation.dropdown.visibility')}
+                        </DrawerTitle>
+                      </DrawerHeader>
+                      <div className="p-4 pb-8 space-y-2">
+                        <DrawerClose asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-between h-auto p-3"
+                            onClick={() => setVisibilityType('private')}
+                          >
+                            <div className="flex items-center">
+                              <LockIcon
+                                size={16}
+                                className="mr-2 text-inherit"
+                              />
+                              <span>{t('navigation.dropdown.private')}</span>
+                            </div>
+                            {visibilityType === 'private' && (
+                              <CheckCircleIcon
+                                size={16}
+                                className="text-green-500"
+                              />
+                            )}
+                          </Button>
+                        </DrawerClose>
+                        <DrawerClose asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-between h-auto p-3"
+                            onClick={() => setVisibilityType('public')}
+                          >
+                            <div className="flex items-center">
+                              <GlobeIcon
+                                size={16}
+                                className="mr-2 text-inherit"
+                              />
+                              <span>{t('navigation.dropdown.public')}</span>
+                            </div>
+                            {visibilityType === 'public' && (
+                              <CheckCircleIcon
+                                size={16}
+                                className="text-green-500"
+                              />
+                            )}
+                          </Button>
+                        </DrawerClose>
+                      </div>
+                    </DrawerContent>
+                  </Drawer>
+                ) : (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer">
+                      <ShareIcon
+                        size={16}
+                        className="mr-2 text-green-600 dark:text-green-400"
+                      />
+                      <span>{t('navigation.dropdown.visibility')}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {visibilityType === 'private'
+                          ? t('navigation.dropdown.private')
+                          : t('navigation.dropdown.public')}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => setVisibilityType('private')}
+                        >
+                          <LockIcon size={16} className="mr-2 text-inherit" />
+                          <span>{t('navigation.dropdown.private')}</span>
+                          {visibilityType === 'private' && (
+                            <CheckCircleIcon
+                              size={16}
+                              className="ml-auto text-green-500"
+                            />
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => setVisibilityType('public')}
+                        >
+                          <GlobeIcon size={16} className="mr-2 text-inherit" />
+                          <span>{t('navigation.dropdown.public')}</span>
+                          {visibilityType === 'public' && (
+                            <CheckCircleIcon
+                              size={16}
+                              className="ml-auto text-green-500"
+                            />
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
               </div>
 
               {/* Danger Zone */}

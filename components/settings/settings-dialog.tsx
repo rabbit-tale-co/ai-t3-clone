@@ -13,11 +13,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 import { useLanguage } from '@/hooks/use-language';
 import { useMessageCount } from '@/hooks/use-message-count';
 import { getUserEntitlements } from '@/lib/ai/entitlements';
@@ -64,8 +65,6 @@ export function SettingsDialog({ user }: { user: UserData }) {
       refetchMessageCount();
     }
   }, [activeTab, open, refetchMessageCount]);
-
-
 
   // Get user entitlements
   const entitlements = getUserEntitlements(user.type);
@@ -138,30 +137,22 @@ export function SettingsDialog({ user }: { user: UserData }) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerTrigger asChild>
         <NavUser user={user} />
-      </SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="h-[95vh] bg-gradient-to-br from-pink-50/70 to-pink-100/60 dark:from-black/95 dark:to-pink-950/10 border-pink-200/20 dark:border-pink-900/20 backdrop-blur-2xl"
-      >
-        <SheetHeader className="p-4 border-b border-pink-200/30 dark:border-pink-900/20">
+      </DrawerTrigger>
+      <DrawerContent className="h-[95vh] bg-gradient-to-br from-pink-50/70 to-pink-100/60 dark:from-black/95 dark:to-pink-950/10 border-pink-200/20 dark:border-pink-900/20 backdrop-blur-2xl">
+        <DrawerHeader className="p-4 border-b border-pink-200/30 dark:border-pink-900/20 shrink-0">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              onClick={() => setOpen(false)}
-            >
-              <X className="size-4" />
-            </Button>
+            <DrawerTitle className="text-lg font-semibold">
+              Settings
+            </DrawerTitle>
           </div>
-        </SheetHeader>
-        <div className="flex-1 overflow-hidden">
+        </DrawerHeader>
+        <div className="flex-1 min-h-0 overflow-hidden">
           <SettingsContent {...settingsProps} isMobile />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

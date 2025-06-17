@@ -9,6 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -37,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { chatModels, type ChatModel } from '@/lib/ai/models';
 import { useSession } from 'next-auth/react';
 import { getAvailableModelsAction } from '@/app/(auth)/models-actions';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FullModelSelectorProps {
   selectedModel: string;
@@ -122,6 +129,7 @@ export function FullModelSelector({
   >({});
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
+  const isMobile = useIsMobile();
 
   const effectiveIsOpen = isOpen !== undefined ? isOpen : localIsOpen;
   const effectiveSetIsOpen = setIsOpen || setLocalIsOpen;
@@ -234,6 +242,248 @@ export function FullModelSelector({
     return groups;
   }, [filteredModels]);
 
+  const mainContent = (
+    <div
+      className={cn(
+        'flex gap-6 min-h-0 pt-4',
+        isMobile ? 'flex-col' : 'flex-1',
+      )}
+    >
+      {/* Sidebar Filters */}
+      <div
+        className={cn(
+          'space-y-4 overflow-y-auto px-px',
+          isMobile ? 'w-full' : 'w-64',
+        )}
+      >
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-pink-500 dark:text-pink-400" />
+          <Input
+            placeholder="Search models..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10 rounded-lg border-pink-200 dark:border-pink-800/50 bg-white/80 dark:bg-black/50 text-pink-900 dark:text-pink-100 placeholder:text-pink-500 dark:placeholder:text-pink-400 focus:border-pink-400 dark:focus:border-pink-600"
+          />
+        </div>
+
+        {!isMobile && (
+          <>
+            {/* Provider Filter */}
+            <div>
+              <h3 className="text-sm font-medium text-pink-900 dark:text-pink-100 mb-2">
+                Provider
+              </h3>
+              <div className="space-y-1">
+                <Button
+                  variant={selectedProvider === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedProvider('all')}
+                  className={cn(
+                    'w-full justify-start h-8 text-xs',
+                    selectedProvider === 'all'
+                      ? 'bg-pink-500 text-white hover:bg-pink-600'
+                      : 'text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20',
+                  )}
+                >
+                  All Providers ({modelsWithAccess.length})
+                </Button>
+                {providers.map((provider) => {
+                  const count = modelsWithAccess.filter(
+                    (m) => getProviderFromModelId(m.id) === provider,
+                  ).length;
+                  const availableCount = modelsWithAccess.filter(
+                    (m) =>
+                      getProviderFromModelId(m.id) === provider &&
+                      m.isAvailable,
+                  ).length;
+                  return (
+                    <Button
+                      key={provider}
+                      variant={
+                        selectedProvider === provider ? 'default' : 'ghost'
+                      }
+                      size="sm"
+                      onClick={() => setSelectedProvider(provider)}
+                      className={cn(
+                        'w-full justify-start h-8 text-xs',
+                        selectedProvider === provider
+                          ? 'bg-pink-500 text-white hover:bg-pink-600'
+                          : 'text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'size-2 rounded-full mr-2',
+                          providerColors[
+                            provider as keyof typeof providerColors
+                          ] || 'bg-gray-500',
+                        )}
+                      />
+                      {provider} ({availableCount}/{count})
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Capabilities Filter */}
+            <div>
+              <h3 className="text-sm font-medium text-pink-900 dark:text-pink-100 mb-2">
+                Capabilities
+              </h3>
+              <div className="space-y-1">
+                {Object.entries(capabilityIcons).map(([capability, icon]) => (
+                  <Button
+                    key={capability}
+                    variant={
+                      selectedCapabilities.includes(capability)
+                        ? 'default'
+                        : 'ghost'
+                    }
+                    size="sm"
+                    onClick={() => toggleCapability(capability)}
+                    className={cn(
+                      'w-full justify-start h-8 text-xs',
+                      selectedCapabilities.includes(capability)
+                        ? 'bg-pink-500 text-white hover:bg-pink-600'
+                        : 'text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20',
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {icon}
+                      <span>
+                        {
+                          capabilityLabels[
+                            capability as keyof typeof capabilityLabels
+                          ]
+                        }
+                      </span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="w-full text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800"
+              >
+                <X className="size-3 mr-1" />
+                Clear filters
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 min-w-0 overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="size-12 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mb-4">
+              <Sparkles className="size-6 text-pink-500 dark:text-pink-400 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
+              Loading models...
+            </h3>
+            <p className="text-sm text-pink-600 dark:text-pink-400">
+              Checking your available models and API keys
+            </p>
+          </div>
+        ) : filteredModels.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Database className="size-12 text-pink-400 dark:text-pink-600 mb-4" />
+            <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
+              No models found
+            </h3>
+            <p className="text-sm text-pink-600 dark:text-pink-400 mb-4">
+              No models match your search criteria
+            </p>
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              className="text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800"
+            >
+              Clear filters
+            </Button>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              'h-full overflow-y-auto space-y-6',
+              isMobile ? 'pr-0' : 'pr-2',
+            )}
+          >
+            {Object.entries(groupedModels).map(([provider, providerModels]) => (
+              <div key={provider} className="space-y-3">
+                <div className="flex items-center gap-3 sticky top-0 bg-gradient-to-r from-pink-50/95 to-pink-100/80 dark:from-black/95 dark:to-pink-950/30 backdrop-blur-sm py-2 z-10 rounded-lg">
+                  <div
+                    className={cn(
+                      'size-3 rounded-full',
+                      providerColors[provider as keyof typeof providerColors] ||
+                        'bg-gray-500',
+                    )}
+                  />
+                  <h3 className="text-lg font-semibold text-pink-900 dark:text-gray-100">
+                    {provider}
+                  </h3>
+                  <Badge
+                    variant="secondary"
+                    className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 text-xs"
+                  >
+                    {providerModels.length} models
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  {providerModels.map((model) => (
+                    <ModelCard
+                      key={model.id}
+                      model={model}
+                      isSelected={selectedModel === model.id}
+                      onSelect={() =>
+                        handleModelSelect(model.id, model.isAvailable)
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Mobile version with Drawer
+  if (isMobile) {
+    return (
+      <TooltipProvider>
+        <Drawer open={effectiveIsOpen} onOpenChange={effectiveSetIsOpen}>
+          <DrawerContent className="bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl h-[95vh] overflow-hidden flex flex-col">
+            <DrawerHeader className="pb-4 border-b border-pink-200/50 dark:border-pink-900/30 shrink-0">
+              <DrawerTitle className="text-pink-900 dark:text-gray-100">
+                AI Model Library
+              </DrawerTitle>
+              <p className="text-sm text-pink-600 dark:text-pink-400">
+                Choose the perfect model for your task
+              </p>
+              <div className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100/50 dark:bg-pink-900/20 px-3 py-1 rounded-full w-fit">
+                {loading ? 'Loading...' : `${filteredModels.length} available`}
+              </div>
+            </DrawerHeader>
+            <div className="flex-1 overflow-y-auto p-4">{mainContent}</div>
+          </DrawerContent>
+        </Drawer>
+      </TooltipProvider>
+    );
+  }
+
+  // Desktop version with Dialog
   return (
     <TooltipProvider>
       <Dialog open={effectiveIsOpen} onOpenChange={effectiveSetIsOpen}>
@@ -260,205 +510,7 @@ export function FullModelSelector({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-1 gap-6 min-h-0 pt-4">
-            {/* Sidebar Filters */}
-            <div className="w-64 space-y-4 overflow-y-auto px-px">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-pink-500 dark:text-pink-400" />
-                <Input
-                  placeholder="Search models..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 rounded-lg border-pink-200 dark:border-pink-800/50 bg-white/80 dark:bg-black/50 text-pink-900 dark:text-pink-100 placeholder:text-pink-500 dark:placeholder:text-pink-400 focus:border-pink-400 dark:focus:border-pink-600"
-                />
-              </div>
-
-              {/* Provider Filter */}
-              <div>
-                <h3 className="text-sm font-medium text-pink-900 dark:text-pink-100 mb-2">
-                  Provider
-                </h3>
-                <div className="space-y-1">
-                  <Button
-                    variant={selectedProvider === 'all' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setSelectedProvider('all')}
-                    className={cn(
-                      'w-full justify-start h-8 text-xs',
-                      selectedProvider === 'all'
-                        ? 'bg-pink-500 text-white hover:bg-pink-600'
-                        : 'text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20',
-                    )}
-                  >
-                    All Providers ({modelsWithAccess.length})
-                  </Button>
-                  {providers.map((provider) => {
-                    const count = modelsWithAccess.filter(
-                      (m) => getProviderFromModelId(m.id) === provider,
-                    ).length;
-                    const availableCount = modelsWithAccess.filter(
-                      (m) =>
-                        getProviderFromModelId(m.id) === provider &&
-                        m.isAvailable,
-                    ).length;
-                    return (
-                      <Button
-                        key={provider}
-                        variant={
-                          selectedProvider === provider ? 'default' : 'ghost'
-                        }
-                        size="sm"
-                        onClick={() => setSelectedProvider(provider)}
-                        className={cn(
-                          'w-full justify-start h-8 text-xs',
-                          selectedProvider === provider
-                            ? 'bg-pink-500 text-white hover:bg-pink-600'
-                            : 'text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20',
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'size-2 rounded-full mr-2',
-                            providerColors[
-                              provider as keyof typeof providerColors
-                            ] || 'bg-gray-500',
-                          )}
-                        />
-                        {provider} ({availableCount}/{count})
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Capabilities Filter */}
-              <div>
-                <h3 className="text-sm font-medium text-pink-900 dark:text-pink-100 mb-2">
-                  Capabilities
-                </h3>
-                <div className="space-y-1">
-                  {Object.entries(capabilityIcons).map(([capability, icon]) => (
-                    <Button
-                      key={capability}
-                      variant={
-                        selectedCapabilities.includes(capability)
-                          ? 'default'
-                          : 'ghost'
-                      }
-                      size="sm"
-                      onClick={() => toggleCapability(capability)}
-                      className={cn(
-                        'w-full justify-start h-8 text-xs',
-                        selectedCapabilities.includes(capability)
-                          ? 'bg-pink-500 text-white hover:bg-pink-600'
-                          : 'text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20',
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        {icon}
-                        <span>
-                          {
-                            capabilityLabels[
-                              capability as keyof typeof capabilityLabels
-                            ]
-                          }
-                        </span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="w-full text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800"
-                >
-                  <X className="size-3 mr-1" />
-                  Clear filters
-                </Button>
-              )}
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 min-w-0 overflow-hidden">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="size-12 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mb-4">
-                    <Sparkles className="size-6 text-pink-500 dark:text-pink-400 animate-pulse" />
-                  </div>
-                  <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
-                    Loading models...
-                  </h3>
-                  <p className="text-sm text-pink-600 dark:text-pink-400">
-                    Checking your available models and API keys
-                  </p>
-                </div>
-              ) : filteredModels.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Database className="size-12 text-pink-400 dark:text-pink-600 mb-4" />
-                  <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
-                    No models found
-                  </h3>
-                  <p className="text-sm text-pink-600 dark:text-pink-400 mb-4">
-                    No models match your search criteria
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={clearFilters}
-                    className="text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800"
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              ) : (
-                <div className="h-full overflow-y-auto space-y-6 pr-2">
-                  {Object.entries(groupedModels).map(
-                    ([provider, providerModels]) => (
-                      <div key={provider}>
-                        {/* Provider Header */}
-                        <div className="flex items-center gap-3 mb-3 sticky top-0 bg-pink-50/80 dark:bg-black/80 backdrop-blur-sm py-2 rounded-lg px-3 z-10">
-                          <div
-                            className={cn(
-                              'size-3 rounded-full',
-                              providerColors[
-                                provider as keyof typeof providerColors
-                              ] || 'bg-gray-500',
-                            )}
-                          />
-                          <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
-                            {provider}
-                          </h3>
-                          <Badge className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border-0">
-                            {providerModels.filter((m) => m.isAvailable).length}
-                            /{providerModels.length} available
-                          </Badge>
-                        </div>
-
-                        {/* Models Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 px-px">
-                          {providerModels.map((model) => (
-                            <ModelCard
-                              key={model.id}
-                              model={model}
-                              isSelected={selectedModel === model.id}
-                              onSelect={() =>
-                                handleModelSelect(model.id, model.isAvailable)
-                              }
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          {mainContent}
         </DialogContent>
       </Dialog>
     </TooltipProvider>

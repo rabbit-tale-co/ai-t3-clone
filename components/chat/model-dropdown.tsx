@@ -13,6 +13,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
+import {
   ChevronDown,
   FileText,
   Sparkles,
@@ -26,6 +33,8 @@ import {
 } from 'lucide-react';
 import { chatModels, FAVORITE_MODELS, type ChatModel } from '@/lib/ai/models';
 import { useLanguage } from '@/hooks/use-language';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ModelDropdownProps {
   selectedModel: string;
@@ -72,6 +81,7 @@ export function ModelDropdown({
 }: ModelDropdownProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const currentModel = availableModels.find(
     (model) => model.id === selectedModel,
@@ -82,97 +92,69 @@ export function ModelDropdown({
     FAVORITE_MODELS.includes(model.id),
   );
 
-  return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="inline-flex items-center gap-2 text-gray-600 dark:text-pink-300 hover:text-gray-900 dark:hover:text-pink-200 bg-pink-300/30 dark:bg-black/50 hover:bg-pink-300/40 dark:hover:bg-black/70 rounded-full px-3 py-1.5 backdrop-blur-sm"
-        >
-          <Zap className="size-4" />
-          <span className="text-sm font-medium">
-            {currentModel?.name || t('chat.input.selectModel')}
-          </span>
-          <ChevronDown className="size-3" />
-        </Button>
-      </DropdownMenuTrigger>
+  const handleModelSelect = (modelId: string) => {
+    onModelChange(modelId);
+    setIsOpen(false);
+  };
 
-      <DropdownMenuContent
-        align="start"
-        sideOffset={8}
-        className="w-96 p-3 bg-gradient-to-br from-pink-50 to-pink-100/60 dark:from-black/95 dark:to-pink-950/20 border-pink-200 dark:border-pink-900/50 backdrop-blur-md overflow-visible"
-      >
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-pink-200 dark:border-pink-900/30">
-          <Sparkles className="size-4 text-pink-600 dark:text-pink-400" />
-          <span className="font-medium text-pink-900 dark:text-gray-100">
-            Favorite Models
-          </span>
-        </div>
+  const triggerButton = (
+    <Button
+      variant="ghost"
+      className="inline-flex items-center gap-2 text-gray-600 dark:text-pink-300 hover:text-gray-900 dark:hover:text-pink-200 bg-pink-300/30 dark:bg-black/50 hover:bg-pink-300/40 dark:hover:bg-black/70 rounded-full px-3 py-1.5 backdrop-blur-sm"
+    >
+      <Zap className="size-4" />
+      <span className="text-sm font-medium">
+        {currentModel?.name || t('chat.input.selectModel')}
+      </span>
+      <ChevronDown className="size-3" />
+    </Button>
+  );
 
-        {/* Favorite Models Grid */}
-        <div className="space-y-1">
-          {favoriteModels.map((model) => (
-            <Button
-              key={model.id}
-              variant="ghost"
-              onClick={() => {
-                onModelChange(model.id);
-                setIsOpen(false);
-              }}
-              className={`w-full justify-start p-2 h-auto transition-all rounded-xl ${
-                selectedModel === model.id
-                  ? 'bg-pink-200 dark:bg-pink-900/50 text-pink-900 dark:text-pink-100 border border-pink-300 dark:border-pink-700'
-                  : 'hover:bg-pink-100 dark:hover:bg-pink-900/20 text-pink-800 dark:text-pink-200'
-              }`}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <div className="size-6 flex items-center justify-center text-pink-600 dark:text-pink-400">
-                  <Zap className="size-4" />
+  const modelContent = (
+    <>
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-pink-200 dark:border-pink-900/30">
+        <Sparkles className="size-4 text-pink-600 dark:text-pink-400" />
+        <span className="font-medium text-pink-900 dark:text-gray-100">
+          Favorite Models
+        </span>
+      </div>
+
+      {/* Favorite Models Grid */}
+      <div className="space-y-1">
+        {favoriteModels.map((model) => (
+          <Button
+            key={model.id}
+            variant="ghost"
+            onClick={() => handleModelSelect(model.id)}
+            className={cn(
+              'w-full justify-start p-2 h-auto transition-all rounded-xl',
+              selectedModel === model.id
+                ? 'bg-pink-200 dark:bg-pink-900/50 text-pink-900 dark:text-pink-100 border border-pink-300 dark:border-pink-700'
+                : 'hover:bg-pink-100 dark:hover:bg-pink-900/20 text-pink-800 dark:text-pink-200',
+            )}
+          >
+            <div className="flex items-center gap-2 w-full">
+              <div className="size-6 flex items-center justify-center text-pink-600 dark:text-pink-400">
+                <Zap className="size-4" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-sm font-medium truncate">{model.name}</div>
+                <div className="text-xs opacity-70 truncate">
+                  {getProviderFromModelId(model.id)}
                 </div>
-                <div className="flex-1 text-left min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {model.name}
-                  </div>
-                  <div className="text-xs opacity-70 truncate">
-                    {getProviderFromModelId(model.id)}
-                  </div>
-                </div>
+              </div>
 
-                {/* Capability icons */}
-                <div className="flex items-center gap-1 mr-2">
-                  {model.capabilities.slice(0, 3).map((capability) => {
-                    const capabilityIcon = getCapabilityIcon(capability);
+              {/* Capability icons */}
+              <div className="flex items-center gap-1 mr-2">
+                {model.capabilities.slice(0, 3).map((capability) => {
+                  const capabilityIcon = getCapabilityIcon(capability);
 
-                    return capabilityIcon ? (
-                      <Tooltip key={capability}>
-                        <TooltipTrigger asChild>
-                          <div className="size-5 rounded bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors cursor-help">
-                            {capabilityIcon}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          sideOffset={10}
-                          avoidCollisions={false}
-                        >
-                          <p className="text-sm font-medium">
-                            {capability === 'text' && 'Text processing'}
-                            {capability === 'image' && 'Image analysis'}
-                            {capability === 'audio' && 'Audio processing'}
-                            {capability === 'video' && 'Video analysis'}
-                            {capability === 'code' && 'Code generation'}
-                            {capability === 'web' && 'Web search'}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : null;
-                  })}
-                  {model.capabilities.length > 3 && (
-                    <Tooltip>
+                  return capabilityIcon ? (
+                    <Tooltip key={capability}>
                       <TooltipTrigger asChild>
-                        <div className="size-5 rounded bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 text-xs font-medium hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors cursor-help">
-                          +{model.capabilities.length - 3}
+                        <div className="size-5 rounded bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors cursor-help">
+                          {capabilityIcon}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent
@@ -181,46 +163,108 @@ export function ModelDropdown({
                         avoidCollisions={false}
                       >
                         <p className="text-sm font-medium">
-                          {model.capabilities.length - 3} more capabilities
+                          {capability === 'text' && 'Text processing'}
+                          {capability === 'image' && 'Image analysis'}
+                          {capability === 'audio' && 'Audio processing'}
+                          {capability === 'video' && 'Video analysis'}
+                          {capability === 'code' && 'Code generation'}
+                          {capability === 'web' && 'Web search'}
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                  )}
-                </div>
+                  ) : null;
+                })}
+                {model.capabilities.length > 3 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="size-5 rounded bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 text-xs font-medium hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors cursor-help">
+                        +{model.capabilities.length - 3}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      sideOffset={10}
+                      avoidCollisions={false}
+                    >
+                      <p className="text-sm font-medium">
+                        {model.capabilities.length - 3} more capabilities
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
-            </Button>
-          ))}
-        </div>
+            </div>
+          </Button>
+        ))}
+      </div>
 
-        {/* Footer with Browse All Models */}
-        <div className="mt-3 pt-2 border-t border-pink-200 dark:border-pink-900/30">
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setIsOpen(false);
-                setTimeout(() => onOpenFullSelector(), 100);
-              }}
-              className="flex-1 text-xs text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 rounded-md"
-            >
-              <Sparkles className="size-3 mr-1" />
-              {t('chat.input.allModels')}
-            </Button>
+      {/* Footer with Browse All Models */}
+      <div className="mt-3 pt-2 border-t border-pink-200 dark:border-pink-900/30">
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setIsOpen(false);
+              setTimeout(() => onOpenFullSelector(), 100);
+            }}
+            className="flex-1 text-xs text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 rounded-md"
+          >
+            <Sparkles className="size-3 mr-1" />
+            {t('chat.input.allModels')}
+          </Button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setIsOpen(false);
-                setTimeout(() => onOpenFullSelector(), 100);
-              }}
-              className="px-2 text-xs text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 rounded-md"
-            >
-              <Filter className="size-3" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setIsOpen(false);
+              setTimeout(() => onOpenFullSelector(), 100);
+            }}
+            className="px-2 text-xs text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 rounded-md"
+          >
+            <Filter className="size-3" />
+          </Button>
         </div>
+      </div>
+    </>
+  );
+
+  // Mobile version with Drawer
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+        <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+        <DrawerContent className="bg-gradient-to-br from-pink-50 to-pink-100/60 dark:from-black/95 dark:to-pink-950/20 border-pink-200 dark:border-pink-900/50 backdrop-blur-md max-h-[80vh] overflow-y-auto">
+          <DrawerHeader className="mb-4">
+            <DrawerTitle className="text-pink-900 dark:text-gray-100">
+              Select Model
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4">{modelContent}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Desktop version with DropdownMenu
+  return (
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="start"
+        sideOffset={8}
+        className="w-96 p-3 bg-gradient-to-br from-pink-50 to-pink-100/60 dark:from-black/95 dark:to-pink-950/20 border-pink-200 dark:border-pink-900/50 backdrop-blur-md overflow-visible"
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking on example prompts
+          const target = e.target as Element;
+          if (target.closest('[data-example-prompt]')) {
+            e.preventDefault();
+          }
+        }}
+      >
+        {modelContent}
       </DropdownMenuContent>
     </DropdownMenu>
   );

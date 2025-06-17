@@ -19,6 +19,7 @@ import { ModelDropdown } from './model-dropdown';
 import { chatModels } from '@/lib/ai/models';
 import Image from 'next/image';
 import { useLanguage } from '@/hooks/use-language';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Helper function to format file size
 const formatFileSize = (bytes: number | undefined): string => {
@@ -98,12 +99,12 @@ export function ChatInput({
   const [timeUntilReset, setTimeUntilReset] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const prevStreamingRef = useRef(isStreaming);
+  const isMobile = useIsMobile();
 
   // Reset submitting state when streaming ends
   useEffect(() => {
     // Only reset when streaming changes from true to false
     if (prevStreamingRef.current && !isStreaming) {
-
       setIsSubmitting(false);
     }
     prevStreamingRef.current = isStreaming;
@@ -170,7 +171,7 @@ export function ChatInput({
     }
   };
 
-    const onSubmitForm = (e: React.FormEvent) => {
+  const onSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Block submission if bot is streaming/thinking or other conditions
@@ -201,12 +202,10 @@ export function ChatInput({
 
   const isInputDisabled = isSubmitting || isStreaming || disabled;
 
-
-
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="fixed inset-x-0 bottom-0 z-[100] p-4 pb-safe">
-        <div className="mx-auto max-w-4xl space-y-3">
+      <div className="fixed inset-x-0 bottom-0 z-[60] p-4 pb-safe pointer-events-none">
+        <div className="mx-auto max-w-4xl space-y-3 pointer-events-auto">
           {/* Upload Progress */}
           {uploadProgress > 0 && uploadProgress < 100 && (
             <Card className="border-pink-300 dark:border-pink-800/50 bg-pink-300/20 dark:bg-black/60 backdrop-blur-sm">
@@ -319,7 +318,13 @@ export function ChatInput({
           {/* Token Usage Alert - Always visible when 10 or fewer tokens remaining */}
           {usage && usage.remaining <= 10 && (
             <Alert
-              variant={usage.remaining === 0 ? 'destructive' : usage.remaining <= 3 ? 'destructive' : 'default'}
+              variant={
+                usage.remaining === 0
+                  ? 'destructive'
+                  : usage.remaining <= 3
+                    ? 'destructive'
+                    : 'default'
+              }
               className={`backdrop-blur-md shadow-lg mb-3 w-fit mx-auto ${
                 usage.remaining === 0
                   ? 'bg-red-50/90 dark:bg-red-950/90 border-red-200 dark:border-red-800/50'
@@ -328,19 +333,20 @@ export function ChatInput({
                     : 'bg-yellow-50/90 dark:bg-yellow-950/90 border-yellow-200 dark:border-yellow-800/50'
               }`}
             >
-              <AlertDescription className={
-                usage.remaining === 0
-                  ? 'text-red-800 dark:text-red-200'
-                  : usage.remaining <= 3
-                    ? 'text-orange-800 dark:text-orange-200'
-                    : 'text-yellow-800 dark:text-yellow-200'
-              }>
+              <AlertDescription
+                className={
+                  usage.remaining === 0
+                    ? 'text-red-800 dark:text-red-200'
+                    : usage.remaining <= 3
+                      ? 'text-orange-800 dark:text-orange-200'
+                      : 'text-yellow-800 dark:text-yellow-200'
+                }
+              >
                 {usage.remaining === 0 ? (
                   <>
                     {userType === 'guest'
                       ? 'No free messages remaining. Please sign in to continue.'
-                      : 'Daily message limit reached. Try again later or upgrade to Pro.'
-                    }
+                      : 'Daily message limit reached. Try again later or upgrade to Pro.'}
                     {timeUntilReset && (
                       <div className="text-sm mt-1 opacity-80">
                         New tokens available in: {timeUntilReset}
@@ -350,8 +356,11 @@ export function ChatInput({
                 ) : (
                   <>
                     {usage.remaining} of {usage.limit} messages remaining today.
-                    {userType === 'guest' && ' Sign in to increase your limits.'}
-                    {userType === 'regular' && usage.remaining <= 3 && ' Consider upgrading to Pro for unlimited messages.'}
+                    {userType === 'guest' &&
+                      ' Sign in to increase your limits.'}
+                    {userType === 'regular' &&
+                      usage.remaining <= 3 &&
+                      ' Consider upgrading to Pro for unlimited messages.'}
                     {timeUntilReset && usage.remaining === 0 && (
                       <div className="text-sm mt-1 opacity-80">
                         Reset in: {timeUntilReset}
@@ -386,7 +395,11 @@ export function ChatInput({
               {/* Left side - Tools */}
               <div className="flex items-center space-x-2">
                 {/* Model Dropdown */}
-                <div className={isStreaming ? 'opacity-50 pointer-events-none' : ''}>
+                <div
+                  className={
+                    isStreaming ? 'opacity-50 pointer-events-none' : ''
+                  }
+                >
                   <ModelDropdown
                     selectedModel={selectedModel}
                     onModelChange={onModelChange}
@@ -450,7 +463,7 @@ export function ChatInput({
                       <Paperclip className="size-4" />
                       {!isNotGuest ? (
                         <Badge className="absolute -top-2.5 -right-2.5 h-4 px-1.5 text-xs bg-pink-600 dark:bg-pink-700 text-white">
-                          Login
+                          Pro
                         </Badge>
                       ) : (
                         attachments.length > 0 && (
@@ -471,6 +484,7 @@ export function ChatInput({
                   <Button
                     type="submit"
                     disabled={isButtonDisabled}
+                    size={isMobile ? 'icon' : 'default'}
                     className="rounded-full"
                     onClick={(e) => {
                       if (isButtonDisabled) {

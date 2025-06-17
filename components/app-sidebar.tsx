@@ -367,7 +367,7 @@ export function AppSidebar({
           <div className="p-2 sm:px-2">
             <Button
               onClick={handleNewChat}
-              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 dark:from-pink-600 dark:to-pink-700 dark:hover:from-pink-700 dark:hover:to-pink-800 text-white rounded-xl shadow-md"
+              className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 dark:from-pink-600 dark:to-pink-700 dark:hover:from-pink-700 dark:hover:to-pink-800 text-white rounded-full shadow-md"
             >
               <span className="inline">{t('navigation.header.newChat')}</span>
             </Button>
@@ -379,7 +379,7 @@ export function AppSidebar({
               placeholder={t('chat.input.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/80 dark:bg-black/50 border-pink-200/50 dark:border-pink-800/30 text-pink-900 dark:text-pink-100 placeholder:text-pink-600/70 dark:placeholder:text-pink-400/70 focus:border-pink-400 dark:focus:border-pink-600 rounded-xl"
+              className="bg-white/80 dark:bg-black/50 border-pink-200/50 dark:border-pink-800/30 text-pink-900 dark:text-pink-100 placeholder:text-pink-600/70 dark:placeholder:text-pink-400/70 focus:border-pink-400 dark:focus:border-pink-600 rounded-full"
             />
           </div>
 
@@ -393,7 +393,7 @@ export function AppSidebar({
                       <Button
                         variant="outline"
                         onClick={() => setShowCreateFolderDialog(true)}
-                        className="border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 rounded-lg"
+                        className="border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 rounded-full"
                       >
                         <FolderIcon className="size-3 mr-1.5" />
                         <span className="text-xs">
@@ -413,7 +413,7 @@ export function AppSidebar({
                       <Button
                         variant="outline"
                         onClick={() => setShowCreateTagDialog(true)}
-                        className="border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 rounded-lg"
+                        className="border-pink-200/50 dark:border-pink-800/30 text-pink-700 dark:text-pink-300 hover:bg-pink-100/50 dark:hover:bg-pink-900/30 hover:border-pink-300 dark:hover:border-pink-700 rounded-full"
                       >
                         <Hash className="size-3 mr-1.5" />
                         <span className="text-xs">

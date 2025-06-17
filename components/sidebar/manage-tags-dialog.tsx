@@ -9,14 +9,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/hooks/use-language';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { Tag } from '@/lib/db/schema';
 import type { UserType } from '@/app/(auth)/auth';
 import { getUserEntitlements } from '@/lib/ai/entitlements';
 import Color from 'colorjs.io';
+import { cn } from '@/lib/utils';
 
 interface SidebarThread {
   id: string;
@@ -103,6 +112,225 @@ export function ManageTagsDialog({
   colorAccents,
 }: ManageTagsDialogProps) {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
+
+  const mainContent = (
+    <div
+      className={cn(
+        'flex flex-col',
+        isMobile ? 'h-full' : 'h-full max-h-[calc(95vh-120px)] overflow-hidden',
+      )}
+    >
+      <div
+        className={cn(
+          'gap-6 py-6',
+          isMobile
+            ? 'flex flex-col space-y-6'
+            : 'grid grid-cols-1 lg:grid-cols-4',
+        )}
+      >
+        {/* Tag Cloud */}
+        <div className={cn('space-y-4', isMobile ? 'w-full' : 'lg:col-span-3')}>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
+              {t('tags.yourTags')}
+            </h3>
+            <span className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100 dark:bg-pink-900/30 px-2 py-1 rounded-full">
+              {t('tags.tagCount', { count: tags.length })}
+            </span>
+          </div>
+
+          {tags.length > 0 ? (
+            <div
+              className={cn(
+                isMobile ? 'max-h-none' : 'max-h-[400px] overflow-y-auto',
+              )}
+            >
+              <div className="flex flex-wrap gap-3 py-2 px-px">
+                {tags.map((tag) => {
+                  const taggedChats = allThreads.filter((t) =>
+                    t.tags?.some((chatTag: any) => chatTag.id === tag.id),
+                  );
+                  const recentTaggedChat = taggedChats.sort(
+                    (a, b) =>
+                      new Date(b.createdAt).getTime() -
+                      new Date(a.createdAt).getTime(),
+                  )[0];
+
+                  const textColor = getColorjsContrastTextColor(
+                    colorAccents[tag.color as keyof typeof colorAccents]
+                      ?.accent || '#6B7280',
+                  );
+
+                  return (
+                    <div
+                      key={tag.id}
+                      className="group relative p-3 rounded-lg bg-white/80 dark:bg-black/50 hover:bg-pink-50 dark:hover:bg-pink-950/30 transition-colors min-w-[160px] border border-pink-200/30 dark:border-pink-800/30"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="size-6 rounded flex items-center justify-center"
+                            style={{
+                              backgroundColor:
+                                colorAccents[
+                                  tag.color as keyof typeof colorAccents
+                                ]?.accent || '#6B7280',
+                            }}
+                          >
+                            <Hash
+                              className="size-3"
+                              style={{ color: textColor }}
+                            />
+                          </div>
+                          <h4 className="text-sm font-medium text-pink-900 dark:text-pink-100">
+                            {tag.label}
+                          </h4>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteTag(tag.id, tag.label)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 size-5 p-0 rounded"
+                        >
+                          <X size={12} />
+                        </Button>
+                      </div>
+
+                      <div className="text-xs text-pink-600 dark:text-pink-400">
+                        {t('tags.chatCount', { count: taggedChats.length })}
+                        {recentTaggedChat && (
+                          <span className="ml-2">
+                            •{' '}
+                            {new Date(
+                              recentTaggedChat.createdAt,
+                            ).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 px-6">
+              <div className="size-16 mx-auto mb-4 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                <Hash className="size-8 text-pink-500 dark:text-pink-400" />
+              </div>
+              <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
+                {t('tags.noTagsYet')}
+              </h3>
+              <p className="text-sm text-pink-600 dark:text-pink-400">
+                {t('tags.createFirstTag')}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Create New Tag */}
+        <div className="space-y-6">
+          <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
+            <h3 className="font-medium mb-4 text-pink-900 dark:text-pink-100">
+              {t('tags.createNewTag')}
+            </h3>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="tagName"
+                  className="text-pink-800 dark:text-pink-200"
+                >
+                  {t('tags.tagName')}
+                </Label>
+                <Input
+                  id="tagName"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder={t('tags.tagNamePlaceholder')}
+                  className="border-pink-200 dark:border-pink-800/50 bg-white/80 dark:bg-black/50 text-pink-900 dark:text-pink-100 placeholder:text-pink-500 dark:placeholder:text-pink-400 focus:border-pink-400 dark:focus:border-pink-600"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-pink-800 dark:text-pink-200">
+                  {t('tags.colorTheme')}
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.entries(colorAccents).map(([color, values]) => {
+                    const textColor = getColorjsContrastTextColor(
+                      values.accent,
+                    );
+
+                    return (
+                      <Button
+                        key={color}
+                        variant="ghost"
+                        size={'sm'}
+                        style={{
+                          backgroundColor: values.accent,
+                          boxShadow:
+                            color === newTagColor
+                              ? `0 0 0 2px ${darkenColor(values.accent, 0.18)}`
+                              : undefined,
+                          transition: 'box-shadow 0.2s, background 0.2s',
+                        }}
+                        className="h-12 justify-center hover:scale-105 transition-transform text-xs"
+                        onClick={() => setNewTagColor(color)}
+                      >
+                        <span style={{ color: textColor }}>{color}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Button
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white disabled:opacity-50"
+                onClick={onCreateTag}
+                disabled={
+                  !newTagName.trim() ||
+                  isCreating ||
+                  (getUserEntitlements(userType).maxTags !== -1 &&
+                    tags.length >= getUserEntitlements(userType).maxTags)
+                }
+              >
+                {isCreating ? 'Creating...' : t('tags.createTag')}
+              </Button>
+
+              <div className="text-xs text-pink-600 dark:text-pink-400 space-y-1">
+                <p>
+                  {getUserEntitlements(userType).maxTags === -1
+                    ? 'Unlimited tags'
+                    : `${tags.length}/${getUserEntitlements(userType).maxTags} tags used`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl h-[95vh] overflow-hidden flex flex-col">
+          <DrawerHeader className="pb-4 border-b border-pink-200/50 dark:border-pink-900/30 shrink-0">
+            <DrawerTitle className="text-pink-900 dark:text-gray-100 flex items-center gap-3">
+              <Hash className="size-5" />
+              {t('tags.manageTags')}
+            </DrawerTitle>
+            <p className="text-sm text-pink-600 dark:text-pink-400">
+              {t('tags.categorizeConversations')}
+            </p>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto p-4 pb-8">{mainContent}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:min-w-5xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl rounded-2xl">
@@ -121,283 +349,7 @@ export function ManageTagsDialog({
             </div>
           </DialogTitle>
         </DialogHeader>
-
-        <div className="flex flex-col h-full max-h-[calc(95vh-120px)] overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 py-6">
-            {/* Tag Cloud - Left 3/4 */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
-                  {t('tags.yourTags')}
-                </h3>
-                <span className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100 dark:bg-pink-900/30 px-2 py-1 rounded-full">
-                  {t('tags.tagCount', { count: tags.length })}
-                </span>
-              </div>
-
-              {tags.length > 0 ? (
-                <div className="max-h-[400px] overflow-y-auto">
-                  <div className="flex flex-wrap gap-3 py-2 px-px">
-                    {tags.map((tag) => {
-                      const taggedChats = allThreads.filter((t) =>
-                        t.tags?.some((chatTag: any) => chatTag.id === tag.id),
-                      );
-                      const recentTaggedChat = taggedChats.sort(
-                        (a, b) =>
-                          new Date(b.createdAt).getTime() -
-                          new Date(a.createdAt).getTime(),
-                      )[0];
-
-                      const textColor = getColorjsContrastTextColor(
-                        colorAccents[tag.color as keyof typeof colorAccents]
-                          ?.accent || '#6B7280',
-                      );
-
-                      return (
-                        <div
-                          key={tag.id}
-                          className="group relative p-3 rounded-lg bg-white/80 dark:bg-black/50 hover:bg-pink-50 dark:hover:bg-pink-950/30 transition-colors min-w-[160px] border border-pink-200/30 dark:border-pink-800/30"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="size-6 rounded flex items-center justify-center"
-                                style={{
-                                  backgroundColor:
-                                    colorAccents[
-                                      tag.color as keyof typeof colorAccents
-                                    ]?.accent || '#6B7280',
-                                }}
-                              >
-                                <Hash
-                                  className="size-3"
-                                  style={{ color: textColor }}
-                                />
-                              </div>
-                              <h4 className="text-sm font-medium text-pink-900 dark:text-pink-100">
-                                {tag.label}
-                              </h4>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onDeleteTag(tag.id, tag.label)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 size-5 p-0 rounded"
-                            >
-                              <X size={12} />
-                            </Button>
-                          </div>
-
-                          <div className="text-xs text-pink-600 dark:text-pink-400">
-                            {t('tags.chatCount', { count: taggedChats.length })}
-                            {recentTaggedChat && (
-                              <span className="ml-2">
-                                •{' '}
-                                {new Date(
-                                  recentTaggedChat.createdAt,
-                                ).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 px-6">
-                  <div className="size-16 mx-auto mb-4 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                    <Hash className="size-8 text-pink-500 dark:text-pink-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-pink-900 dark:text-pink-100 mb-2">
-                    {t('tags.noTagsYet')}
-                  </h3>
-                  <p className="text-sm text-pink-600 dark:text-pink-400">
-                    {t('tags.createFirstTag')}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Create New Tag - Right 1/4 */}
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
-                <h3 className="font-medium mb-4 text-pink-900 dark:text-pink-100">
-                  {t('tags.createNewTag')}
-                </h3>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="tagName"
-                      className="text-pink-800 dark:text-pink-200"
-                    >
-                      {t('tags.tagName')}
-                    </Label>
-                    <Input
-                      id="tagName"
-                      value={newTagName}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                      placeholder={t('tags.tagNamePlaceholder')}
-                      className="border-pink-200 dark:border-pink-800/50 bg-white/80 dark:bg-black/50 text-pink-900 dark:text-pink-100 placeholder:text-pink-500 dark:placeholder:text-pink-400 focus:border-pink-400 dark:focus:border-pink-600"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-pink-800 dark:text-pink-200">
-                      {t('tags.colorTheme')}
-                    </Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {Object.entries(colorAccents).map(([color, values]) => {
-                        const textColor = getColorjsContrastTextColor(
-                          values.accent,
-                        );
-
-                        return (
-                          <Button
-                            key={color}
-                            variant="ghost"
-                            size={'sm'}
-                            style={{
-                              backgroundColor: values.accent,
-                              boxShadow:
-                                color === newTagColor
-                                  ? `0 0 0 2px ${darkenColor(values.accent, 0.18)}`
-                                  : undefined,
-                              transition: 'box-shadow 0.2s, background 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                darkenColor(values.accent, 0.18);
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                values.accent;
-                            }}
-                            onClick={() => setNewTagColor(color)}
-                          >
-                            <span
-                              className="text-xs capitalize font-medium"
-                              style={{ color: textColor }}
-                            >
-                              {color}
-                            </span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={onCreateTag}
-                    disabled={
-                      !newTagName.trim() ||
-                      isCreating ||
-                      (() => {
-                        const entitlements = getUserEntitlements(userType);
-                        return (
-                          entitlements.maxTags !== -1 &&
-                          tags.length >= entitlements.maxTags
-                        );
-                      })()
-                    }
-                    className="w-full bg-pink-500 hover:bg-pink-600 dark:bg-pink-600 dark:hover:bg-pink-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Hash className="size-4 mr-2" />
-                    {isCreating
-                      ? /* TODO: add translation */
-                        'Saving...'
-                      : (() => {
-                          const entitlements = getUserEntitlements(userType);
-                          if (
-                            entitlements.maxTags !== -1 &&
-                            tags.length >= entitlements.maxTags
-                          ) {
-                            // TODO: add translation
-                            return 'Limit reached';
-                          }
-                          return t('tags.createTag');
-                        })()}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Tag Stats */}
-              <div className="p-4 rounded-xl bg-pink-50/50 dark:bg-black/30 border border-pink-200/50 dark:border-pink-800/30">
-                <h4 className="text-sm font-medium text-pink-900 dark:text-pink-100 mb-3">
-                  {t('tags.tagStatistics')}
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-pink-600 dark:text-pink-400">
-                      {t('tags.tagsUsed')}:
-                    </span>
-                    <span className="font-medium text-pink-900 dark:text-pink-100">
-                      {tags.length}
-                      {(() => {
-                        const entitlements = getUserEntitlements(userType);
-                        return entitlements.maxTags === -1
-                          ? ''
-                          : ` / ${entitlements.maxTags}`;
-                      })()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-pink-600 dark:text-pink-400">
-                      {t('tags.taggedChats')}:
-                    </span>
-                    <span className="font-medium text-pink-900 dark:text-pink-100">
-                      {
-                        allThreads.filter((t) => t.tags && t.tags.length > 0)
-                          .length
-                      }
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-pink-600 dark:text-pink-400">
-                      {t('tags.untaggedChats')}:
-                    </span>
-                    <span className="font-medium text-pink-900 dark:text-pink-100">
-                      {
-                        allThreads.filter((t) => !t.tags || t.tags.length === 0)
-                          .length
-                      }
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-pink-600 dark:text-pink-400">
-                      {t('tags.avgTagsPerChat')}:
-                    </span>
-                    <span className="font-medium text-pink-900 dark:text-pink-100">
-                      {allThreads.length > 0
-                        ? (
-                            allThreads.reduce(
-                              (acc, t) => acc + (t.tags?.length || 0),
-                              0,
-                            ) / allThreads.length
-                          ).toFixed(1)
-                        : '0.0'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="pt-6 border-t border-pink-200/50 dark:border-pink-900/30">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setNewTagName('');
-              setNewTagColor('gray');
-              onOpenChange(false);
-            }}
-            className="border-pink-200 dark:border-pink-800/50 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20"
-          >
-            {t('common.close')}
-          </Button>
-        </DialogFooter>
+        {mainContent}
       </DialogContent>
     </Dialog>
   );

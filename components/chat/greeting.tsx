@@ -186,6 +186,7 @@ export const Greeting = ({
               size="lg"
               className="w-full p-4 text-left justify-start hover:bg-pink-300/20 dark:hover:bg-black/40 text-gray-700 dark:text-gray-300 border border-transparent hover:border-pink-300 dark:hover:border-pink-800/60 rounded-xl h-auto"
               onClick={() => onExamplePromptClick?.(prompt)}
+              data-example-prompt="true"
             >
               <span className="text-base">{prompt}</span>
             </Button>

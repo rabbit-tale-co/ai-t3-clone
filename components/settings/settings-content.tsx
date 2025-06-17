@@ -133,60 +133,69 @@ export function SettingsContent({
 
   if (isMobile) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full max-h-[calc(95vh-80px)]">
         {/* Mobile Navigation */}
-        <div className="border-b border-pink-200/30 dark:border-pink-900/20 p-4">
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2">
+        <div className="border-b border-pink-200/30 dark:border-pink-900/20 shrink-0 overflow-x-auto">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="inline-flex h-12 w-max bg-transparent border-0 rounded-none p-0 gap-0">
               {navigationTabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
-                  <Button
+                  <TabsTrigger
                     key={tab.id}
-                    variant={activeTab === tab.id ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`${
-                      activeTab === tab.id
-                        ? 'bg-pink-600 text-white'
-                        : 'text-pink-600 dark:text-pink-400'
-                    }`}
+                    value={tab.id}
+                    className="
+                      shrink-0 inline-flex items-center gap-2 px-4 py-3 rounded-none text-sm font-medium
+                      transition-colors whitespace-nowrap min-w-fit border-b-2 border-transparent
+                      text-pink-600 dark:text-pink-400
+                      data-[state=active]:text-pink-900 dark:data-[state=active]:text-pink-100
+                      data-[state=active]:border-pink-600 dark:data-[state=active]:border-pink-400
+                      data-[state=active]:bg-transparent
+                      hover:text-pink-700 dark:hover:text-pink-300
+                      hover:bg-pink-50 dark:hover:bg-pink-900/10
+                    "
                   >
                     <Icon size={16} />
                     {tab.label}
-                  </Button>
+                  </TabsTrigger>
                 );
               })}
-            </div>
-          </ScrollArea>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Mobile Content */}
-        <ScrollArea className="flex-1 p-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsContent value="account" className="space-y-6 mt-0">
-              <AccountTab user={user} />
-            </TabsContent>
-            <TabsContent value="customization" className="space-y-6 mt-0">
-              <CustomizationTab user={user} />
-            </TabsContent>
-            <TabsContent value="history" className="space-y-6 mt-0">
-              <HistoryTab />
-            </TabsContent>
-            <TabsContent value="models" className="space-y-6 mt-0">
-              <ModelsTab user={user} entitlements={entitlements} />
-            </TabsContent>
-            <TabsContent value="api-keys" className="space-y-6 mt-0">
-              <ApiKeysTab user={user} />
-            </TabsContent>
-            <TabsContent value="attachments" className="space-y-6 mt-0">
-              <AttachmentsTab />
-            </TabsContent>
-            <TabsContent value="contact" className="space-y-6 mt-0">
-              <ContactTab />
-            </TabsContent>
-          </Tabs>
-        </ScrollArea>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="p-4 pb-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsContent value="account" className="space-y-6 mt-0">
+                <AccountTab user={user} />
+              </TabsContent>
+              <TabsContent value="customization" className="space-y-6 mt-0">
+                <CustomizationTab user={user} />
+              </TabsContent>
+              <TabsContent value="history" className="space-y-6 mt-0">
+                <HistoryTab />
+              </TabsContent>
+              <TabsContent value="models" className="space-y-6 mt-0">
+                <ModelsTab user={user} entitlements={entitlements} />
+              </TabsContent>
+              <TabsContent value="api-keys" className="space-y-6 mt-0">
+                <ApiKeysTab user={user} />
+              </TabsContent>
+              <TabsContent value="attachments" className="space-y-6 mt-0">
+                <AttachmentsTab />
+              </TabsContent>
+              <TabsContent value="contact" className="space-y-6 mt-0">
+                <ContactTab />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
     );
   }
