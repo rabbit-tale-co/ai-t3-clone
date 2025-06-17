@@ -37,7 +37,7 @@ function PureChatHeader({
   const { open: sidebarOpen, isMobile } = useSidebar();
 
   return (
-    <header className="flex sticky top-0 bg-gradient-to-r from-pink-50/80 to-pink-100/60 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-md py-3 items-center px-4 gap-3 border-b border-pink-200/50 dark:border-pink-800/30 rounded-t-3xl z-10">
+    <header className="flex bg-gradient-to-r from-pink-50/80 to-pink-100/60 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-md py-3 items-center px-4 gap-3 border-b border-pink-200/50 dark:border-pink-800/30 rounded-t-3xl">
       {/* Left side - Sidebar toggle and buttons */}
       <div className="flex items-center gap-3">
         {/* Sidebar Toggle */}

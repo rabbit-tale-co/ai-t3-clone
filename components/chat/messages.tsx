@@ -51,7 +51,7 @@ function PureMessages({
     <div
       ref={messagesContainerRef}
       className={cn(
-        'flex flex-col min-w-0 gap-4 h-full overflow-y-auto pt-6 pb-32 sm:pb-40 relative',
+        'flex flex-col min-w-0 gap-4 h-full overflow-y-auto pt-6 pb-2 relative',
         'scroll-smooth scrollbar-thin scrollbar-thumb-pink-200 dark:scrollbar-thumb-pink-800 scrollbar-track-transparent',
         'overscroll-behavior-y-contain',
       )}

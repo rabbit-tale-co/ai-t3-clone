@@ -464,9 +464,9 @@ export function Chat({
 
   return (
     <>
-      <div className="flex flex-col h-full bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm">
-        {/* Chat Header */}
-        <div className="sticky top-0 z-50 shrink-0">
+      <div className="relative h-dvh bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm">
+        {/* Chat Header - Fixed at top */}
+        <div className="absolute top-0 left-0 right-0 z-40">
           <ChatHeader
             chatId={id}
             selectedModelId={selectedModel}
@@ -476,8 +476,8 @@ export function Chat({
           />
         </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-hidden">
+        {/* Messages Area - Full height with bottom padding for input */}
+        <div className="absolute top-0 left-0 right-0 bottom-0 pt-16 pb-4 overflow-hidden">
           <Messages
             chatId={id}
             status={status}
@@ -492,9 +492,9 @@ export function Chat({
           />
         </div>
 
-        {/* Chat Input */}
+        {/* Chat Input - Fixed at bottom */}
         {!isReadonly && (
-          <div className="shrink-0">
+          <div className="absolute bottom-0 left-0 right-0 z-50">
             <ChatInput
               input={input}
               onInputChange={(e) => setInput(e.target.value)}

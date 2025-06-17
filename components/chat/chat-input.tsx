@@ -204,7 +204,7 @@ export function ChatInput({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="fixed inset-x-0 bottom-0 z-[60] p-4 pb-safe pointer-events-none">
+      <div className="relative p-4 pb-safe pointer-events-none">
         <div className="mx-auto max-w-4xl space-y-3 pointer-events-auto">
           {/* Upload Progress */}
           {uploadProgress > 0 && uploadProgress < 100 && (
@@ -223,7 +223,7 @@ export function ChatInput({
 
           {/* Display Selected Attachments - Compact Version */}
           {attachments.length > 0 && (
-            <div className="bg-pink-50/60 dark:bg-pink-950/20 border border-pink-200/50 dark:border-pink-800/30 rounded-xl p-3 backdrop-blur-sm">
+            <div className="bg-pink-50/10 dark:bg-pink-950/10 border border-pink-200/30 dark:border-pink-800/20 rounded-xl p-3 backdrop-blur-[32px] backdrop-saturate-150">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Paperclip className="size-4 text-pink-600 dark:text-pink-400" />
@@ -305,7 +305,7 @@ export function ChatInput({
             <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 max-w-md mx-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200">
               <Alert
                 variant="destructive"
-                className="bg-red-50/90 dark:bg-red-950/90 border-red-200 dark:border-red-800/50 backdrop-blur-md shadow-lg"
+                className="bg-red-50/40 dark:bg-red-950/40 border-red-200/50 dark:border-red-800/30 backdrop-blur-lg shadow-lg"
               >
                 <AlertDescription className="text-red-800 dark:text-red-200">
                   Selected model is not available. Add API key in settings or
@@ -325,12 +325,12 @@ export function ChatInput({
                     ? 'destructive'
                     : 'default'
               }
-              className={`backdrop-blur-md shadow-lg mb-3 w-fit mx-auto ${
+              className={`backdrop-blur-lg shadow-lg mb-3 w-fit mx-auto ${
                 usage.remaining === 0
-                  ? 'bg-red-50/90 dark:bg-red-950/90 border-red-200 dark:border-red-800/50'
+                  ? 'bg-red-50/40 dark:bg-red-950/40 border-red-200/50 dark:border-red-800/30'
                   : usage.remaining <= 3
-                    ? 'bg-orange-50/90 dark:bg-orange-950/90 border-orange-200 dark:border-orange-800/50'
-                    : 'bg-yellow-50/90 dark:bg-yellow-950/90 border-yellow-200 dark:border-yellow-800/50'
+                    ? 'bg-orange-50/40 dark:bg-orange-950/40 border-orange-200/50 dark:border-orange-800/30'
+                    : 'bg-yellow-50/40 dark:bg-yellow-950/40 border-yellow-200/50 dark:border-yellow-800/30'
               }`}
             >
               <AlertDescription
@@ -375,7 +375,7 @@ export function ChatInput({
           {/* Main Input Form */}
           <form
             onSubmit={onSubmitForm}
-            className="p-2 border-pink-300/50 dark:border-pink-800/60 bg-gradient-to-br from-pink-50/90 to-pink-100/70 dark:from-black/80 dark:to-pink-950/40 backdrop-blur-md rounded-3xl shadow-lg border"
+            className="p-2 border-pink-300/40 dark:border-pink-800/40 bg-pink-50/10 dark:bg-black/10 backdrop-blur-[40px] backdrop-saturate-150 rounded-3xl shadow-xl border"
           >
             {/* Textarea */}
             <div className="mb-3">
