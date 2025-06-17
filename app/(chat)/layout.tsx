@@ -59,9 +59,7 @@ export default async function Layout({
       />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar session={session} initialData={initialData} />
-        <SidebarInset className="h-dvh flex flex-col overflow-hidden">
-          {children}
-        </SidebarInset>
+        <SidebarInset className="h-dvh flex flex-col">{children}</SidebarInset>
       </SidebarProvider>
     </>
   );

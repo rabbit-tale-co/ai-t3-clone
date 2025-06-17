@@ -19,6 +19,10 @@ export const metadata: Metadata = {
 
 export const viewport = {
   maximumScale: 1, // Disable auto-zoom on mobile Safari
+  height: 'device-height',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 const geist = Geist({
@@ -69,7 +73,7 @@ export default async function RootLayout({
         // prop is necessary to avoid the React hydration mismatch warning.
         // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
         suppressHydrationWarning
-        className={`${geist.variable} ${geistMono.variable}`}
+        className={`${geist.variable} ${geistMono.variable} h-full`}
       >
         <head>
           <script
@@ -82,7 +86,7 @@ export default async function RootLayout({
           strategy="beforeInteractive"
         /> */}
         </head>
-        <body className="antialiased">
+        <body className="antialiased h-full">
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
