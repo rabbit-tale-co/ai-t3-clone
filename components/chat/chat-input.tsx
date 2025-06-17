@@ -305,7 +305,7 @@ export function ChatInput({
             <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 max-w-md mx-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200">
               <Alert
                 variant="destructive"
-                className="bg-red-50/40 dark:bg-red-950/40 border-red-200/50 dark:border-red-800/30 backdrop-blur-lg shadow-lg"
+                className="bg-red-50/40 dark:bg-red-950/40 border-red-200/50 dark:border-red-800/30 supports-[backdrop-filter]:bg-red-50/40 supports-[backdrop-filter]:dark:bg-red-950/40 supports-[backdrop-filter]:border-red-200/50 supports-[backdrop-filter]:dark:border-red-800/30 backdrop-blur-lg shadow-lg"
               >
                 <AlertDescription className="text-red-800 dark:text-red-200">
                   Selected model is not available. Add API key in settings or
