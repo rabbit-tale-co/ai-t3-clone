@@ -265,7 +265,7 @@ export function PureMessageActions({
               className="text-sm text-pink-800 dark:text-pink-200 hover:bg-pink-100 dark:hover:bg-pink-900/50 focus:bg-pink-100 dark:focus:bg-pink-900/50 rounded-lg cursor-pointer"
             >
               <Share className="size-4 mr-2 text-pink-600 dark:text-pink-400" />
-              Udostępnij
+              Share
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
