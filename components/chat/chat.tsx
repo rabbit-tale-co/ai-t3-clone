@@ -477,7 +477,7 @@ export function Chat({
         </div>
 
         {/* Messages Area - Full height with bottom padding for input */}
-        <div className="absolute top-0 left-0 right-0 bottom-0 pt-16 pb-4 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 bottom-0 pt-16 pb-32 md:pb-4 overflow-hidden">
           <Messages
             chatId={id}
             status={status}
@@ -494,7 +494,7 @@ export function Chat({
 
         {/* Chat Input - Fixed at bottom */}
         {!isReadonly && (
-          <div className="absolute bottom-0 left-0 right-0 z-50">
+          <div className="fixed md:absolute bottom-0 left-0 right-0 z-50">
             <ChatInput
               input={input}
               onInputChange={(e) => setInput(e.target.value)}

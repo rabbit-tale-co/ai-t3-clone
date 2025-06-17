@@ -103,7 +103,7 @@ export const Greeting = ({
   return (
     <motion.div
       key="overview"
-      className="max-w-3xl mx-auto md:mt-20 px-8 size-full flex flex-col justify-center"
+      className="max-w-3xl mx-auto md:mt-20 px-8 size-full flex flex-col justify-center pb-32 md:pb-4"
       initial={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
       animate={{
         opacity: input.length > 0 ? 0 : 1,
