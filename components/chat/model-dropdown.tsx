@@ -235,7 +235,7 @@ export function ModelDropdown({
     return (
       <Drawer open={isOpen} onOpenChange={setIsOpen}>
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-        <DrawerContent className="bg-gradient-to-br from-pink-50 to-pink-100/60 dark:from-black/95 dark:to-pink-950/20 border-pink-200 dark:border-pink-900/50 backdrop-blur-md max-h-[80vh] overflow-y-auto">
+        <DrawerContent className="max-h-[80vh] overflow-y-auto">
           <DrawerHeader className="mb-4">
             <DrawerTitle className="text-pink-900 dark:text-gray-100">
               Select Model

@@ -315,10 +315,19 @@ export function ManageTagsDialog({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl h-[95vh] overflow-hidden flex flex-col">
-          <DrawerHeader className="pb-4 border-b border-pink-200/50 dark:border-pink-900/30 shrink-0">
+        <DrawerContent className="h-[95vh] overflow-hidden flex flex-col">
+          <DrawerHeader className="pb-4 shrink-0">
             <DrawerTitle className="text-pink-900 dark:text-gray-100 flex items-center gap-3">
-              <Hash className="size-5" />
+              <div
+                className="size-6 rounded flex items-center justify-center"
+                style={{
+                  backgroundColor:
+                    colorAccents['pink' as keyof typeof colorAccents]?.accent ||
+                    '#EC4899',
+                }}
+              >
+                <Hash className="size-3 text-white" />
+              </div>
               {t('tags.manageTags')}
             </DrawerTitle>
             <p className="text-sm text-pink-600 dark:text-pink-400">

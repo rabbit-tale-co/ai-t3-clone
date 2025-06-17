@@ -464,7 +464,7 @@ export function Chat({
 
   return (
     <>
-      <div className="flex flex-col h-dvh bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm">
+      <div className="flex flex-col h-dvh bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm overflow-hidden">
         {/* Chat Header */}
         <div className="sticky top-0 z-50 shrink-0">
           <ChatHeader
@@ -477,7 +477,7 @@ export function Chat({
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 min-h-0 relative">
+        <div className="flex-1 min-h-0 relative overflow-hidden">
           <Messages
             chatId={id}
             status={status}

@@ -82,7 +82,7 @@ export default async function RootLayout({
           strategy="beforeInteractive"
         /> */}
         </head>
-        <body className="antialiased">
+        <body className="antialiased overflow-hidden">
           <ThemeProvider
             attribute="class"
             defaultTheme="system"

@@ -59,7 +59,7 @@ export default async function Layout({
       />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar session={session} initialData={initialData} />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset className="overflow-hidden">{children}</SidebarInset>
       </SidebarProvider>
     </>
   );

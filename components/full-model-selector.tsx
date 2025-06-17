@@ -464,7 +464,7 @@ export function FullModelSelector({
     return (
       <TooltipProvider>
         <Drawer open={effectiveIsOpen} onOpenChange={effectiveSetIsOpen}>
-          <DrawerContent className="bg-gradient-to-br from-pink-50/95 to-pink-100/80 dark:from-black/98 dark:to-pink-950/30 border-pink-200/60 dark:border-pink-900/40 backdrop-blur-xl h-[95vh] overflow-hidden flex flex-col">
+          <DrawerContent className="h-[95vh] overflow-hidden flex flex-col">
             <DrawerHeader className="pb-4 border-b border-pink-200/50 dark:border-pink-900/30 shrink-0">
               <DrawerTitle className="text-pink-900 dark:text-gray-100">
                 AI Model Library

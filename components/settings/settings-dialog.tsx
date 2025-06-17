@@ -141,7 +141,7 @@ export function SettingsDialog({ user }: { user: UserData }) {
       <DrawerTrigger asChild>
         <NavUser user={user} />
       </DrawerTrigger>
-      <DrawerContent className="h-[95vh] bg-gradient-to-br from-pink-50/70 to-pink-100/60 dark:from-black/95 dark:to-pink-950/10 border-pink-200/20 dark:border-pink-900/20 backdrop-blur-2xl">
+      <DrawerContent className="h-[95vh]">
         <DrawerHeader className="p-4 border-b border-pink-200/30 dark:border-pink-900/20 shrink-0">
           <div className="flex items-center justify-between">
             <DrawerTitle className="text-lg font-semibold">
