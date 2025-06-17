@@ -439,7 +439,7 @@ export function FullModelSelector({
                     {providerModels.length} models
                   </Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-px">
                   {providerModels.map((model) => (
                     <ModelCard
                       key={model.id}
@@ -532,21 +532,21 @@ function ModelCard({
   return (
     <Card
       className={cn(
-        'cursor-pointer transition-all duration-200 hover:shadow-md group h-full py-0',
+        'cursor-pointer ring transition-all !rounded-2xl ring-pink-900/20 duration-200 hover:shadow-md group h-full py-0',
         isSelected
-          ? 'ring-2 ring-pink-500 bg-gradient-to-br from-pink-100 to-pink-200/80 dark:from-pink-900/40 dark:to-pink-800/30 border-pink-300 dark:border-pink-600 shadow-lg'
+          ? 'ring-pink-500 bg-gradient-to-br from-pink-100 to-pink-200/80 dark:from-pink-900/40 dark:to-pink-800/30'
           : isDisabled
-            ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+            ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900/20'
             : 'hover:bg-pink-50/50 dark:hover:bg-pink-950/20 border-pink-200/50 dark:border-pink-800/50 hover:border-pink-300 dark:hover:border-pink-700',
       )}
       onClick={isDisabled ? undefined : onSelect}
     >
-      <CardContent className="p-3 h-full flex flex-col">
+      <CardContent className="p-2 h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-start gap-2 mb-2">
           <div
             className={cn(
-              'size-8 rounded-lg flex items-center justify-center transition-all',
+              'size-10 rounded-lg flex items-center justify-center transition-all',
               isSelected
                 ? 'bg-pink-500 text-white shadow-md'
                 : isDisabled
@@ -555,9 +555,9 @@ function ModelCard({
             )}
           >
             {isDisabled ? (
-              <Lock className="size-4" />
+              <Lock className="size-5" />
             ) : (
-              <Zap className="size-4" />
+              <Zap className="size-5" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -638,7 +638,7 @@ function ModelCard({
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      'size-6 rounded flex items-center justify-center transition-all',
+                      'size-6 rounded-lg flex items-center justify-center transition-all',
                       isSelected && !isDisabled
                         ? 'bg-pink-400/30 text-pink-700 dark:text-pink-200'
                         : isDisabled
@@ -687,7 +687,7 @@ function ModelCard({
           disabled={isDisabled}
           // TODO: make better disabled theme
           className={cn(
-            'w-full transition-all h-8 text-xs',
+            'w-full transition-all h-8 text-xs rounded-lg',
             isSelected && !isDisabled
               ? 'bg-pink-500 hover:bg-pink-600 text-white shadow-md'
               : isDisabled
