@@ -204,7 +204,7 @@ export function ChatInput({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="relative p-4 pb-safe pointer-events-none">
+      <div className="relative p-4">
         <div className="mx-auto max-w-4xl space-y-3 pointer-events-auto">
           {/* Upload Progress */}
           {uploadProgress > 0 && uploadProgress < 100 && (
@@ -375,7 +375,7 @@ export function ChatInput({
           {/* Main Input Form */}
           <form
             onSubmit={onSubmitForm}
-            className="p-2 border-pink-300/40 dark:border-pink-800/40 bg-pink-50/15 dark:bg-black/15 backdrop-blur-[40px] backdrop-saturate-150 rounded-t-3xl shadow-xl border supports-[backdrop-filter]:bg-pink-50/10 supports-[backdrop-filter]:dark:bg-black/10"
+            className="p-2 border-pink-300/40 dark:border-pink-800/40 bg-pink-50/15 dark:bg-black/15 backdrop-blur-[40px] backdrop-saturate-150 rounded-3xl shadow-xl border supports-[backdrop-filter]:bg-pink-50/10 supports-[backdrop-filter]:dark:bg-black/10"
           >
             {/* Textarea */}
             <div className="mb-3">

@@ -464,9 +464,9 @@ export function Chat({
 
   return (
     <>
-      <div className="relative h-dvh bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm">
-        {/* Chat Header - Fixed at top */}
-        <div className="absolute top-0 left-0 right-0 z-40">
+      <div className="flex flex-col h-full bg-gradient-to-br from-pink-50/30 to-pink-100/20 dark:from-black/90 dark:to-pink-950/30 backdrop-blur-sm">
+        {/* Chat Header */}
+        <div className="shrink-0">
           <ChatHeader
             chatId={id}
             selectedModelId={selectedModel}
@@ -476,58 +476,60 @@ export function Chat({
           />
         </div>
 
-        {/* Messages Area - Full height with bottom padding for input */}
-        <div className="absolute top-0 left-0 right-0 bottom-0 pt-16 pb-32 md:pb-4 overflow-hidden">
-          <Messages
-            chatId={id}
-            status={status}
-            votes={votes}
-            messages={messages}
-            setMessages={setMessages}
-            reload={reload}
-            isReadonly={isReadonly}
-            isArtifactVisible={isArtifactVisible}
-            input={input}
-            onExamplePromptClick={handleExamplePromptClick}
-          />
-        </div>
-
-        {/* Chat Input - Fixed at bottom */}
-        {!isReadonly && (
-          <div className="fixed md:absolute bottom-0 left-0 right-0 z-50">
-            <ChatInput
+        {/* Messages Area - Flex grow with overflow */}
+        <div className="flex-1 min-h-0 relative">
+          <div className="absolute inset-0 pb-32 md:pb-4 overflow-hidden">
+            <Messages
+              chatId={id}
+              status={status}
+              votes={votes}
+              messages={messages}
+              setMessages={setMessages}
+              reload={reload}
+              isReadonly={isReadonly}
+              isArtifactVisible={isArtifactVisible}
               input={input}
-              onInputChange={(e) => setInput(e.target.value)}
-              onSubmit={handleSubmitWithOptimistic}
-              attachments={attachments}
-              onFileUpload={(e) => {
-                const files = Array.from(e.target.files || []) as File[];
-                handleFilesSelected(files);
-              }}
-              onRemoveAttachment={handleRemoveAttachment}
-              onClearAttachments={handleClearAttachments}
-              onShowFileUpload={handleShowFileUpload}
-              uploadProgress={0}
-              selectedModel={selectedModel}
-              onModelChange={handleModelChange}
-              searchEnabled={searchEnabled}
-              onToggleSearch={handleToggleSearch}
-              isStreaming={status === 'streaming'}
-              disabled={false}
-              fileInputRef={{ current: null }}
-              hasRemainingUsage={messagesLeft === null || messagesLeft > 0}
-              usage={
-                messagesLeft !== null && maxMessages !== null
-                  ? { remaining: messagesLeft, limit: maxMessages }
-                  : null
-              }
-              resetTime={resetTime}
-              userType={session?.user?.type}
-              isModelAvailable={isModelAvailable}
-              loadingModels={loadingModels}
+              onExamplePromptClick={handleExamplePromptClick}
             />
           </div>
-        )}
+
+          {/* Chat Input - Absolute at bottom of messages area */}
+          {!isReadonly && (
+            <div className="absolute bottom-0 left-0 right-0">
+              <ChatInput
+                input={input}
+                onInputChange={(e) => setInput(e.target.value)}
+                onSubmit={handleSubmitWithOptimistic}
+                attachments={attachments}
+                onFileUpload={(e) => {
+                  const files = Array.from(e.target.files || []) as File[];
+                  handleFilesSelected(files);
+                }}
+                onRemoveAttachment={handleRemoveAttachment}
+                onClearAttachments={handleClearAttachments}
+                onShowFileUpload={handleShowFileUpload}
+                uploadProgress={0}
+                selectedModel={selectedModel}
+                onModelChange={handleModelChange}
+                searchEnabled={searchEnabled}
+                onToggleSearch={handleToggleSearch}
+                isStreaming={status === 'streaming'}
+                disabled={false}
+                fileInputRef={{ current: null }}
+                hasRemainingUsage={messagesLeft === null || messagesLeft > 0}
+                usage={
+                  messagesLeft !== null && maxMessages !== null
+                    ? { remaining: messagesLeft, limit: maxMessages }
+                    : null
+                }
+                resetTime={resetTime}
+                userType={session?.user?.type}
+                isModelAvailable={isModelAvailable}
+                loadingModels={loadingModels}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* File Upload Modal */}
