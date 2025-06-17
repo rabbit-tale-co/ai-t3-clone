@@ -103,7 +103,9 @@ export function PureMessageActions({
           { revalidate: false },
         );
 
-        return type === 'up' ? 'Successfully voted!' : 'Failed to vote!';
+        return type === 'up'
+          ? 'Successfully voted! Upvoted'
+          : 'Successfully voted! Downvoted';
       },
       error: 'Failed to vote for message.',
     });
