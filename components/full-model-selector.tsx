@@ -465,16 +465,16 @@ export function FullModelSelector({
       <TooltipProvider>
         <Drawer open={effectiveIsOpen} onOpenChange={effectiveSetIsOpen}>
           <DrawerContent className="h-[95vh] overflow-hidden flex flex-col">
-            <DrawerHeader className="pb-4 border-b border-pink-200/50 dark:border-pink-900/30 shrink-0">
+            <DrawerHeader className="pb-4 border-b border-pink-200/50 dark:border-pink-900/30 shrink-">
               <DrawerTitle className="text-pink-900 dark:text-gray-100">
                 AI Model Library
               </DrawerTitle>
               <p className="text-sm text-pink-600 dark:text-pink-400">
                 Choose the perfect model for your task
               </p>
-              <div className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100/50 dark:bg-pink-900/20 px-3 py-1 rounded-full w-fit">
+              <Badge className="text-xs self-end text-pink-600 dark:text-pink-400 bg-pink-100/50 dark:bg-pink-900/20">
                 {loading ? 'Loading...' : `${filteredModels.length} available`}
-              </div>
+              </Badge>
             </DrawerHeader>
             <div className="flex-1 overflow-y-auto p-4">{mainContent}</div>
           </DrawerContent>
@@ -504,9 +504,9 @@ export function FullModelSelector({
                   </p>
                 </div>
               </div>
-              <div className="text-sm text-pink-600 dark:text-pink-400 bg-pink-100/50 dark:bg-pink-900/20 px-3 py-1 rounded-full">
+              <Badge className="text-xs self-end text-pink-600 dark:text-pink-400 bg-pink-100/50 dark:bg-pink-900/20">
                 {loading ? 'Loading...' : `${filteredModels.length} available`}
-              </div>
+              </Badge>
             </DialogTitle>
           </DialogHeader>
 
