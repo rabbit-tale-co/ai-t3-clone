@@ -375,7 +375,7 @@ export function ChatInput({
           {/* Main Input Form */}
           <form
             onSubmit={onSubmitForm}
-            className="p-2 border-pink-300/40 dark:border-pink-800/40 bg-pink-50/15 dark:bg-black/15 backdrop-blur-[40px] backdrop-saturate-150 rounded-3xl shadow-xl border supports-[backdrop-filter]:bg-pink-50/10 supports-[backdrop-filter]:dark:bg-black/10"
+            className="p-2 border-pink-300/40 dark:border-pink-800/40 bg-pink-50/5 dark:bg-black/5 backdrop-blur-xl backdrop-saturate-150 rounded-3xl shadow-xl border supports-[backdrop-filter]:bg-pink-50/5 supports-[backdrop-filter]:dark:bg-black/5"
           >
             {/* Textarea */}
             <div className="mb-3">
